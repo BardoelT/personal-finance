@@ -50,6 +50,25 @@ lipo -create -output MyApp \
 - Use `cargo watch -x run` for fast iteration during development
 - Use `cargo flamegraph` (wraps `dtrace`) for profiling on macOS
 
+## UI Framework: Tauri
+
+The application uses Tauri for its GUI layer. Tauri provides a native WebView for the frontend (HTML/CSS/JS) and Rust for the application backend, producing a small native macOS binary (~5–10 MB).
+
+**Stack:**
+- Backend: Rust — business logic, data access, state management
+- Frontend: a web framework (React, Vue, or Svelte) rendered in the WebView
+- IPC: Tauri commands (`#[tauri::command]`) bridge the two layers
+
+**Sidebar:** implemented in the frontend using the chosen web framework's routing or state. Each sidebar item maps to a named route or view component. The Rust backend exposes data via Tauri commands; the frontend renders it.
+
+**Why Tauri:**
+- Access to rich charting and table libraries (Chart.js, D3, AG Grid) — important for a finance app
+- Full CSS control over sidebar layout and styling
+- Significantly smaller binary than Electron (~5–10 MB vs ~80–150 MB)
+- Strong security model: WebView capabilities are disabled by default and must be explicitly allowlisted
+
+**Security:** configure `tauri.conf.json` with the minimum required permissions. Scope filesystem access to the app's data directory only; do not enable arbitrary shell execution.
+
 ## Prerequisites
 
 | Requirement | Details |
@@ -142,6 +161,10 @@ Pass notarization credentials (`APPLE_ID`, `TEAM_ID`, `NOTARIZATION_PASSWORD`) a
 
 ## Distribution Checklist
 
+- [ ] Install Tauri CLI (`cargo install tauri-cli`) and Node.js
+- [ ] Choose and scaffold a frontend framework (React, Vue, or Svelte) inside the Tauri project
+- [ ] Configure `tauri.conf.json` allowlist with minimum required permissions
+- [ ] Implement sidebar routing/state in the frontend framework
 - [ ] Enroll in Apple Developer Program and obtain Developer ID Application certificate
 - [ ] Export certificate as `.p12` and store securely (CI variable + local Keychain)
 - [ ] Build universal binary (`aarch64-apple-darwin` + `x86_64-apple-darwin`, then `lipo`)
