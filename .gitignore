@@ -1,0 +1,13 @@
+# Rust build artifacts
+target/
+
+# Tauri generated platform code
+src-tauri/gen/
+
+# macOS
+.DS_Store
+
+# Code-signing credentials — never commit
+*.p12
+*.keychain
+build.keychain
