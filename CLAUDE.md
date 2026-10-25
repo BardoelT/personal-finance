@@ -9,7 +9,7 @@ Personal wealth tracking desktop app: accounts, assets, transactions and net-wor
 
 - **Stack:** Rust + Tauri v2. Frontend: vanilla HTML + CSS + JS (no framework, no build step) in `ui/`, Rust backend in `src-tauri/`.
 - **Platform:** macOS only (Apple Silicon + Intel). Do not add Windows/Linux code paths or CI targets unless asked.
-- **Data:** stored **locally only** (SQLite via `rusqlite` or `sqlx` — not yet wired up; see Ask first). No cloud sync, no backend server.
+- **Data:** stored **locally only** in a user-chosen project file (JSON, no database; see CSD-002). No cloud sync, no backend server.
 - **Repo:** public on GitHub. Assume everything committed is visible to the world.
 
 ## Commands
@@ -38,10 +38,10 @@ ui/                   # frontend (UI only — HTML + CSS + JS, no business logic
 src-tauri/
   src/main.rs         # thin entry point
   src/lib.rs          # app setup, command registration
-  src/commands/       # #[tauri::command] handlers: validate input, call domain, map errors  (not yet created)
-  src/domain/         # pure business logic (money, portfolios, net worth): no Tauri, no IO  (not yet created)
-  src/storage/        # persistence + migrations                                              (not yet created)
-  src/error.rs        # app error type                                                        (not yet created)
+  src/commands/       # #[tauri::command] handlers: validate input, call domain, map errors
+  src/domain/         # pure business logic (money, income, net worth): no Tauri, no IO
+  src/storage/        # project file persistence (JSON, atomic write)
+  src/error.rs        # app error type
   capabilities/       # Tauri permission files
   tauri.conf.json
 docs/                 # architecture notes and ADRs                                           (not yet created)
@@ -114,7 +114,7 @@ This app handles personal financial data and the repo is public.
 ## Testing
 - Unit tests for all `domain/` logic, especially money math, currency handling and edge cases (zero, negative, very large values, rounding).
 - Use property tests (`proptest`) for arithmetic invariants where useful.
-- Storage tests run against a temporary database, never the real app data dir.
+- Storage tests run against a temporary directory, never real project files.
 - Bug fix = failing test first, then the fix.
 - Don't delete or weaken existing tests to make a change pass.
 
@@ -134,7 +134,6 @@ This app handles personal financial data and the repo is public.
 ## Ask first
 Stop and ask before:
 - adding dependencies or Tauri plugins/permissions
-- choosing the SQLite crate and writing the first migration / schema
 - touching `.github/workflows/`, signing/notarization config, or `tauri.conf.json` security settings
 - adding any network access
 - large refactors across modules

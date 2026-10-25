@@ -11,3 +11,6 @@ src-tauri/gen/
 *.p12
 *.keychain
 build.keychain
+
+# Project files hold real financial data — never commit
+*.wealth
