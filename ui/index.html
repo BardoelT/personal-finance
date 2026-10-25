@@ -45,31 +45,6 @@
           Income
         </button>
 
-        <button class="nav-item" data-section="accounts">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-            <rect x="2" y="5" width="20" height="14" rx="2"/>
-            <path d="M2 10h20"/>
-            <circle cx="7" cy="15" r="1.2" fill="currentColor"/>
-          </svg>
-          Accounts
-        </button>
-
-        <button class="nav-item" data-section="transactions">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M7 16V4m0 0L4 7m3-3 3 3"/>
-            <path d="M17 8v12m0 0 3-3m-3 3-3-3"/>
-          </svg>
-          Transactions
-        </button>
-
-        <button class="nav-item" data-section="budget">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="9"/>
-            <path d="M12 3v9l4.5 2.5"/>
-          </svg>
-          Budget
-        </button>
-
         <div class="nav-section-label">Insights</div>
 
         <button class="nav-item" data-section="reports">
@@ -109,79 +84,21 @@
       <section class="section active" id="dashboard" aria-labelledby="dashboard-title">
         <div class="section-header">
           <h1 class="section-title" id="dashboard-title">Dashboard</h1>
-          <span class="example-badge">Example data</span>
         </div>
 
-        <div class="cards">
-          <div class="card">
-            <div class="card-label">Total Balance</div>
-            <div class="card-value">€ 12,450.00</div>
-            <div class="card-delta">across 3 accounts</div>
-          </div>
-          <div class="card">
-            <div class="card-label">Income · Oct</div>
-            <div class="card-value pos">€ 3,200.00</div>
-            <div class="card-delta">↑ 4% vs last month</div>
-          </div>
-          <div class="card">
-            <div class="card-label">Expenses · Oct</div>
-            <div class="card-value neg">€ 1,840.00</div>
-            <div class="card-delta">↓ 12% vs last month</div>
-          </div>
-          <div class="card">
-            <div class="card-label">Savings Rate</div>
-            <div class="card-value">42%</div>
-            <div class="card-delta">€ 1,360 saved</div>
-          </div>
+        <div class="placeholder" id="dashboard-empty" hidden>
+          <p>No jobs yet. Add your first job to see your income here.</p>
+          <button type="button" class="btn primary" data-nav="income">Add your first job</button>
         </div>
 
-        <div class="panel">
-          <div class="panel-header">
-            <span class="panel-title">Recent Transactions</span>
-            <button class="panel-link" data-nav="transactions">View all →</button>
-          </div>
-          <ul class="txn-list">
-            <li class="txn-item">
-              <div class="txn-icon">🛒</div>
-              <div class="txn-body">
-                <div class="txn-name">Albert Heijn</div>
-                <div class="txn-meta">Today · <span class="tag expense">Groceries</span></div>
-              </div>
-              <div class="txn-amount neg">− € 47.30</div>
-            </li>
-            <li class="txn-item">
-              <div class="txn-icon">💼</div>
-              <div class="txn-body">
-                <div class="txn-name">Salary — October</div>
-                <div class="txn-meta">Oct 25 · <span class="tag income">Income</span></div>
-              </div>
-              <div class="txn-amount pos">+ € 3,200.00</div>
-            </li>
-            <li class="txn-item">
-              <div class="txn-icon">🏠</div>
-              <div class="txn-body">
-                <div class="txn-name">Rent</div>
-                <div class="txn-meta">Oct 1 · <span class="tag expense">Housing</span></div>
-              </div>
-              <div class="txn-amount neg">− € 950.00</div>
-            </li>
-            <li class="txn-item">
-              <div class="txn-icon">⚡</div>
-              <div class="txn-body">
-                <div class="txn-name">Vattenfall Energy</div>
-                <div class="txn-meta">Oct 3 · <span class="tag expense">Utilities</span></div>
-              </div>
-              <div class="txn-amount neg">− € 88.50</div>
-            </li>
-            <li class="txn-item">
-              <div class="txn-icon">🚆</div>
-              <div class="txn-body">
-                <div class="txn-name">NS Reisproduct</div>
-                <div class="txn-meta">Oct 5 · <span class="tag expense">Transport</span></div>
-              </div>
-              <div class="txn-amount neg">− € 112.00</div>
-            </li>
-          </ul>
+        <div id="dashboard-content" hidden>
+          <h2 class="block-title" id="dashboard-year-title"></h2>
+          <p class="empty-note block-note" id="dashboard-year-empty" hidden></p>
+          <div class="cards" id="dashboard-year-cards"></div>
+
+          <h2 class="block-title" id="dashboard-month-title"></h2>
+          <p class="empty-note block-note" id="dashboard-month-empty" hidden></p>
+          <div class="cards" id="dashboard-month-cards"></div>
         </div>
       </section>
 
@@ -266,96 +183,6 @@
               <option value="USD">USD</option>
               <option value="GBP">GBP</option>
             </select>
-          </div>
-        </div>
-      </section>
-
-      <!-- Accounts -->
-      <section class="section" id="accounts" aria-labelledby="accounts-title">
-        <div class="section-header">
-          <h1 class="section-title" id="accounts-title">Accounts</h1>
-          <span class="example-badge">Example data</span>
-        </div>
-        <div class="panel">
-          <div class="panel-header"><span class="panel-title">Your Accounts</span></div>
-          <div class="account-item">
-            <div class="account-icon">🏦</div>
-            <div class="account-body">
-              <div class="account-name">Current Account</div>
-              <div class="account-bank">ING Bank · NL29 INGB ···· 8647</div>
-            </div>
-            <div class="account-balance">€ 4,280.00</div>
-          </div>
-          <div class="account-item">
-            <div class="account-icon">💰</div>
-            <div class="account-body">
-              <div class="account-name">Savings Account</div>
-              <div class="account-bank">ING Bank · NL29 INGB ···· 9321</div>
-            </div>
-            <div class="account-balance">€ 7,920.00</div>
-          </div>
-          <div class="account-item">
-            <div class="account-icon">💳</div>
-            <div class="account-body">
-              <div class="account-name">Credit Card</div>
-              <div class="account-bank">ABN AMRO · NL29 ABNA ···· 2204</div>
-            </div>
-            <div class="account-balance">€ 250.00</div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Transactions -->
-      <section class="section" id="transactions" aria-labelledby="transactions-title">
-        <div class="section-header">
-          <h1 class="section-title" id="transactions-title">Transactions</h1>
-          <span class="example-badge">Example data</span>
-        </div>
-        <div class="panel">
-          <div class="panel-header"><span class="panel-title">October 2026</span></div>
-          <ul class="txn-list">
-            <li class="txn-item"><div class="txn-icon">🛒</div><div class="txn-body"><div class="txn-name">Albert Heijn</div><div class="txn-meta">Oct 24 · <span class="tag expense">Groceries</span></div></div><div class="txn-amount neg">− € 47.30</div></li>
-            <li class="txn-item"><div class="txn-icon">☕</div><div class="txn-body"><div class="txn-name">Koffie Leute</div><div class="txn-meta">Oct 23 · <span class="tag expense">Food &amp; Drink</span></div></div><div class="txn-amount neg">− € 4.80</div></li>
-            <li class="txn-item"><div class="txn-icon">💼</div><div class="txn-body"><div class="txn-name">Salary — October</div><div class="txn-meta">Oct 25 · <span class="tag income">Income</span></div></div><div class="txn-amount pos">+ € 3,200.00</div></li>
-            <li class="txn-item"><div class="txn-icon">🏠</div><div class="txn-body"><div class="txn-name">Rent</div><div class="txn-meta">Oct 1 · <span class="tag expense">Housing</span></div></div><div class="txn-amount neg">− € 950.00</div></li>
-            <li class="txn-item"><div class="txn-icon">⚡</div><div class="txn-body"><div class="txn-name">Vattenfall Energy</div><div class="txn-meta">Oct 3 · <span class="tag expense">Utilities</span></div></div><div class="txn-amount neg">− € 88.50</div></li>
-            <li class="txn-item"><div class="txn-icon">🚆</div><div class="txn-body"><div class="txn-name">NS Reisproduct</div><div class="txn-meta">Oct 5 · <span class="tag expense">Transport</span></div></div><div class="txn-amount neg">− € 112.00</div></li>
-            <li class="txn-item"><div class="txn-icon">📱</div><div class="txn-body"><div class="txn-name">KPN Mobiel</div><div class="txn-meta">Oct 5 · <span class="tag expense">Phone</span></div></div><div class="txn-amount neg">− € 29.00</div></li>
-          </ul>
-        </div>
-      </section>
-
-      <!-- Budget -->
-      <section class="section" id="budget" aria-labelledby="budget-title">
-        <div class="section-header">
-          <h1 class="section-title" id="budget-title">Budget</h1>
-          <span class="example-badge">Example data</span>
-        </div>
-        <div class="panel">
-          <div class="panel-header"><span class="panel-title">October 2026</span></div>
-          <div class="budget-item">
-            <div class="budget-row"><span class="budget-cat">🏠 Housing</span><span class="budget-nums">€ 950 / € 1,000</span></div>
-            <div class="bar-track"><div class="bar-fill" style="width:95%"></div></div>
-          </div>
-          <div class="budget-item">
-            <div class="budget-row"><span class="budget-cat">🛒 Groceries</span><span class="budget-nums">€ 280 / € 350</span></div>
-            <div class="bar-track"><div class="bar-fill" style="width:80%"></div></div>
-          </div>
-          <div class="budget-item">
-            <div class="budget-row"><span class="budget-cat">🚆 Transport</span><span class="budget-nums">€ 140 / € 120</span></div>
-            <div class="bar-track"><div class="bar-fill over" style="width:100%"></div></div>
-          </div>
-          <div class="budget-item">
-            <div class="budget-row"><span class="budget-cat">☕ Food &amp; Drink</span><span class="budget-nums">€ 68 / € 100</span></div>
-            <div class="bar-track"><div class="bar-fill" style="width:68%"></div></div>
-          </div>
-          <div class="budget-item">
-            <div class="budget-row"><span class="budget-cat">⚡ Utilities</span><span class="budget-nums">€ 88 / € 90</span></div>
-            <div class="bar-track"><div class="bar-fill warn" style="width:98%"></div></div>
-          </div>
-          <div class="budget-item">
-            <div class="budget-row"><span class="budget-cat">🎉 Entertainment</span><span class="budget-nums">€ 22 / € 80</span></div>
-            <div class="bar-track"><div class="bar-fill" style="width:28%"></div></div>
           </div>
         </div>
       </section>

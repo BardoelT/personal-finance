@@ -1,5 +1,6 @@
 //! `#[tauri::command]` handlers: validate input, call the domain, map errors.
 
+pub mod dashboard;
 pub mod income;
 pub mod project;
 pub mod settings;

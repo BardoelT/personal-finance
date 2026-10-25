@@ -97,6 +97,17 @@ impl YearMonth {
     pub fn year(self) -> i32 {
         self.year
     }
+
+    /// The month before this one; January looks back to December. `None` only
+    /// at the start of the supported years.
+    #[must_use]
+    pub fn previous(self) -> Option<Self> {
+        if self.month == 1 {
+            Self::new(self.year - 1, 12)
+        } else {
+            Self::new(self.year, self.month - 1)
+        }
+    }
 }
 
 impl fmt::Display for YearMonth {
@@ -197,6 +208,25 @@ impl JobInput {
     }
 }
 
+/// The sums of some paychecks, or `None` if there are none.
+fn totals_of<'a>(paychecks: impl Iterator<Item = &'a Paycheck>) -> Option<PeriodTotals> {
+    let mut totals = PeriodTotals {
+        gross_salary: zero(),
+        holiday_pay: zero(),
+        bonus: zero(),
+        total_gross: zero(),
+        paycheck_count: 0,
+    };
+    for paycheck in paychecks {
+        totals.gross_salary += paycheck.amounts.gross_salary();
+        totals.holiday_pay += paycheck.amounts.holiday_pay();
+        totals.bonus += paycheck.amounts.bonus();
+        totals.total_gross += paycheck.amounts.total_gross();
+        totals.paycheck_count += 1;
+    }
+    (totals.paycheck_count > 0).then_some(totals)
+}
+
 fn non_blank(text: Option<&str>) -> Option<&str> {
     text.map(str::trim).filter(|text| !text.is_empty())
 }
@@ -210,6 +240,26 @@ pub struct YearlyTotal {
     pub bonus: Decimal,
     pub total_gross: Decimal,
     pub paycheck_count: usize,
+}
+
+/// Sums of a set of paychecks over all jobs (CSD-004).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct PeriodTotals {
+    pub gross_salary: Decimal,
+    pub holiday_pay: Decimal,
+    pub bonus: Decimal,
+    pub total_gross: Decimal,
+    pub paycheck_count: usize,
+}
+
+/// The two blocks of the dashboard (CSD-004): this year up to the current
+/// month, and last month. A period without paychecks has no totals.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct IncomeOverview {
+    pub year: i32,
+    pub year_to_date: Option<PeriodTotals>,
+    pub last_month: Option<YearMonth>,
+    pub last_month_totals: Option<PeriodTotals>,
 }
 
 /// Form values for "copy previous month" (CSD-001 REQ-9).
@@ -379,6 +429,33 @@ impl Income {
             holiday_pay: zero(),
             bonus: zero(),
         })
+    }
+
+    /// Whether any job exists.
+    #[must_use]
+    pub fn has_jobs(&self) -> bool {
+        !self.jobs.is_empty()
+    }
+
+    /// Income this year up to and including `today`'s month, and last month,
+    /// summed over all jobs (CSD-004 REQ-2 to REQ-4). Months after `today`,
+    /// which only a project file can contain, are not counted.
+    #[must_use]
+    pub fn overview(&self, today: YearMonth) -> IncomeOverview {
+        let last_month = today.previous();
+        let year_to_date = totals_of(
+            self.paychecks
+                .iter()
+                .filter(|p| p.month.year() == today.year() && p.month <= today),
+        );
+        let last_month_totals = last_month
+            .and_then(|last| totals_of(self.paychecks.iter().filter(|p| p.month == last)));
+        IncomeOverview {
+            year: today.year(),
+            year_to_date,
+            last_month,
+            last_month_totals,
+        }
     }
 
     /// The paychecks of all jobs with their job, newest month first and, within
@@ -1051,6 +1128,159 @@ mod tests {
                 ("Older Example Employer", "2026-08".to_owned()),
             ]
         );
+    }
+
+    // ---- CSD-004: income dashboard ----
+
+    /// The paychecks of CSD-004 AC-2.1: two jobs, today 25/10/2026.
+    fn dashboard_income() -> Income {
+        let mut income = Income::default();
+        let recent = job_with(&mut income, "01/03/2024", "");
+        let older = income
+            .create_job(&input("Older Example Employer", "01/01/2020", ""))
+            .unwrap()
+            .id;
+        add(&mut income, recent, "2026-08", "3000.00");
+        income
+            .add_paycheck(
+                recent,
+                month("2026-09"),
+                amounts("3000.00", "", "500.00"),
+                today(),
+            )
+            .unwrap();
+        add(&mut income, recent, "2026-10", "3000.00");
+        add(&mut income, older, "2026-09", "1000.00");
+        income
+    }
+
+    #[test]
+    fn test_csd004_ac_2_1_year_to_date_over_all_jobs() {
+        let overview = dashboard_income().overview(today());
+        assert_eq!(overview.year, 2026);
+        let totals = overview.year_to_date.unwrap();
+        assert_eq!(totals.gross_salary.to_string(), "10000.00");
+        assert_eq!(totals.holiday_pay.to_string(), "0.00");
+        assert_eq!(totals.bonus.to_string(), "500.00");
+        assert_eq!(totals.total_gross.to_string(), "10500.00");
+        assert_eq!(totals.paycheck_count, 4);
+    }
+
+    #[test]
+    fn test_csd004_ac_2_2_other_years_are_not_counted() {
+        let mut income = Income::default();
+        let id = job_with(&mut income, "01/03/2024", "");
+        add(&mut income, id, "2025-12", "3000.00");
+        add(&mut income, id, "2026-09", "1000.00");
+        let totals = income.overview(today()).year_to_date.unwrap();
+        assert_eq!(totals.gross_salary.to_string(), "1000.00");
+        assert_eq!(totals.paycheck_count, 1);
+    }
+
+    #[test]
+    fn test_csd004_ac_2_3_months_after_the_current_month_are_not_counted() {
+        let mut income = Income::default();
+        let id = job_with(&mut income, "01/03/2024", "");
+        add(&mut income, id, "2026-10", "3000.00");
+        // Only a project file can hold a later month, so allow it here.
+        income
+            .add_paycheck(
+                id,
+                month("2026-12"),
+                amounts("3000.00", "", ""),
+                month("2026-12"),
+            )
+            .unwrap();
+        let totals = income.overview(today()).year_to_date.unwrap();
+        assert_eq!(totals.gross_salary.to_string(), "3000.00");
+        assert_eq!(totals.paycheck_count, 1);
+    }
+
+    #[test]
+    fn test_csd004_ac_3_1_last_month_is_the_previous_calendar_month() {
+        let overview = dashboard_income().overview(today());
+        assert_eq!(overview.last_month.unwrap().to_string(), "2026-09");
+        let totals = overview.last_month_totals.unwrap();
+        assert_eq!(totals.gross_salary.to_string(), "4000.00");
+        assert_eq!(totals.holiday_pay.to_string(), "0.00");
+        assert_eq!(totals.bonus.to_string(), "500.00");
+        assert_eq!(totals.total_gross.to_string(), "4500.00");
+        assert_eq!(totals.paycheck_count, 2);
+    }
+
+    #[test]
+    fn test_csd004_ac_3_2_january_looks_back_to_december() {
+        let mut income = Income::default();
+        let id = job_with(&mut income, "01/03/2024", "");
+        income
+            .add_paycheck(
+                id,
+                month("2026-12"),
+                amounts("3000.00", "", ""),
+                month("2027-01"),
+            )
+            .unwrap();
+        let overview = income.overview(month("2027-01"));
+        assert_eq!(overview.last_month.unwrap().to_string(), "2026-12");
+        let totals = overview.last_month_totals.unwrap();
+        assert_eq!(totals.total_gross.to_string(), "3000.00");
+        assert_eq!(totals.paycheck_count, 1);
+    }
+
+    #[test]
+    fn test_csd004_ac_3_3_the_current_month_is_not_last_month() {
+        let mut income = Income::default();
+        let id = job_with(&mut income, "01/03/2024", "");
+        add(&mut income, id, "2026-10", "3000.00");
+        let overview = income.overview(today());
+        assert_eq!(overview.last_month.unwrap().to_string(), "2026-09");
+        assert_eq!(overview.last_month_totals, None);
+    }
+
+    #[test]
+    fn test_csd004_ac_4_1_nothing_earned_this_year_yet_has_no_totals() {
+        let mut income = Income::default();
+        let id = job_with(&mut income, "01/03/2024", "");
+        income
+            .add_paycheck(
+                id,
+                month("2026-12"),
+                amounts("3000.00", "", ""),
+                month("2027-01"),
+            )
+            .unwrap();
+        let overview = income.overview(month("2027-01"));
+        assert_eq!(overview.year, 2027);
+        assert_eq!(overview.year_to_date, None);
+    }
+
+    #[test]
+    fn test_csd004_ac_4_2_nothing_earned_last_month_has_no_totals() {
+        let mut income = Income::default();
+        let id = job_with(&mut income, "01/03/2024", "");
+        add(&mut income, id, "2026-10", "3000.00");
+        let overview = income.overview(today());
+        assert_eq!(overview.last_month_totals, None);
+        assert!(overview.year_to_date.is_some());
+    }
+
+    #[test]
+    fn test_csd004_ac_5_1_has_jobs_tells_an_empty_project_apart() {
+        let mut income = Income::default();
+        assert!(!income.has_jobs());
+        job_with(&mut income, "01/03/2024", "");
+        assert!(income.has_jobs());
+        // A job without paychecks has no totals, and no zero amounts either.
+        let overview = income.overview(today());
+        assert_eq!(overview.year_to_date, None);
+        assert_eq!(overview.last_month_totals, None);
+    }
+
+    #[test]
+    fn year_month_previous_wraps_and_stops_at_the_first_year() {
+        assert_eq!(month("2026-10").previous().unwrap().to_string(), "2026-09");
+        assert_eq!(month("2027-01").previous().unwrap().to_string(), "2026-12");
+        assert_eq!(month("1900-01").previous(), None);
     }
 
     // ---- REQ-22: date format ----

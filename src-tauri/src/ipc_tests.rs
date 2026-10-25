@@ -341,3 +341,68 @@ fn test_csd003_settings_over_ipc() {
     app.ok("new_project", json!({}));
     assert_eq!(app.ok("get_settings", json!({}))["currency"], "EUR");
 }
+
+#[test]
+fn test_csd004_dashboard_over_ipc() {
+    use crate::domain::YearMonth;
+
+    let app = harness();
+    let now = time::OffsetDateTime::now_utc();
+    let this_month = YearMonth::from_date(now.date());
+    let last_month = this_month.previous().unwrap();
+
+    // AC-5.1: an empty project says there are no jobs and has no figures.
+    let empty = app.ok("get_dashboard", json!({}));
+    assert_eq!(empty["has_jobs"], false);
+    assert_eq!(empty["currency"], "EUR");
+    assert_eq!(empty["year"], this_month.year());
+    assert_eq!(empty["year_to_date"], Value::Null);
+    assert_eq!(empty["last_month_totals"], Value::Null);
+
+    // A job without paychecks: jobs exist, still no amounts (AC-4).
+    let job = app.ok("create_job", json!({ "input": job_input() }));
+    let job_id = job["id"].as_str().unwrap();
+    let no_paychecks = app.ok("get_dashboard", json!({}));
+    assert_eq!(no_paychecks["has_jobs"], true);
+    assert_eq!(no_paychecks["year_to_date"], Value::Null);
+    assert_eq!(no_paychecks["last_month"], last_month.to_string());
+
+    // AC-7.1: figures follow the project as it is now, saved or not.
+    app.ok(
+        "add_paycheck",
+        json!({ "jobId": job_id, "month": last_month.to_string(), "amounts": amounts("3000.00", "", "500") }),
+    );
+    let last = app.ok("get_dashboard", json!({}));
+    assert_eq!(last["last_month"], last_month.to_string());
+    assert_eq!(last["last_month_totals"]["gross_salary"], "3000.00");
+    assert_eq!(last["last_month_totals"]["bonus"], "500.00");
+    assert_eq!(last["last_month_totals"]["total_gross"], "3500.00");
+    assert_eq!(last["last_month_totals"]["paycheck_count"], 1);
+
+    // This year to date counts the current month, and last month too unless
+    // that is still the previous year (January).
+    app.ok(
+        "add_paycheck",
+        json!({ "jobId": job_id, "month": this_month.to_string(), "amounts": amounts("1000.00", "", "") }),
+    );
+    let year = app.ok("get_dashboard", json!({}));
+    let same_year = last_month.year() == this_month.year();
+    assert_eq!(
+        year["year_to_date"]["paycheck_count"],
+        if same_year { 2 } else { 1 }
+    );
+    assert_eq!(
+        year["year_to_date"]["total_gross"],
+        if same_year { "4500.00" } else { "1000.00" }
+    );
+
+    // AC-6.1: the currency is the project currency.
+    app.ok("set_currency", json!({ "currency": "USD" }));
+    assert_eq!(app.ok("get_dashboard", json!({}))["currency"], "USD");
+
+    // AC-7.2: a new project goes back to the empty state.
+    app.ok("new_project", json!({}));
+    let fresh = app.ok("get_dashboard", json!({}));
+    assert_eq!(fresh["has_jobs"], false);
+    assert_eq!(fresh["currency"], "EUR");
+}
