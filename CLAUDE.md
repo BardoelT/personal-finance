@@ -124,6 +124,13 @@ This app handles personal financial data and the repo is public.
 - PR description: what changed, why, and how it was tested.
 - CI (GitHub Actions, `macos-latest`) must be green: fmt, clippy, tests, `cargo deny`.
 
+## Specifications (CSD)
+- All capability specs (CSDs) live in `docs/csd/`. Read `docs/csd/CSD-000-capability-specifications.md` before reading, writing, or implementing any CSD.
+- Requirements use EARS, acceptance criteria use Gherkin (tagged @AC-n.m), and flows use Mermaid.
+- Before changing behaviour, find and read the governing CSD; only implement CSDs with `status: approved`.
+- Never build what a CSD lists as a non-goal. Ask when the spec is ambiguous about behaviour or interfaces.
+- Reference REQ-/AC- IDs in tests (test name: `test_ac_n_m_…`), commits, and PR descriptions.
+
 ## Ask first
 Stop and ask before:
 - adding dependencies or Tauri plugins/permissions
