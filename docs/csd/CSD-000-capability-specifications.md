@@ -3,7 +3,7 @@ id: CSD-000
 title: Capability Specification Documents (CSD): reading, interpreting and writing
 status: approved
 owner: Thijs Bardoel
-version: 2.0
+version: 2.1
 last_updated: 2026-10-25
 location: docs/csd/CSD-000-capability-specifications.md
 applies_to: all humans and agents (Claude Code) working in this repository
@@ -183,7 +183,7 @@ Scenario: Requirement and acceptance criterion contradict
 **REQ-6: Traceability** *(ubiquitous)*
 Claude shall reference CSD IDs in all related work:
 
-- Rust unit and integration tests are named after the AC they prove: `test_ac_3_2_<description>` in `#[test]` functions
+- Rust unit and integration tests are named after the CSD and AC they prove: `test_csd001_ac_3_2_<description>` in `#[test]` functions, so names stay unique across CSDs (AC numbers restart in every CSD). `cargo test test_csd001_` runs one CSD's tests, and `cargo test test_csd001_ac_3_` runs one requirement's
 - commit messages and PR descriptions list the `REQ-`/`AC-` IDs covered
 - the PR description includes a coverage table: each AC → test name, or "not covered (reason)"
 
@@ -389,11 +389,12 @@ This CSD is working when:
 
 - **OQ-1:** Should CI enforce V-4, or is it advisory only? Owner: Thijs.
 - **OQ-2:** Who may approve CSDs — the owner only, or any reviewer? Owner: Thijs.
-- **OQ-3:** Do we want to adopt a Rust BDD crate (e.g. `cucumber-rust`) so Gherkin ACs run as tests directly, or keep the convention of naming `#[test]` functions `test_ac_n_m_…`? Owner: Thijs.
+- **OQ-3:** Do we want to adopt a Rust BDD crate (e.g. `cucumber-rust`) so Gherkin ACs run as tests directly, or keep the convention of naming `#[test]` functions `test_csd<NNN>_ac_n_m_…`? Owner: Thijs.
 - **OQ-4:** Add a `/csd` Claude Code slash command that scaffolds a new CSD from §5.2? Owner: Thijs.
 
 ## 9. Changelog
 
+- 2.1 (2026-10-25): Test names now include the CSD number (`test_csd<NNN>_ac_n_m_…`) because AC numbers restart in every CSD (REQ-6, OQ-3, Appendix B).
 - 2.0 (2026-10-25): Adapted from the original template for the personal-finance project. GitLab → GitHub; MR → PR; BDD runner references updated for Rust; worked example replaced with a personal finance domain scenario; `.feature` file layout removed (OQ-3 left open); template flow diagram updated to reflect Tauri layered architecture.
 - 1.0 (2026-10-25): initial version.
 
@@ -423,7 +424,7 @@ This CSD is working when:
 - Requirements use EARS, acceptance criteria use Gherkin (tagged @AC-n.m), and flows use Mermaid.
 - Before changing behaviour, find and read the governing CSD; only implement CSDs with `status: approved`.
 - Never build what a CSD lists as a non-goal. Ask when the spec is ambiguous about behaviour or interfaces.
-- Reference REQ-/AC- IDs in tests (test name: `test_ac_n_m_…`), commits, and PR descriptions.
+- Reference REQ-/AC- IDs in tests (test name: `test_csd<NNN>_ac_n_m_…`), commits, and PR descriptions.
 ```
 
 ## Appendix C: Worked example

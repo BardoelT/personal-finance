@@ -1,0 +1,246 @@
+---
+id: CSD-002
+title: Project file (save, open, new)
+status: approved
+owner: Thijs Bardoel
+version: 0.2
+last_updated: 2026-10-25
+related: [CSD-001]
+---
+
+# CSD-002: Project file (save, open, new)
+
+## 1. Intent
+The app keeps all of the user's data in one local project file instead of a database. Without a clear save model, users can lose edits or overwrite good data with bad. This capability defines how a project is created, opened, saved and protected against accidental loss. It applies to all app data, starting with the employment income of CSD-001, and it is for a single user working on one project at a time.
+
+## 2. Scope
+### 2.1 In scope
+- New, Open, Save and Save As for the project file.
+- Unsaved-changes tracking and the confirmations that protect unsaved data.
+- Safe writing, so a failed save never damages an existing file.
+- The project file format and its versioning.
+
+### 2.2 Non-goals
+- NG-1: Encryption of the project file, and remembering or auto-opening the last used file.
+- NG-2: Autosave and backup or recovery copies.
+- NG-3: Multiple projects open at once.
+- NG-4: Cloud sync or sharing of the file.
+
+## 3. Definitions
+| Term | Meaning |
+|---|---|
+| **Project** | All app data held in memory, plus an optional path to its file. |
+| **Project file** | A JSON file with the extension `.wealth` holding the project. |
+| **Unsaved changes** | The in-memory project differs from the last saved or opened state. |
+
+## 4. Requirements
+
+### 4.0 Overview flow
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant UI as Frontend (ui/)
+    participant CMD as commands/
+    participant FS as Project file
+    U->>UI: Save
+    UI->>CMD: save_project()
+    alt project has no path
+        CMD->>U: native save dialog
+        U-->>CMD: chosen path
+    end
+    CMD->>FS: write temporary file, then rename over target
+    CMD-->>UI: ok, unsaved indicator cleared
+```
+
+**REQ-1: Save** *(event-driven)*
+When the user saves, the app shall write all project data to the project file and clear the unsaved indicator, asking for a path in a native save dialog when the project has no path yet or when the user chose Save As.
+
+```gherkin
+@AC-1.1
+Scenario: Save and reload round-trips
+  Given 2 jobs with 5 paychecks in total
+  When the user saves to a chosen path and then opens that file in a fresh session
+  Then the same 2 jobs and 5 paychecks exist with identical values
+
+@AC-1.2
+Scenario: Write failure keeps changes unsaved
+  Given unsaved changes
+  And the chosen path is not writable
+  When the user saves
+  Then an error with code "PROJECT_SAVE_FAILED" and no file path or OS detail is shown
+  And the unsaved indicator remains
+
+@AC-1.3
+Scenario: Path is asked once, then reused
+  Given a new project with a job and no path
+  When the user saves
+  Then a native save dialog is shown and the file is written to the chosen path
+  When the user adds a second job and saves again
+  Then no dialog is shown and the same file is overwritten
+
+@AC-1.4
+Scenario: Save As asks again
+  Given a project saved to "example-a.wealth"
+  When the user chooses Save As and picks "example-b.wealth"
+  Then "example-b.wealth" contains the data
+  And later saves go to "example-b.wealth"
+
+@AC-1.5
+Scenario: Cancelling the dialog saves nothing
+  Given a new project with a job and no path
+  When the user saves and cancels the native save dialog
+  Then no file is written
+  And the unsaved indicator remains
+```
+
+**REQ-2: Open** *(event-driven)*
+When the user opens a project file through a native open dialog, the app shall replace the in-memory project with the file's contents.
+
+```gherkin
+@AC-2.1
+Scenario: Open valid file
+  Given a valid project file with 1 job and 2 paychecks
+  When the user opens it
+  Then 1 job and 2 paychecks are shown
+
+@AC-2.2
+Scenario: Invalid file is rejected
+  Given a file that is not a valid project file
+  And the app holds 1 job in memory
+  When the user opens it
+  Then an error with code "PROJECT_INVALID_FILE" is shown
+  And the 1 job in memory is unchanged
+
+@AC-2.3
+Scenario: File from a newer app version is rejected
+  Given a project file with "format_version" 2 and the app understands version 1
+  When the user opens it
+  Then an error with code "PROJECT_INVALID_FILE" is shown
+  And the data in memory is unchanged
+```
+
+**REQ-3: Unsaved-changes indicator** *(state-driven)*
+While the in-memory project differs from the last saved or opened state, the app shall show an unsaved-changes indicator.
+
+```gherkin
+@AC-3.1
+Scenario: Indicator follows edits
+  Given a freshly opened project
+  Then no unsaved indicator is shown
+  When the user adds a job
+  Then the unsaved indicator is shown
+  When the user saves
+  Then the unsaved indicator is cleared
+```
+
+**REQ-4: Confirm close with unsaved changes** *(event-driven)*
+When the user closes the app while the unsaved-changes indicator is shown, the app shall ask for confirmation before closing.
+
+```gherkin
+@AC-4.1
+Scenario: Close prompts
+  Given unsaved changes
+  When the user closes the app
+  Then a confirmation is asked
+  And choosing "cancel" keeps the app open with its data
+
+@AC-4.2
+Scenario: Close without changes
+  Given no unsaved changes
+  When the user closes the app
+  Then the app closes without asking
+```
+
+**REQ-5: Failed save leaves the file intact** *(unwanted behaviour)*
+If writing the project file fails, then the app shall leave any existing file at that path unchanged.
+
+```gherkin
+@AC-5.1
+Scenario: Interrupted write does not corrupt the file
+  Given "example-a.wealth" holds 1 job
+  And the project in memory has 2 jobs
+  When the write fails part-way
+  Then "example-a.wealth" still holds exactly 1 job
+  And the error code "PROJECT_SAVE_FAILED" is shown
+```
+
+**REQ-6: New project** *(event-driven)*
+When the user starts a new project, the app shall replace the in-memory project with an empty one that has no path.
+
+```gherkin
+@AC-6.1
+Scenario: New project is empty
+  Given a project with 1 job saved to "example-a.wealth"
+  When the user starts a new project
+  Then no jobs exist
+  And the next save asks for a path
+
+@AC-6.2
+Scenario: Saved file is untouched by New
+  Given a project with 1 job saved to "example-a.wealth"
+  When the user starts a new project and then closes it without saving
+  Then "example-a.wealth" still holds 1 job
+```
+
+**REQ-7: Confirm before replacing unsaved data** *(event-driven)*
+When the user starts a new project or opens a file while the unsaved-changes indicator is shown, the app shall ask for confirmation before replacing the in-memory project.
+
+```gherkin
+@AC-7.1
+Scenario: Open prompts when unsaved
+  Given unsaved changes
+  When the user chooses Open
+  Then a confirmation is asked before the open dialog
+  And choosing "cancel" keeps the current data
+
+@AC-7.2
+Scenario: New project without unsaved changes
+  Given no unsaved changes
+  When the user starts a new project
+  Then no confirmation is asked
+```
+
+**REQ-8: Start empty** *(ubiquitous)*
+The app shall start with an empty project and shall not open or remember the previously used file.
+
+```gherkin
+@AC-8.1
+Scenario: Fresh launch
+  Given a project was saved to "example-a.wealth" in an earlier session
+  When the app starts
+  Then no jobs exist
+  And no path is set
+```
+
+## 5. Interfaces and contracts
+
+Commands: `new_project()`, `open_project()`, `save_project()`, `save_project_as()`, `project_status()` (returns whether there are unsaved changes and whether a path is set). The save and open commands show the native dialog themselves and take no path from the frontend.
+
+Project file: JSON with the extension `.wealth`, a top-level integer `format_version` (currently 1) and amounts as decimal strings. Each capability owns one section of the file. Income (CSD-001) is the first.
+
+Error codes (code plus safe message): `PROJECT_SAVE_FAILED`, `PROJECT_INVALID_FILE`.
+
+## 6. Constraints
+- CON-1: The project file is plain, unencrypted JSON, written by writing a temporary file and renaming it over the target. It is never committed (`*.wealth` is git-ignored). Rationale: it holds real financial data and the repo is public. The atomic write backs REQ-5.
+- CON-2: File access uses only the Tauri dialog plugin with the save and open dialog permissions. There is no `fs` plugin, and file paths never come from the frontend. Rationale: least privilege per `CLAUDE.md`. Adding the plugin still needs approval at implementation time.
+- CON-3: Amounts in the file are decimal strings and the file carries `format_version`. A newer version than the app knows is rejected. Rationale: no float rounding, and safe forward compatibility.
+- CON-4: Errors shown to the user never contain file paths or OS details. Rationale: `CLAUDE.md` error rules.
+- CON-5: Tests use a temporary directory and synthetic data only, never real app data or real financial data. Rationale: `CLAUDE.md` testing and privacy rules, and the repo is public.
+
+## 7. Verification
+The unsaved flag and the project state live in Rust, so these are proven by `cargo test`, with file round-trips in a temporary directory.
+
+| Requirement | Command |
+|---|---|
+| REQ-1, REQ-2, REQ-3, REQ-5, REQ-6, REQ-8 | `cargo test test_csd002_` (tests are named `test_csd002_ac_<n>_<m>_<description>`, CSD-000 REQ-6). One requirement, e.g. REQ-1: `cargo test test_csd002_ac_1_` |
+| REQ-4, REQ-7 | Manual checklist: confirmation dialogs on close, New and Open, with and without unsaved changes. There is no frontend test setup and none is added |
+
+Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
+
+## 8. Open questions
+- OQ-1: (resolved) Tests include the CSD number, `test_csd<NNN>_ac_n_m_...`. CSD-000 is now 2.1 and `CLAUDE.md` uses the same naming.
+- OQ-2: When approved, `CLAUDE.md` is updated in the same PR: replace "SQLite" with "local project file (JSON), no database", drop the SQLite-crate item from Ask first, and reword the `storage/` layout line. Owner: Thijs. Blocks: approval PR.
+
+## 9. Changelog
+- 0.2 (2026-10-25): Resolved OQ-1. Verification uses the `test_csd002_` filter.
+- 0.1 (2026-10-25): initial draft, split out of CSD-001 v0.3 (its REQ-14 to REQ-21 and CON-7 to CON-9).
