@@ -1,4 +1,4 @@
-// Project file controls: New, Open, Save, Save As, and the unsaved-changes indicator (CSD-002).
+// Project file: runs the File menu actions and shows the unsaved-changes indicator (CSD-002).
 import { invoke, listen, confirmAction, showToast, errorText } from './api.js';
 
 let status = { unsaved_changes: false, has_path: false };
@@ -40,41 +40,40 @@ async function confirmDiscard(action) {
   });
 }
 
+/** The flows behind the File menu items (CSD-002 REQ-9). */
+const menuActions = (onReplaced) => ({
+  'project-new': async () => {
+    if (!(await confirmDiscard('start a new project'))) return;
+    status = await invoke('new_project');
+    render();
+    await onReplaced();
+  },
+  'project-open': async () => {
+    if (!(await confirmDiscard('open another file'))) return;
+    const result = await invoke('open_project');
+    status = result.status;
+    render();
+    if (result.done) await onReplaced();
+  },
+  'project-save': async () => {
+    const result = await invoke('save_project');
+    status = result.status;
+    render();
+  },
+  'project-save-as': async () => {
+    const result = await invoke('save_project_as');
+    status = result.status;
+    render();
+  },
+});
+
 export async function initProject({ onReplaced }) {
-  document.getElementById('project-new').addEventListener('click', () =>
-    attempt(async () => {
-      if (!(await confirmDiscard('start a new project'))) return;
-      status = await invoke('new_project');
-      render();
-      await onReplaced();
-    }),
-  );
-
-  document.getElementById('project-open').addEventListener('click', () =>
-    attempt(async () => {
-      if (!(await confirmDiscard('open another file'))) return;
-      const result = await invoke('open_project');
-      status = result.status;
-      render();
-      if (result.done) await onReplaced();
-    }),
-  );
-
-  document.getElementById('project-save').addEventListener('click', () =>
-    attempt(async () => {
-      const result = await invoke('save_project');
-      status = result.status;
-      render();
-    }),
-  );
-
-  document.getElementById('project-save-as').addEventListener('click', () =>
-    attempt(async () => {
-      const result = await invoke('save_project_as');
-      status = result.status;
-      render();
-    }),
-  );
+  // Rust sends the id of the File menu item the user chose.
+  const actions = menuActions(onReplaced);
+  await listen('menu-action', (event) => {
+    const action = actions[event.payload];
+    if (action) attempt(action);
+  });
 
   // Rust asks for a confirmation when the window or app is closed with unsaved changes.
   await listen('close-requested', () =>
@@ -90,4 +89,8 @@ export async function initProject({ onReplaced }) {
   );
 
   await refreshProjectStatus();
+
+  // The last project could not be reopened at start (CSD-002 REQ-11).
+  const notice = await invoke('take_startup_notice');
+  if (notice) showToast(`Your last project could not be reopened. ${errorText(notice)}`);
 }

@@ -3,6 +3,7 @@
 mod commands;
 mod domain;
 mod error;
+mod menu;
 mod storage;
 
 use tauri::{Emitter, Manager, RunEvent, Runtime, WindowEvent};
@@ -25,6 +26,13 @@ fn has_unsaved_changes(state: &AppState) -> bool {
 fn configure<R: Runtime>(builder: tauri::Builder<R>, utc_offset: UtcOffset) -> tauri::Builder<R> {
     builder
         .manage(AppState::new(utc_offset))
+        .on_menu_event(|app, event| {
+            // CSD-002 REQ-9: the frontend runs the action behind the item.
+            let id = event.id().as_ref();
+            if menu::is_project_item(id) {
+                let _ = app.emit(menu::MENU_EVENT, id);
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             income::list_jobs,
             income::create_job,
@@ -37,6 +45,7 @@ fn configure<R: Runtime>(builder: tauri::Builder<R>, utc_offset: UtcOffset) -> t
             income::copy_previous_paycheck,
             income::yearly_totals,
             project::project_status,
+            project::take_startup_notice,
             project::new_project,
             project::open_project,
             project::save_project,
@@ -61,7 +70,20 @@ pub fn run() {
     let utc_offset = UtcOffset::current_local_offset().unwrap_or(UtcOffset::UTC);
 
     let built = configure(
-        tauri::Builder::default().plugin(tauri_plugin_dialog::init()),
+        tauri::Builder::default()
+            .plugin(tauri_plugin_dialog::init())
+            .setup(|app| {
+                // CSD-002 REQ-8: reopen the last used project. Without a config
+                // folder the app simply starts empty.
+                if let Ok(dir) = app.path().app_config_dir() {
+                    if let Ok(mut project) = app.state::<AppState>().project() {
+                        project.restore(storage::LastProject::in_dir(&dir));
+                    }
+                }
+                Ok(())
+            })
+            // Native menus need the main thread, so the IPC tests skip this.
+            .menu(menu::build),
         utc_offset,
     )
     .build(tauri::generate_context!());

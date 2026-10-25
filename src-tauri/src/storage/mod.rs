@@ -1,8 +1,10 @@
 //! Persistence: the project file (CSD-002).
 
 mod file;
+mod last_project;
 mod project;
 
+pub use last_project::LastProject;
 pub use project::{OpenOutcome, Project, ProjectStatus, SaveOutcome};
 
 use std::io;
