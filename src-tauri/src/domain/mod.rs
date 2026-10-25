@@ -6,4 +6,4 @@ pub mod money;
 
 pub use error::DomainError;
 pub use income::{Income, Job, JobId, JobInput, Paycheck, PaycheckPrefill, YearMonth, YearlyTotal};
-pub use money::Amounts;
+pub use money::{Amounts, Currency};

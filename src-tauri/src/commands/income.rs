@@ -8,7 +8,8 @@ use tauri::State;
 
 use super::AppState;
 use crate::domain::{
-    Amounts, Income, Job, JobId, JobInput, Paycheck, PaycheckPrefill, YearMonth, YearlyTotal,
+    Amounts, Currency, Income, Job, JobId, JobInput, Paycheck, PaycheckPrefill, YearMonth,
+    YearlyTotal,
 };
 use crate::error::AppError;
 
@@ -28,19 +29,28 @@ impl JobView {
     }
 }
 
+/// A paycheck with the job it belongs to, as the paychecks table shows it.
 #[derive(Serialize)]
 pub struct PaycheckView {
     #[serde(flatten)]
     paycheck: Paycheck,
     total_gross: String,
+    employer: String,
+    currency: Currency,
 }
 
-impl From<&Paycheck> for PaycheckView {
-    fn from(paycheck: &Paycheck) -> Self {
+impl PaycheckView {
+    fn new(job: &Job, paycheck: &Paycheck) -> Self {
         Self {
             total_gross: paycheck.amounts.total_gross().to_string(),
             paycheck: paycheck.clone(),
+            employer: job.employer.clone(),
+            currency: job.currency,
         }
+    }
+
+    fn of(income: &Income, paycheck: &Paycheck) -> Result<Self, AppError> {
+        Ok(Self::new(income.job(paycheck.job_id)?, paycheck))
     }
 }
 
@@ -103,14 +113,16 @@ pub fn delete_job(state: State<'_, AppState>, job_id: String) -> Result<(), AppE
     Ok(())
 }
 
+/// The paychecks of all jobs, newest month first (CSD-001 REQ-12).
 #[tauri::command]
-pub fn list_paychecks(
-    state: State<'_, AppState>,
-    job_id: String,
-) -> Result<Vec<PaycheckView>, AppError> {
+pub fn list_paychecks(state: State<'_, AppState>) -> Result<Vec<PaycheckView>, AppError> {
     let project = state.project()?;
-    let paychecks = project.income().paychecks(JobId::parse(&job_id)?)?;
-    Ok(paychecks.into_iter().map(PaycheckView::from).collect())
+    Ok(project
+        .income()
+        .all_paychecks()
+        .into_iter()
+        .map(|(job, paycheck)| PaycheckView::new(job, paycheck))
+        .collect())
 }
 
 #[tauri::command]
@@ -128,7 +140,7 @@ pub fn add_paycheck(
     let paycheck = project
         .income_mut()
         .add_paycheck(job_id, month, amounts, today)?;
-    Ok(PaycheckView::from(&paycheck))
+    PaycheckView::of(project.income(), &paycheck)
 }
 
 #[tauri::command]
@@ -145,7 +157,7 @@ pub fn update_paycheck(
     let paycheck = project
         .income_mut()
         .update_paycheck(job_id, month, amounts)?;
-    Ok(PaycheckView::from(&paycheck))
+    PaycheckView::of(project.income(), &paycheck)
 }
 
 #[tauri::command]
@@ -172,11 +184,9 @@ pub fn copy_previous_paycheck(
         .prefill_from_latest(JobId::parse(&job_id)?)?)
 }
 
+/// Yearly totals summed over all jobs (CSD-001 REQ-11).
 #[tauri::command]
-pub fn yearly_totals(
-    state: State<'_, AppState>,
-    job_id: String,
-) -> Result<Vec<YearlyTotal>, AppError> {
+pub fn yearly_totals(state: State<'_, AppState>) -> Result<Vec<YearlyTotal>, AppError> {
     let project = state.project()?;
-    Ok(project.income().yearly_totals(JobId::parse(&job_id)?)?)
+    Ok(project.income().yearly_totals())
 }

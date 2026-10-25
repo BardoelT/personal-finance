@@ -187,53 +187,14 @@
           <button type="button" class="btn primary" id="job-add-first">Add your first job</button>
         </div>
 
-        <div class="panel" id="jobs-panel" hidden>
-          <div class="panel-header"><span class="panel-title">Jobs</span></div>
-          <ul class="job-list" id="job-list"></ul>
-        </div>
-
-        <div id="job-detail" hidden>
+        <div id="income-content" hidden>
           <div class="panel">
-            <div class="panel-header">
-              <div>
-                <span class="panel-title" id="job-detail-title"></span>
-                <div class="panel-sub" id="job-detail-meta"></div>
-              </div>
-              <div class="btn-row">
-                <button type="button" class="btn" id="job-edit">Edit job</button>
-                <button type="button" class="btn danger" id="job-delete">Delete job</button>
-              </div>
-            </div>
+            <div class="panel-header"><span class="panel-title">Jobs</span></div>
+            <ul class="job-list" id="job-list"></ul>
           </div>
 
           <div class="panel">
-            <div class="panel-header">
-              <span class="panel-title" id="paycheck-title">Paychecks</span>
-              <div class="btn-row">
-                <button type="button" class="btn" id="paycheck-copy">Copy previous month</button>
-                <button type="button" class="btn primary" id="paycheck-add">Add paycheck</button>
-              </div>
-            </div>
-            <p class="empty-note" id="paycheck-empty" hidden>No paychecks yet for this job.</p>
-            <div class="table-wrap">
-              <table class="data-table" id="paycheck-table" hidden>
-                <thead>
-                  <tr>
-                    <th scope="col">Month</th>
-                    <th scope="col" class="num">Gross salary</th>
-                    <th scope="col" class="num">Holiday pay</th>
-                    <th scope="col" class="num">Bonus</th>
-                    <th scope="col" class="num">Total gross</th>
-                    <th scope="col"><span class="visually-hidden">Actions</span></th>
-                  </tr>
-                </thead>
-                <tbody id="paycheck-rows"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="panel">
-            <div class="panel-header"><span class="panel-title" id="totals-title">Yearly totals</span></div>
+            <div class="panel-header"><span class="panel-title">Yearly totals</span></div>
             <p class="empty-note" id="totals-empty" hidden>No totals yet. Totals appear once there is a paycheck.</p>
             <div class="table-wrap">
               <table class="data-table" id="totals-table" hidden>
@@ -248,6 +209,31 @@
                   </tr>
                 </thead>
                 <tbody id="totals-rows"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Paychecks</span>
+              <button type="button" class="btn primary" id="paycheck-add">Add paycheck</button>
+            </div>
+            <p class="empty-note" id="paycheck-empty" hidden>No paychecks yet.</p>
+            <div class="table-wrap">
+              <table class="data-table" id="paycheck-table" hidden>
+                <thead>
+                  <tr>
+                    <th scope="col">Month</th>
+                    <th scope="col">Job</th>
+                    <th scope="col">Currency</th>
+                    <th scope="col" class="num">Gross salary</th>
+                    <th scope="col" class="num">Holiday pay</th>
+                    <th scope="col" class="num">Bonus</th>
+                    <th scope="col" class="num">Total gross</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody id="paycheck-rows"></tbody>
               </table>
             </div>
           </div>
@@ -393,6 +379,12 @@
   <dialog id="paycheck-dialog" aria-labelledby="paycheck-dialog-title">
     <form method="dialog" id="paycheck-form" novalidate>
       <h2 id="paycheck-dialog-title">Add paycheck</h2>
+      <label class="field">Job
+        <select name="job_id"></select>
+      </label>
+      <div class="field-action">
+        <button type="button" class="btn" id="paycheck-copy">Copy previous month</button>
+      </div>
       <label class="field">Month (YYYY-MM)
         <input type="text" name="month" inputmode="numeric" placeholder="2026-09" maxlength="7" autocomplete="off" required>
       </label>

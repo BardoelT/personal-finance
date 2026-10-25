@@ -3,7 +3,7 @@ id: CSD-001
 title: Employment income tracking
 status: approved
 owner: Thijs Bardoel
-version: 0.6
+version: 0.7
 last_updated: 25/10/2026
 related: [CSD-000, CSD-002]
 ---
@@ -17,7 +17,7 @@ The app tracks wealth but has no view of what comes in. This capability lets the
 ### 2.1 In scope
 - Create, edit, end and delete jobs.
 - Create, edit and delete one paycheck per job per calendar month.
-- Yearly totals per job.
+- One employment view with the jobs, the yearly totals over all jobs and the paychecks of all jobs.
 - Income data is part of the project file. Saving and loading is specified in CSD-002.
 
 ### 2.2 Non-goals
@@ -26,7 +26,7 @@ The app tracks wealth but has no view of what comes in. This capability lets the
 - NG-3: Automatic payslip import (PDF, bank) and bulk import of paychecks.
 - NG-4: Forecasting future income.
 - NG-5: Integration with net worth.
-- NG-6: A combined income-over-time chart or view across jobs (candidate for a later CSD).
+- NG-6: A chart or other income-over-time visualisation (candidate for a later CSD). Yearly totals over all jobs are in scope (REQ-11).
 - NG-7: Automatic calculation of holiday pay or any other amount. All amounts are entered manually.
 - NG-8: (moved to CSD-002 NG-1 in v0.4)
 
@@ -154,7 +154,7 @@ Scenario: Cancelled deletion changes nothing
 ### 4.2 Paychecks
 
 **REQ-5: Add a paycheck** *(event-driven)*
-When the user submits a paycheck for a job and a calendar month with a gross salary, the app shall store it, with holiday pay and bonus defaulting to 0.00, and shall accept any month that is not later than the current month, including months outside the job's start and end dates.
+When the user submits a paycheck for the job chosen in the add form and a calendar month with a gross salary, the app shall store it, with holiday pay and bonus defaulting to 0.00, and shall accept any month that is not later than the current month, including months outside the job's start and end dates.
 
 ```gherkin
 @AC-5.1
@@ -187,6 +187,13 @@ Scenario: Current month is accepted
   Given the current date is 25/10/2026
   When the user adds a paycheck for 2026-10 with gross salary 3000.00
   Then the paycheck for 2026-10 exists
+
+@AC-5.6
+Scenario: The add form chooses the job
+  Given jobs "Example Employer" starting 01/03/2024 and "Older Example Employer" starting 01/01/2020
+  When the user opens the add paycheck form
+  Then the job shown is "Example Employer", the job with the newest start date
+  And the user can choose "Older Example Employer" instead
 ```
 
 **REQ-6: One paycheck per job per month** *(unwanted behaviour)*
@@ -267,21 +274,28 @@ Scenario: Month stays fixed on edit
 ```
 
 **REQ-9: Copy previous month** *(event-driven)*
-When the user starts adding a paycheck using "copy previous month", the app shall pre-fill the form with the gross salary of the job's most recent paycheck and holiday pay and bonus of 0.00, and shall not store anything until the user confirms.
+When the user chooses "copy previous month" in the add paycheck form, the app shall pre-fill the gross salary with that of the most recent paycheck of the job chosen in the form and holiday pay and bonus with 0.00, and shall not store anything until the user confirms.
 
 ```gherkin
 @AC-9.1
 Scenario: Form pre-filled from latest paycheck
   Given a job with paychecks for 2026-07 (gross 3000.00) and 2026-08 (gross 3100.00, bonus 500.00)
-  When the user starts "copy previous month"
+  When the user chooses "copy previous month" in the add form for that job
   Then the form shows gross 3100.00, holiday pay 0.00 and bonus 0.00
   And no new paycheck exists
 
 @AC-9.2
 Scenario: No paycheck to copy
   Given a job with no paychecks
-  When the user starts "copy previous month"
+  When the user chooses "copy previous month" in the add form for that job
   Then the form shows gross empty, holiday pay 0.00 and bonus 0.00
+
+@AC-9.3
+Scenario: The copy follows the chosen job
+  Given job "Example Employer" with a latest paycheck of gross 3000.00
+  And job "Older Example Employer" with a latest paycheck of gross 1000.00
+  When the user chooses "Older Example Employer" in the add form and then "copy previous month"
+  Then the form shows gross 1000.00
 ```
 
 **REQ-10: Total gross is derived** *(ubiquitous)*
@@ -297,7 +311,7 @@ Scenario: Total is the sum
 ### 4.3 Views
 
 **REQ-11: Yearly totals** *(event-driven)*
-When the user views a job's yearly totals, the app shall return, for each calendar year with at least one paycheck, the sums of gross salary, holiday pay, bonus and total gross, and the number of paychecks, without extrapolating partial years.
+When the user views the employment overview, the app shall show, for each calendar year with at least one paycheck of any job, the sums over all jobs of gross salary, holiday pay, bonus and total gross and the number of paychecks, without extrapolating partial years and without converting currencies.
 
 ```gherkin
 @AC-11.1
@@ -311,11 +325,26 @@ Scenario: Totals per calendar year
 Scenario: No paychecks
   Given a job with no paychecks
   When the user views the yearly totals
-  Then the totals list is empty and the UI shows 0.00
+  Then the totals list is empty
+  And a short note says there are no totals yet
+
+@AC-11.3
+Scenario: Totals add up all jobs
+  Given job "Example Employer" with paychecks 2026-08 (gross 3000.00) and 2026-09 (gross 3000.00, bonus 500.00)
+  And job "Older Example Employer" with paycheck 2026-09 (gross 1000.00)
+  When the user views the yearly totals
+  Then there is one row for 2026 with gross 7000.00, holiday pay 0.00, bonus 500.00, total 7500.00, count 3
+
+@AC-11.4
+Scenario: Currencies are not converted
+  Given an EUR job with paycheck 2026-09 (gross 3000.00)
+  And a USD job with paycheck 2026-09 (gross 1000.00)
+  When the user views the yearly totals
+  Then the row for 2026 shows gross 4000.00
 ```
 
 **REQ-12: Ordering** *(ubiquitous)*
-The app shall list jobs by start date, newest first, and a job's paychecks by month, newest first.
+The app shall list jobs by start date, newest first, the paychecks of all jobs by month, newest first and, within a month, by job in job order, and the yearly totals by year, newest first.
 
 ```gherkin
 @AC-12.1
@@ -323,10 +352,21 @@ Scenario: Newest first
   Given jobs starting 01/01/2020 and 01/03/2024, and a job with paychecks for 2026-07 and 2026-09
   Then jobs are listed 01/03/2024 before 01/01/2020
   And paychecks are listed 2026-09 before 2026-07
+
+@AC-12.2
+Scenario: Same month is ordered by job
+  Given job "Example Employer" starting 01/03/2024 and job "Older Example Employer" starting 01/01/2020
+  And both have a paycheck for 2026-09
+  Then the paycheck of "Example Employer" is listed before that of "Older Example Employer"
+
+@AC-12.3
+Scenario: Yearly totals newest year first
+  Given paychecks in 2024, 2026 and 2025
+  Then the yearly totals are listed 2026, 2025, 2024
 ```
 
 **REQ-13: Empty states** *(state-driven)*
-While no jobs exist, the app shall show an "add your first job" prompt, and while a job has no paychecks, the app shall show an empty paycheck table with totals of 0.00 and no error.
+While no jobs exist, the app shall show an "add your first job" prompt, and while jobs exist but have no paychecks, the app shall show a short note in the yearly totals and paychecks sections, with no totals rows and no error.
 
 ```gherkin
 @AC-13.1
@@ -335,9 +375,10 @@ Scenario: No jobs
   Then the income view shows an "add your first job" prompt
 
 @AC-13.2
-Scenario: Job without paychecks
+Scenario: Jobs without paychecks
   Given a job with no paychecks
-  Then the paycheck table is empty and no error is shown
+  Then the yearly totals and the paychecks show a short note
+  And no error is shown
 ```
 
 **REQ-22: Date format** *(ubiquitous)*
@@ -371,6 +412,35 @@ Scenario: Month stays YYYY-MM
   Then the paycheck is stored for the month "2026-09"
 ```
 
+**REQ-23: Employment view layout** *(ubiquitous)*
+The app shall show the employment view as the sections Jobs, Yearly totals and Paychecks in that order, with Edit job and Delete job on each job in the Jobs section, a Job column and a Currency column in the paychecks, and no job selection that changes what the sections show.
+
+```gherkin
+@AC-23.1
+Scenario: Sections in order
+  Given a job with a paycheck
+  Then the sections appear in the order Jobs, Yearly totals, Paychecks
+  And there is no section that only describes one selected job
+
+@AC-23.2
+Scenario: Job rows carry their actions and paycheck count
+  Given job "Example Employer" with 2 paychecks
+  Then its row in the Jobs section shows the employer, dates, currency and "2 paychecks"
+  And the row has the buttons "Edit job" and "Delete job"
+
+@AC-23.3
+Scenario: Paychecks of all jobs with their job
+  Given job "Example Employer" with a paycheck for 2026-09 (EUR) and job "Older Example Employer" with a paycheck for 2026-08 (USD)
+  Then the Paychecks section lists both paychecks
+  And the Job column shows "Example Employer" and "Older Example Employer" and the Currency column shows "EUR" and "USD"
+
+@AC-23.4
+Scenario: Clicking a job changes nothing
+  Given two jobs with paychecks
+  When the user clicks a job row
+  Then the yearly totals and the paychecks are unchanged
+```
+
 ### 4.4 Saving and loading
 REQ-14 to REQ-21 (removed in v0.4): moved to CSD-002 (Project file). Income data is saved and loaded as one section of that project file.
 
@@ -399,12 +469,12 @@ erDiagram
 ```
 
 Commands (all inputs validated in Rust; amounts cross IPC as decimal strings):
-`list_jobs`, `create_job`, `update_job`, `delete_job`, `list_paychecks(job_id)`, `add_paycheck`, `update_paycheck`, `delete_paycheck`, `yearly_totals(job_id)`. Project commands (save, open, new) are in CSD-002. The income data is stored as one section of the project file defined there.
+`list_jobs`, `create_job`, `update_job`, `delete_job`, `list_paychecks()` (all jobs, each with its employer and currency), `add_paycheck`, `update_paycheck`, `delete_paycheck`, `copy_previous_paycheck(job_id)`, `yearly_totals()` (over all jobs). Project commands (save, open, new) are in CSD-002. The income data is stored as one section of the project file defined there.
 
 Error codes (returned as code plus safe message): `JOB_EMPLOYER_REQUIRED`, `JOB_START_REQUIRED`, `JOB_END_BEFORE_START`, `JOB_CURRENCY_UNSUPPORTED`, `JOB_CURRENCY_LOCKED`, `PAYCHECK_MONTH_IN_FUTURE`, `PAYCHECK_DUPLICATE_MONTH`, `PAYCHECK_GROSS_INVALID`, `PAYCHECK_AMOUNT_NEGATIVE`, `PAYCHECK_AMOUNT_PRECISION`, `PAYCHECK_AMOUNT_TOO_LARGE`, `JOB_DATE_INVALID`. Project error codes are in CSD-002.
 
 ## 6. Constraints
-- CON-1: Amounts use `rust_decimal::Decimal` and carry the job's currency. Totals are per job and never summed across currencies. Rationale: `CLAUDE.md` money rules.
+- CON-1: Amounts use `rust_decimal::Decimal` and carry the job's currency. Temporary exception (v0.7): the yearly totals add the amounts of all jobs without converting currencies (REQ-11, AC-11.4). Rationale: `CLAUDE.md` money rules apply, except that the owner will make the whole project file single-currency (OQ-8), which removes the exception.
 - CON-2: The frontend displays figures computed in Rust and computes none itself. Rationale: `CLAUDE.md` layout rule.
 - CON-3: No network access. Rationale: `CLAUDE.md` Tauri security rules.
 - CON-4: Errors shown to the user never contain file paths or OS details. Rationale: `CLAUDE.md` error rules.
@@ -420,7 +490,8 @@ All ACs are proven by `cargo test`, with domain logic tested in `domain/`. Tests
 | Requirement | Command |
 |---|---|
 | All of REQ-1 to REQ-13, and AC-22.2 and AC-22.3 | `cargo test test_csd001_` |
-| AC-22.1 (display) | Manual checklist: job list and job details show dd/mm/yyyy. There is no frontend test setup |
+| AC-5.6, AC-22.1, REQ-23 (AC-23.1, AC-23.2, AC-23.4) and the display parts of AC-9.3, AC-11.2, AC-13.2 | Manual checklist: section order and contents, job buttons and paycheck counts, no selection, dd/mm/yyyy dates, default job in the add form. There is no frontend test setup |
+| AC-23.3 (data) | `cargo test test_csd001_ac_23_` covers the data of the paychecks table (all jobs, employer, currency) |
 | One requirement, e.g. REQ-5 | `cargo test test_csd001_ac_5_` |
 
 Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
@@ -433,8 +504,10 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 - OQ-5: (moved to CSD-002 in v0.4) Testing the unsaved state, resolved there.
 - OQ-6: (resolved in v0.2) The month of an existing paycheck is not editable.
 - OQ-7: (resolved in v0.2) Deleting a single paycheck needs no confirmation.
+- OQ-8: The project file will become single-currency. Then the per-job currency, `JOB_CURRENCY_*` codes, the Currency column and the CON-1 exception are removed in a later version. Owner: Thijs. Blocks: nothing now.
 
 ## 9. Changelog
+- 0.7 (25/10/2026): The employment view no longer has a selected job. Yearly totals are summed over all jobs (REQ-11, AC-11.3, AC-11.4), the paychecks of all jobs are listed together with Job and Currency columns (REQ-12, REQ-23), the job is chosen in the add form and "copy previous month" moves into it (REQ-5, AC-5.6, REQ-9, AC-9.3). NG-6 narrowed to charts. CON-1 gets a temporary exception for summing mixed currencies (OQ-8). Commands `list_paychecks()` and `yearly_totals()` no longer take a job.
 - 0.6 (25/10/2026): Dates are written dd/mm/yyyy (CSD-000 2.2, CON-7). New REQ-22 (date format, AC-22.1 to AC-22.3), error code `JOB_DATE_INVALID` listed, existing examples converted. Months stay YYYY-MM; the file and commands keep ISO 8601 internally.
 - 0.5 (25/10/2026): Verification uses the `test_csd001_` filter (CSD-000 2.1 naming).
 - 0.4 (25/10/2026): Split persistence into CSD-002. REQ-14 to REQ-21, NG-8, CON-7 to CON-9, AC-14.* to AC-21.*, the project commands and error codes, and OQ-1, OQ-2, OQ-3, OQ-5 moved there (IDs kept as removed markers per CSD-000 CON-6). No change to income behaviour.

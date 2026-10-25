@@ -393,7 +393,7 @@ body {
 .btn.danger:hover { border-color: var(--negative); }
 .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .push-right { margin-left: auto; }
-.btn:focus-visible, .job-row:focus-visible, .link-btn:focus-visible {
+.btn:focus-visible, .link-btn:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -407,32 +407,29 @@ body {
 .job-list li:last-child { border-bottom: none; }
 .job-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 14px;
-  width: 100%;
-  padding: 13px 20px;
-  font: inherit;
-  color: var(--text);
-  background: none;
-  border: none;
-  border-left: 3px solid transparent;
-  text-align: left;
-  cursor: pointer;
+  padding: 11px 20px;
 }
-.job-row:hover { background: var(--bg); }
-.job-row[aria-pressed="true"] { border-left-color: var(--accent); background: rgba(67,97,238,.07); }
 .job-name { font-size: 14px; font-weight: 600; }
 .job-meta { flex: 1; font-size: 12px; color: var(--muted); min-width: 0; }
 .job-count { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.job-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.field-action { margin: -2px 0 12px; }
+.field-action .btn { font-size: 12px; padding: 5px 10px; }
 
 .table-wrap { overflow-x: auto; }
 .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .data-table th, .data-table td {
-  padding: 10px 20px;
+  padding: 10px 10px;
   border-bottom: 1px solid var(--border);
   text-align: left;
   font-weight: 400;
+  white-space: nowrap;
 }
+.data-table td.wrap { white-space: normal; min-width: 110px; max-width: 220px; }
+.data-table th:first-child, .data-table td:first-child { padding-left: 20px; }
+.data-table th:last-child, .data-table td:last-child { padding-right: 20px; }
 .data-table thead th {
   font-size: 11px;
   font-weight: 600;

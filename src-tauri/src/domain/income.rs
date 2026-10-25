@@ -398,14 +398,32 @@ impl Income {
         })
     }
 
-    /// Sums per calendar year, newest year first, without extrapolating
-    /// partial years (REQ-11).
-    ///
-    /// # Errors
-    /// Returns `JobNotFound`.
-    pub fn yearly_totals(&self, job_id: JobId) -> Result<Vec<YearlyTotal>, DomainError> {
+    /// The paychecks of all jobs with their job, newest month first and, within
+    /// a month, in job order (REQ-12).
+    #[must_use]
+    pub fn all_paychecks(&self) -> Vec<(&Job, &Paycheck)> {
+        let mut rows: Vec<(usize, &Job, &Paycheck)> = Vec::new();
+        for (position, job) in self.jobs().into_iter().enumerate() {
+            rows.extend(
+                self.paychecks
+                    .iter()
+                    .filter(|paycheck| paycheck.job_id == job.id)
+                    .map(|paycheck| (position, job, paycheck)),
+            );
+        }
+        rows.sort_by(|a, b| b.2.month.cmp(&a.2.month).then(a.0.cmp(&b.0)));
+        rows.into_iter()
+            .map(|(_, job, paycheck)| (job, paycheck))
+            .collect()
+    }
+
+    /// Sums per calendar year over all jobs, newest year first, without
+    /// extrapolating partial years (REQ-11). Currencies are not converted: the
+    /// amounts are added as they are (CON-1, temporary exception).
+    #[must_use]
+    pub fn yearly_totals(&self) -> Vec<YearlyTotal> {
         let mut by_year: BTreeMap<i32, YearlyTotal> = BTreeMap::new();
-        for paycheck in self.paychecks(job_id)? {
+        for paycheck in &self.paychecks {
             let year = paycheck.month.year();
             let total = by_year.entry(year).or_insert_with(|| YearlyTotal {
                 year,
@@ -421,7 +439,7 @@ impl Income {
             total.total_gross += paycheck.amounts.total_gross();
             total.paycheck_count += 1;
         }
-        Ok(by_year.into_values().rev().collect())
+        by_year.into_values().rev().collect()
     }
 
     /// Checks the invariants of data that came from outside, such as a file.
@@ -458,7 +476,11 @@ impl Income {
         Ok(())
     }
 
-    fn job(&self, id: JobId) -> Result<&Job, DomainError> {
+    /// A job by id.
+    ///
+    /// # Errors
+    /// Returns `JobNotFound`.
+    pub fn job(&self, id: JobId) -> Result<&Job, DomainError> {
         self.jobs
             .iter()
             .find(|job| job.id == id)
@@ -963,7 +985,7 @@ mod tests {
                 today(),
             )
             .unwrap();
-        let totals = income.yearly_totals(id).unwrap();
+        let totals = income.yearly_totals();
         assert_eq!(totals.len(), 2);
         let (y2026, y2025) = (&totals[0], &totals[1]);
         assert_eq!(y2026.year, 2026);
@@ -983,19 +1005,50 @@ mod tests {
     #[test]
     fn test_csd001_ac_11_2_no_paychecks_gives_no_totals() {
         let mut income = Income::default();
-        let id = job_with(&mut income, "01/03/2024", "");
-        assert_eq!(income.yearly_totals(id).unwrap().len(), 0);
+        job_with(&mut income, "01/03/2024", "");
+        assert_eq!(income.yearly_totals().len(), 0);
     }
 
     #[test]
-    fn yearly_totals_only_count_the_given_job() {
+    fn test_csd001_ac_11_3_totals_add_up_all_jobs() {
         let mut income = Income::default();
         let first = job_with(&mut income, "01/03/2024", "");
-        let second = job_with(&mut income, "01/01/2025", "");
-        add(&mut income, first, "2026-09", "3000.00");
+        let second = job_with(&mut income, "01/01/2020", "");
+        add(&mut income, first, "2026-08", "3000.00");
+        income
+            .add_paycheck(
+                first,
+                month("2026-09"),
+                amounts("3000.00", "", "500.00"),
+                today(),
+            )
+            .unwrap();
         add(&mut income, second, "2026-09", "1000.00");
-        let totals = income.yearly_totals(first).unwrap();
-        assert_eq!(totals[0].total_gross.to_string(), "3000.00");
+
+        let totals = income.yearly_totals();
+        assert_eq!(totals.len(), 1);
+        let year = &totals[0];
+        assert_eq!(year.year, 2026);
+        assert_eq!(year.gross_salary.to_string(), "7000.00");
+        assert_eq!(year.holiday_pay.to_string(), "0.00");
+        assert_eq!(year.bonus.to_string(), "500.00");
+        assert_eq!(year.total_gross.to_string(), "7500.00");
+        assert_eq!(year.paycheck_count, 3);
+    }
+
+    #[test]
+    fn test_csd001_ac_11_4_currencies_are_not_converted() {
+        let mut income = Income::default();
+        let eur = job_with(&mut income, "01/03/2024", "");
+        let usd = income
+            .create_job(&input("Other Example Employer", "01/01/2020", "", "USD"))
+            .unwrap()
+            .id;
+        add(&mut income, eur, "2026-09", "3000.00");
+        add(&mut income, usd, "2026-09", "1000.00");
+        let totals = income.yearly_totals();
+        assert_eq!(totals.len(), 1);
+        assert_eq!(totals[0].gross_salary.to_string(), "4000.00");
     }
 
     // ---- REQ-12: ordering ----
@@ -1018,6 +1071,42 @@ mod tests {
         assert_eq!(months, ["2026-09", "2026-07"]);
     }
 
+    #[test]
+    fn test_csd001_ac_12_2_same_month_is_ordered_by_job() {
+        let mut income = Income::default();
+        let old = job_with(&mut income, "01/01/2020", "");
+        let recent = job_with(&mut income, "01/03/2024", "");
+        // Added in the opposite order of the expected result.
+        add(&mut income, old, "2026-09", "1000.00");
+        add(&mut income, recent, "2026-09", "3000.00");
+        add(&mut income, old, "2026-10", "1000.00");
+
+        let order: Vec<(String, JobId)> = income
+            .all_paychecks()
+            .into_iter()
+            .map(|(job, paycheck)| (paycheck.month.to_string(), job.id))
+            .collect();
+        assert_eq!(
+            order,
+            [
+                ("2026-10".to_owned(), old),
+                ("2026-09".to_owned(), recent),
+                ("2026-09".to_owned(), old),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_csd001_ac_12_3_yearly_totals_newest_year_first() {
+        let mut income = Income::default();
+        let id = job_with(&mut income, "01/03/2024", "");
+        add(&mut income, id, "2024-05", "1000.00");
+        add(&mut income, id, "2026-05", "1000.00");
+        add(&mut income, id, "2025-05", "1000.00");
+        let years: Vec<i32> = income.yearly_totals().iter().map(|t| t.year).collect();
+        assert_eq!(years, [2026, 2025, 2024]);
+    }
+
     // ---- REQ-13: empty states ----
 
     #[test]
@@ -1030,7 +1119,45 @@ mod tests {
         let mut income = Income::default();
         let id = job_with(&mut income, "01/03/2024", "");
         assert_eq!(income.paychecks(id).unwrap().len(), 0);
-        assert_eq!(income.yearly_totals(id).unwrap().len(), 0);
+        assert_eq!(income.all_paychecks().len(), 0);
+        assert_eq!(income.yearly_totals().len(), 0);
+    }
+
+    // ---- REQ-23: employment view (data behind the paychecks table) ----
+
+    #[test]
+    fn test_csd001_ac_23_3_paychecks_of_all_jobs_come_with_their_job() {
+        let mut income = Income::default();
+        let eur = job_with(&mut income, "01/03/2024", "");
+        let usd = income
+            .create_job(&input("Older Example Employer", "01/01/2020", "", "USD"))
+            .unwrap()
+            .id;
+        add(&mut income, eur, "2026-09", "3000.00");
+        add(&mut income, usd, "2026-08", "1000.00");
+
+        let rows: Vec<(&str, Currency, String)> = income
+            .all_paychecks()
+            .into_iter()
+            .map(|(job, paycheck)| {
+                (
+                    job.employer.as_str(),
+                    job.currency,
+                    paycheck.month.to_string(),
+                )
+            })
+            .collect();
+        assert_eq!(
+            rows,
+            [
+                ("Example Employer", Currency::Eur, "2026-09".to_owned()),
+                (
+                    "Older Example Employer",
+                    Currency::Usd,
+                    "2026-08".to_owned()
+                ),
+            ]
+        );
     }
 
     // ---- REQ-22: date format ----

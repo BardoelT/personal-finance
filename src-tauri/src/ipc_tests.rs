@@ -99,7 +99,7 @@ fn income_flow_through_ipc_matches_what_the_frontend_expects() {
         json!({ "jobId": job_id, "month": "2026-05", "amounts": amounts("3000", "2400", "") }),
     );
 
-    let paychecks = app.ok("list_paychecks", json!({ "jobId": job_id }));
+    let paychecks = app.ok("list_paychecks", json!({}));
     let months: Vec<&str> = paychecks
         .as_array()
         .unwrap()
@@ -108,8 +108,13 @@ fn income_flow_through_ipc_matches_what_the_frontend_expects() {
         .collect();
     assert_eq!(months, ["2026-05", "2025-12"], "newest first");
     assert_eq!(paychecks[0]["total_gross"], "5400.00");
+    // The paychecks table needs the job without another round trip.
+    assert_eq!(paychecks[0]["employer"], "Example Employer");
+    assert_eq!(paychecks[0]["currency"], "EUR");
+    assert_eq!(paychecks[0]["job_id"], job_id);
+    assert_eq!(added["employer"], "Example Employer");
 
-    let totals = app.ok("yearly_totals", json!({ "jobId": job_id }));
+    let totals = app.ok("yearly_totals", json!({}));
     assert_eq!(totals[0]["year"], 2026);
     assert_eq!(totals[0]["total_gross"], "5400.00");
     assert_eq!(totals[0]["paycheck_count"], 1);
@@ -136,7 +141,7 @@ fn income_flow_through_ipc_matches_what_the_frontend_expects() {
         json!({ "jobId": job_id, "month": "2025-12" }),
     );
     assert_eq!(
-        app.ok("list_paychecks", json!({ "jobId": job_id }))
+        app.ok("list_paychecks", json!({}))
             .as_array()
             .unwrap()
             .len(),
@@ -209,7 +214,7 @@ fn errors_reach_the_frontend_as_code_and_safe_message() {
     assert_eq!(kept["currency"], "EUR");
     assert_eq!(kept["employer"], "Renamed");
 
-    let missing = app.err("list_paychecks", json!({ "jobId": "not-a-job" }));
+    let missing = app.err("copy_previous_paycheck", json!({ "jobId": "not-a-job" }));
     assert_eq!(missing["code"], "JOB_NOT_FOUND");
 }
 
@@ -240,4 +245,62 @@ fn close_is_prevented_only_while_there_are_unsaved_changes() {
     assert!(crate::has_unsaved_changes(&state));
     app.ok("new_project", json!({}));
     assert!(!crate::has_unsaved_changes(&state));
+}
+
+#[test]
+fn test_csd001_ac_23_3_paychecks_and_totals_span_all_jobs_over_ipc() {
+    let app = harness();
+    let eur = app.ok("create_job", json!({ "input": job_input() }));
+    let usd = app.ok(
+        "create_job",
+        json!({ "input": {
+            "employer": "Older Example Employer",
+            "start_date": "01/01/2020",
+            "currency": "USD"
+        } }),
+    );
+    let (eur_id, usd_id) = (eur["id"].as_str().unwrap(), usd["id"].as_str().unwrap());
+    app.ok(
+        "add_paycheck",
+        json!({ "jobId": eur_id, "month": "2026-09", "amounts": amounts("3000.00", "", "") }),
+    );
+    app.ok(
+        "add_paycheck",
+        json!({ "jobId": usd_id, "month": "2026-09", "amounts": amounts("1000.00", "", "500") }),
+    );
+    app.ok(
+        "add_paycheck",
+        json!({ "jobId": usd_id, "month": "2026-08", "amounts": amounts("1000.00", "", "") }),
+    );
+
+    let rows = app.ok("list_paychecks", json!({}));
+    let table: Vec<(&str, &str, &str)> = rows
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|row| {
+            (
+                row["month"].as_str().unwrap(),
+                row["employer"].as_str().unwrap(),
+                row["currency"].as_str().unwrap(),
+            )
+        })
+        .collect();
+    assert_eq!(
+        table,
+        [
+            ("2026-09", "Example Employer", "EUR"),
+            ("2026-09", "Older Example Employer", "USD"),
+            ("2026-08", "Older Example Employer", "USD"),
+        ]
+    );
+
+    // One row for the year, all jobs added together (currencies not converted).
+    let totals = app.ok("yearly_totals", json!({}));
+    assert_eq!(totals.as_array().unwrap().len(), 1);
+    assert_eq!(totals[0]["year"], 2026);
+    assert_eq!(totals[0]["gross_salary"], "5000.00");
+    assert_eq!(totals[0]["bonus"], "500.00");
+    assert_eq!(totals[0]["total_gross"], "5500.00");
+    assert_eq!(totals[0]["paycheck_count"], 3);
 }
