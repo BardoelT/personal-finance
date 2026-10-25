@@ -3,8 +3,8 @@ id: CSD-001
 title: Employment income tracking
 status: approved
 owner: Thijs Bardoel
-version: 0.5
-last_updated: 2026-10-25
+version: 0.6
+last_updated: 25/10/2026
 related: [CSD-000, CSD-002]
 ---
 
@@ -35,6 +35,7 @@ The app tracks wealth but has no view of what comes in. This capability lets the
 |---|---|
 | **Job** | One employment relationship, identified by an employer name and start date. |
 | **Paycheck** | The record of one job for one calendar month (`YYYY-MM`). |
+| **Date format** | Dates are shown and typed as dd/mm/yyyy (for example 01/03/2024). Months stay `YYYY-MM`. |
 | **Total gross** | Gross salary + holiday pay + bonus of one paycheck. |
 | **Project file** | The single user-chosen file holding all app data. Income is its first section. See CSD-002. |
 
@@ -64,8 +65,8 @@ When the user submits a new job with an employer name and a start date, the app 
 @AC-1.1
 Scenario: Job created with defaults
   Given no jobs exist
-  When the user adds a job with employer "Example Employer" and start date 2024-03-01
-  Then one job exists with employer "Example Employer", start date 2024-03-01 and currency "EUR"
+  When the user adds a job with employer "Example Employer" and start date 01/03/2024
+  Then one job exists with employer "Example Employer", start date 01/03/2024 and currency "EUR"
   And the job has no title and no end date
 
 @AC-1.2
@@ -77,20 +78,20 @@ Scenario Outline: Invalid job is rejected
 
   Examples:
     | employer         | start      | end        | code                |
-    |                  | 2024-03-01 |            | JOB_EMPLOYER_REQUIRED |
+    |                  | 01/03/2024 |            | JOB_EMPLOYER_REQUIRED |
     | Example Employer |            |            | JOB_START_REQUIRED    |
-    | Example Employer | 2024-03-01 | 2024-02-29 | JOB_END_BEFORE_START  |
+    | Example Employer | 01/03/2024 | 29/02/2024 | JOB_END_BEFORE_START  |
 
 @AC-1.3
 Scenario: Supported non-default currency
   Given no jobs exist
-  When the user adds a job with employer "Example Employer", start date 2024-03-01 and currency "GBP"
+  When the user adds a job with employer "Example Employer", start date 01/03/2024 and currency "GBP"
   Then the job has currency "GBP"
 
 @AC-1.4
 Scenario: Unsupported currency is rejected
   Given no jobs exist
-  When the user adds a job with employer "Example Employer", start date 2024-03-01 and currency "CHF"
+  When the user adds a job with employer "Example Employer", start date 01/03/2024 and currency "CHF"
   Then the job is rejected with error code "JOB_CURRENCY_UNSUPPORTED"
   And no job exists
 ```
@@ -101,15 +102,15 @@ When the user edits a job's employer, title, start date or end date, the app sha
 ```gherkin
 @AC-2.1
 Scenario: Dates change freely with paychecks present
-  Given a job "Example Employer" starting 2024-03-01 with a paycheck for 2024-03
-  When the user sets the job's start date to 2024-06-01 and its end date to 2025-01-31
-  Then the job has start date 2024-06-01 and end date 2025-01-31
+  Given a job "Example Employer" starting 01/03/2024 with a paycheck for 2024-03
+  When the user sets the job's start date to 01/06/2024 and its end date to 31/01/2025
+  Then the job has start date 01/06/2024 and end date 31/01/2025
   And the paycheck for 2024-03 still exists
 
 @AC-2.2
 Scenario: End date before start date is rejected on edit
-  Given a job "Example Employer" starting 2024-03-01
-  When the user sets the job's end date to 2024-02-01
+  Given a job "Example Employer" starting 01/03/2024
+  When the user sets the job's end date to 01/02/2024
   Then the edit is rejected with error code "JOB_END_BEFORE_START"
   And the job has no end date
 ```
@@ -158,32 +159,32 @@ When the user submits a paycheck for a job and a calendar month with a gross sal
 ```gherkin
 @AC-5.1
 Scenario: Paycheck with defaults
-  Given the current date is 2026-10-25
-  And an EUR job "Example Employer" starting 2024-03-01
+  Given the current date is 25/10/2026
+  And an EUR job "Example Employer" starting 01/03/2024
   When the user adds a paycheck for 2026-09 with gross salary 3000.00
   Then the paycheck has gross salary 3000.00, holiday pay 0.00, bonus 0.00 and total gross 3000.00
 
 @AC-5.2
 Scenario: Month before the job start date is accepted
-  Given an EUR job "Example Employer" starting 2024-03-01
+  Given an EUR job "Example Employer" starting 01/03/2024
   When the user adds a paycheck for 2024-01 with gross salary 2800.00
   Then the paycheck for 2024-01 exists
 
 @AC-5.3
 Scenario: Month after the job end date is accepted
-  Given an EUR job "Example Employer" ending 2025-01-31
+  Given an EUR job "Example Employer" ending 31/01/2025
   When the user adds a paycheck for 2025-03 with gross salary 1500.00
   Then the paycheck for 2025-03 exists
 
 @AC-5.4
 Scenario: Month later than the current month is rejected
-  Given the current date is 2026-10-25
+  Given the current date is 25/10/2026
   When the user adds a paycheck for 2026-11 with gross salary 3000.00
   Then the paycheck is rejected with error code "PAYCHECK_MONTH_IN_FUTURE"
 
 @AC-5.5
 Scenario: Current month is accepted
-  Given the current date is 2026-10-25
+  Given the current date is 25/10/2026
   When the user adds a paycheck for 2026-10 with gross salary 3000.00
   Then the paycheck for 2026-10 exists
 ```
@@ -212,7 +213,7 @@ If a paycheck amount is negative, has more than two decimal places or exceeds 1,
 ```gherkin
 @AC-7.1
 Scenario Outline: Invalid amounts rejected
-  Given an EUR job and the current date 2026-10-25
+  Given an EUR job and the current date 25/10/2026
   When the user adds a paycheck for 2026-09 with gross "<gross>", holiday pay "<holiday>" and bonus "<bonus>"
   Then it is rejected with error code "<code>"
   And no paycheck for 2026-09 exists
@@ -228,7 +229,7 @@ Scenario Outline: Invalid amounts rejected
 
 @AC-7.2
 Scenario: Boundary amount accepted
-  Given an EUR job and the current date 2026-10-25
+  Given an EUR job and the current date 25/10/2026
   When the user adds a paycheck for 2026-09 with gross 1000000.00, holiday pay 0.00 and bonus 0.00
   Then the paycheck for 2026-09 exists
 ```
@@ -319,8 +320,8 @@ The app shall list jobs by start date, newest first, and a job's paychecks by mo
 ```gherkin
 @AC-12.1
 Scenario: Newest first
-  Given jobs starting 2020-01-01 and 2024-03-01, and a job with paychecks for 2026-07 and 2026-09
-  Then jobs are listed 2024-03-01 before 2020-01-01
+  Given jobs starting 01/01/2020 and 01/03/2024, and a job with paychecks for 2026-07 and 2026-09
+  Then jobs are listed 01/03/2024 before 01/01/2020
   And paychecks are listed 2026-09 before 2026-07
 ```
 
@@ -339,10 +340,43 @@ Scenario: Job without paychecks
   Then the paycheck table is empty and no error is shown
 ```
 
+**REQ-22: Date format** *(ubiquitous)*
+The app shall show and accept job start and end dates as dd/mm/yyyy with a two-digit day and month, and shall reject any other date format.
+
+```gherkin
+@AC-22.1
+Scenario: Dates are shown as dd/mm/yyyy
+  Given a job "Example Employer" starting 01/03/2024 and ending 31/01/2025
+  Then the job list and the job details show "01/03/2024" and "31/01/2025"
+
+@AC-22.2
+Scenario Outline: Other formats are rejected
+  Given no jobs exist
+  When the user adds a job with employer "Example Employer" and start date "<start>"
+  Then the job is rejected with error code "JOB_DATE_INVALID"
+  And no job exists
+
+  Examples:
+    | start      | reason                  |
+    | 2024-03-01 | year first              |
+    | 1/3/2024   | no two-digit day/month  |
+    | 03-01-2024 | wrong separator         |
+    | 31/02/2024 | not a calendar date     |
+    | 01/03/24   | two-digit year          |
+
+@AC-22.3
+Scenario: Month stays YYYY-MM
+  Given an EUR job "Example Employer"
+  When the user adds a paycheck for "2026-09" with gross salary 3000.00
+  Then the paycheck is stored for the month "2026-09"
+```
+
 ### 4.4 Saving and loading
 REQ-14 to REQ-21 (removed in v0.4): moved to CSD-002 (Project file). Income data is saved and loaded as one section of that project file.
 
 ## 5. Interfaces and contracts
+
+Dates: the job start and end dates are shown and typed as dd/mm/yyyy (REQ-22). Rust validates the dates as typed. Dates returned by the commands and stored in the project file are ISO 8601 (`YYYY-MM-DD`), and the frontend formats them as dd/mm/yyyy for display. Months are `YYYY-MM` everywhere.
 
 ```mermaid
 erDiagram
@@ -367,7 +401,7 @@ erDiagram
 Commands (all inputs validated in Rust; amounts cross IPC as decimal strings):
 `list_jobs`, `create_job`, `update_job`, `delete_job`, `list_paychecks(job_id)`, `add_paycheck`, `update_paycheck`, `delete_paycheck`, `yearly_totals(job_id)`. Project commands (save, open, new) are in CSD-002. The income data is stored as one section of the project file defined there.
 
-Error codes (returned as code plus safe message): `JOB_EMPLOYER_REQUIRED`, `JOB_START_REQUIRED`, `JOB_END_BEFORE_START`, `JOB_CURRENCY_UNSUPPORTED`, `JOB_CURRENCY_LOCKED`, `PAYCHECK_MONTH_IN_FUTURE`, `PAYCHECK_DUPLICATE_MONTH`, `PAYCHECK_GROSS_INVALID`, `PAYCHECK_AMOUNT_NEGATIVE`, `PAYCHECK_AMOUNT_PRECISION`, `PAYCHECK_AMOUNT_TOO_LARGE`. Project error codes are in CSD-002.
+Error codes (returned as code plus safe message): `JOB_EMPLOYER_REQUIRED`, `JOB_START_REQUIRED`, `JOB_END_BEFORE_START`, `JOB_CURRENCY_UNSUPPORTED`, `JOB_CURRENCY_LOCKED`, `PAYCHECK_MONTH_IN_FUTURE`, `PAYCHECK_DUPLICATE_MONTH`, `PAYCHECK_GROSS_INVALID`, `PAYCHECK_AMOUNT_NEGATIVE`, `PAYCHECK_AMOUNT_PRECISION`, `PAYCHECK_AMOUNT_TOO_LARGE`, `JOB_DATE_INVALID`. Project error codes are in CSD-002.
 
 ## 6. Constraints
 - CON-1: Amounts use `rust_decimal::Decimal` and carry the job's currency. Totals are per job and never summed across currencies. Rationale: `CLAUDE.md` money rules.
@@ -385,7 +419,8 @@ All ACs are proven by `cargo test`, with domain logic tested in `domain/`. Tests
 
 | Requirement | Command |
 |---|---|
-| All of REQ-1 to REQ-13 | `cargo test test_csd001_` |
+| All of REQ-1 to REQ-13, and AC-22.2 and AC-22.3 | `cargo test test_csd001_` |
+| AC-22.1 (display) | Manual checklist: job list and job details show dd/mm/yyyy. There is no frontend test setup |
 | One requirement, e.g. REQ-5 | `cargo test test_csd001_ac_5_` |
 
 Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
@@ -400,8 +435,9 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 - OQ-7: (resolved in v0.2) Deleting a single paycheck needs no confirmation.
 
 ## 9. Changelog
-- 0.5 (2026-10-25): Verification uses the `test_csd001_` filter (CSD-000 2.1 naming).
-- 0.4 (2026-10-25): Split persistence into CSD-002. REQ-14 to REQ-21, NG-8, CON-7 to CON-9, AC-14.* to AC-21.*, the project commands and error codes, and OQ-1, OQ-2, OQ-3, OQ-5 moved there (IDs kept as removed markers per CSD-000 CON-6). No change to income behaviour.
-- 0.3 (2026-10-25): Resolved OQ-1, OQ-2, OQ-3, OQ-5. Added NG-8, REQ-18 to REQ-21 and AC-14.3, AC-14.4, AC-15.3. REQ-14 and REQ-15 use native dialogs and the commands no longer take a path. Added CON-7 to CON-9, the project file description, and the revised verification table.
-- 0.2 (2026-10-25): Resolved OQ-4, OQ-6, OQ-7. REQ-1 restricts currency to EUR, USD, GBP (AC-1.3, AC-1.4, new code `JOB_CURRENCY_UNSUPPORTED`). REQ-8 fixes the paycheck month and removes delete confirmation (AC-8.3 amended, AC-8.4 added).
-- 0.1 (2026-10-25): initial draft.
+- 0.6 (25/10/2026): Dates are written dd/mm/yyyy (CSD-000 2.2, CON-7). New REQ-22 (date format, AC-22.1 to AC-22.3), error code `JOB_DATE_INVALID` listed, existing examples converted. Months stay YYYY-MM; the file and commands keep ISO 8601 internally.
+- 0.5 (25/10/2026): Verification uses the `test_csd001_` filter (CSD-000 2.1 naming).
+- 0.4 (25/10/2026): Split persistence into CSD-002. REQ-14 to REQ-21, NG-8, CON-7 to CON-9, AC-14.* to AC-21.*, the project commands and error codes, and OQ-1, OQ-2, OQ-3, OQ-5 moved there (IDs kept as removed markers per CSD-000 CON-6). No change to income behaviour.
+- 0.3 (25/10/2026): Resolved OQ-1, OQ-2, OQ-3, OQ-5. Added NG-8, REQ-18 to REQ-21 and AC-14.3, AC-14.4, AC-15.3. REQ-14 and REQ-15 use native dialogs and the commands no longer take a path. Added CON-7 to CON-9, the project file description, and the revised verification table.
+- 0.2 (25/10/2026): Resolved OQ-4, OQ-6, OQ-7. REQ-1 restricts currency to EUR, USD, GBP (AC-1.3, AC-1.4, new code `JOB_CURRENCY_UNSUPPORTED`). REQ-8 fixes the paycheck month and removes delete confirmation (AC-8.3 amended, AC-8.4 added).
+- 0.1 (25/10/2026): initial draft.

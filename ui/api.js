@@ -39,6 +39,11 @@ export function h(tag, attrs = {}, ...children) {
   return node;
 }
 
+/** Shows an ISO date such as "2024-03-01" as dd/mm/yyyy (CSD-001 REQ-22). Display only. */
+export function formatDate(iso) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso.split('-').reverse().join('/') : String(iso);
+}
+
 /** Adds thousands separators to a decimal string such as "3000.00". Display only. */
 export function formatAmount(text) {
   const [whole, fraction] = String(text).split('.');

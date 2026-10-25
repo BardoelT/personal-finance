@@ -17,8 +17,10 @@ const LAST_YEAR: i32 = 9999;
 
 time::serde::format_description!(iso_date, Date, "[year]-[month]-[day]");
 
+/// Parses a date as the user types it: `dd/mm/yyyy` with a two-digit day and
+/// month (CSD-001 REQ-22). Other formats and impossible dates are rejected.
 fn parse_date(text: &str) -> Result<Date, DomainError> {
-    Date::parse(text.trim(), format_description!("[year]-[month]-[day]"))
+    Date::parse(text.trim(), format_description!("[day]/[month]/[year]"))
         .map_err(|_| DomainError::JobDateInvalid)
 }
 
@@ -524,7 +526,7 @@ mod tests {
         let job = income
             .create_job(&JobInput {
                 employer: "Example Employer".into(),
-                start_date: Some("2024-03-01".into()),
+                start_date: Some("01/03/2024".into()),
                 ..JobInput::default()
             })
             .unwrap();
@@ -539,13 +541,13 @@ mod tests {
     #[test]
     fn test_csd001_ac_1_2_invalid_job_is_rejected() {
         let cases = [
-            ("", "2024-03-01", "", DomainError::JobEmployerRequired),
-            ("   ", "2024-03-01", "", DomainError::JobEmployerRequired),
+            ("", "01/03/2024", "", DomainError::JobEmployerRequired),
+            ("   ", "01/03/2024", "", DomainError::JobEmployerRequired),
             ("Example Employer", "", "", DomainError::JobStartRequired),
             (
                 "Example Employer",
-                "2024-03-01",
-                "2024-02-29",
+                "01/03/2024",
+                "29/02/2024",
                 DomainError::JobEndBeforeStart,
             ),
             (
@@ -582,7 +584,7 @@ mod tests {
     fn test_csd001_ac_1_3_supported_non_default_currency() {
         let mut income = Income::default();
         let job = income
-            .create_job(&input("Example Employer", "2024-03-01", "", "GBP"))
+            .create_job(&input("Example Employer", "01/03/2024", "", "GBP"))
             .unwrap();
         assert_eq!(job.currency, Currency::Gbp);
     }
@@ -591,7 +593,7 @@ mod tests {
     fn test_csd001_ac_1_4_unsupported_currency_is_rejected() {
         let mut income = Income::default();
         let error = income
-            .create_job(&input("Example Employer", "2024-03-01", "", "CHF"))
+            .create_job(&input("Example Employer", "01/03/2024", "", "CHF"))
             .unwrap_err();
         assert_eq!(error.code(), "JOB_CURRENCY_UNSUPPORTED");
         assert_eq!(income.jobs().len(), 0);
@@ -602,7 +604,7 @@ mod tests {
         let mut income = Income::default();
         let long = "x".repeat(201);
         let error = income
-            .create_job(&input(&long, "2024-03-01", "", ""))
+            .create_job(&input(&long, "01/03/2024", "", ""))
             .unwrap_err();
         assert_eq!(error, DomainError::JobFieldTooLong);
     }
@@ -612,12 +614,12 @@ mod tests {
     #[test]
     fn test_csd001_ac_2_1_dates_change_freely_with_paychecks_present() {
         let mut income = Income::default();
-        let id = job_with(&mut income, "2024-03-01", "");
+        let id = job_with(&mut income, "01/03/2024", "");
         add(&mut income, id, "2024-03", "3000.00");
         let updated = income
             .update_job(
                 id,
-                &input("Example Employer", "2024-06-01", "2025-01-31", ""),
+                &input("Example Employer", "01/06/2024", "31/01/2025", ""),
             )
             .unwrap();
         assert_eq!(updated.start_date.to_string(), "2024-06-01");
@@ -631,11 +633,11 @@ mod tests {
     #[test]
     fn test_csd001_ac_2_2_end_before_start_is_rejected_on_edit() {
         let mut income = Income::default();
-        let id = job_with(&mut income, "2024-03-01", "");
+        let id = job_with(&mut income, "01/03/2024", "");
         let error = income
             .update_job(
                 id,
-                &input("Example Employer", "2024-03-01", "2024-02-01", ""),
+                &input("Example Employer", "01/03/2024", "01/02/2024", ""),
             )
             .unwrap_err();
         assert_eq!(error.code(), "JOB_END_BEFORE_START");
@@ -648,7 +650,7 @@ mod tests {
         let error = income
             .update_job(
                 JobId::generate(),
-                &input("Example Employer", "2024-03-01", "", ""),
+                &input("Example Employer", "01/03/2024", "", ""),
             )
             .unwrap_err();
         assert_eq!(error, DomainError::JobNotFound);
@@ -659,10 +661,10 @@ mod tests {
     #[test]
     fn test_csd001_ac_3_1_currency_change_rejected_with_paychecks() {
         let mut income = Income::default();
-        let id = job_with(&mut income, "2024-03-01", "");
+        let id = job_with(&mut income, "01/03/2024", "");
         add(&mut income, id, "2026-09", "3000.00");
         let error = income
-            .update_job(id, &input("Example Employer", "2024-03-01", "", "USD"))
+            .update_job(id, &input("Example Employer", "01/03/2024", "", "USD"))
             .unwrap_err();
         assert_eq!(error.code(), "JOB_CURRENCY_LOCKED");
         assert_eq!(income.jobs()[0].currency, Currency::Eur);
@@ -671,9 +673,9 @@ mod tests {
     #[test]
     fn test_csd001_ac_3_2_currency_change_allowed_without_paychecks() {
         let mut income = Income::default();
-        let id = job_with(&mut income, "2024-03-01", "");
+        let id = job_with(&mut income, "01/03/2024", "");
         let updated = income
-            .update_job(id, &input("Example Employer", "2024-03-01", "", "USD"))
+            .update_job(id, &input("Example Employer", "01/03/2024", "", "USD"))
             .unwrap();
         assert_eq!(updated.currency, Currency::Usd);
     }
@@ -681,10 +683,10 @@ mod tests {
     #[test]
     fn keeping_the_same_currency_is_allowed_with_paychecks() {
         let mut income = Income::default();
-        let id = job_with(&mut income, "2024-03-01", "");
+        let id = job_with(&mut income, "01/03/2024", "");
         add(&mut income, id, "2026-09", "3000.00");
         income
-            .update_job(id, &input("Renamed Employer", "2024-03-01", "", "EUR"))
+            .update_job(id, &input("Renamed Employer", "01/03/2024", "", "EUR"))
             .unwrap();
         assert_eq!(income.jobs()[0].employer, "Renamed Employer");
     }
@@ -694,8 +696,8 @@ mod tests {
     #[test]
     fn test_csd001_ac_4_1_deletion_cascades() {
         let mut income = Income::default();
-        let id = job_with(&mut income, "2024-03-01", "");
-        let other = job_with(&mut income, "2020-01-01", "");
+        let id = job_with(&mut income, "01/03/2024", "");
+        let other = job_with(&mut income, "01/01/2020", "");
         for m in ["2026-07", "2026-08", "2026-09"] {
             add(&mut income, id, m, "3000.00");
         }
@@ -715,7 +717,7 @@ mod tests {
     #[test]
     fn test_csd001_ac_5_1_paycheck_with_defaults() {
         let mut income = Income::default();
-        let id = job_with(&mut income, "2024-03-01", "");
+        let id = job_with(&mut income, "01/03/2024", "");
         let paycheck = add(&mut income, id, "2026-09", "3000.00");
         assert_eq!(paycheck.amounts.gross_salary().to_string(), "3000.00");
         assert_eq!(paycheck.amounts.holiday_pay().to_string(), "0.00");
@@ -726,7 +728,7 @@ mod tests {
     #[test]
     fn test_csd001_ac_5_2_month_before_job_start_is_accepted() {
         let mut income = Income::default();
-        let id = job_with(&mut income, "2024-03-01", "");
+        let id = job_with(&mut income, "01/03/2024", "");
         add(&mut income, id, "2024-01", "2800.00");
         assert_eq!(income.paycheck_count(id), 1);
     }
@@ -734,7 +736,7 @@ mod tests {
     #[test]
     fn test_csd001_ac_5_3_month_after_job_end_is_accepted() {
         let mut income = Income::default();
-        let id = job_with(&mut income, "2024-03-01", "2025-01-31");
+        let id = job_with(&mut income, "01/03/2024", "31/01/2025");
         add(&mut income, id, "2025-03", "1500.00");
         assert_eq!(income.paycheck_count(id), 1);
     }
@@ -742,7 +744,7 @@ mod tests {
     #[test]
     fn test_csd001_ac_5_4_month_later_than_current_is_rejected() {
         let mut income = Income::default();
-        let id = job_with(&mut income, "2024-03-01", "");
+        let id = job_with(&mut income, "01/03/2024", "");
         let error = income
             .add_paycheck(id, month("2026-11"), amounts("3000.00", "", ""), today())
             .unwrap_err();
@@ -753,7 +755,7 @@ mod tests {
     #[test]
     fn test_csd001_ac_5_5_current_month_is_accepted() {
         let mut income = Income::default();
-        let id = job_with(&mut income, "2024-03-01", "");
+        let id = job_with(&mut income, "01/03/2024", "");
         add(&mut income, id, "2026-10", "3000.00");
         assert_eq!(income.paycheck_count(id), 1);
     }
@@ -777,7 +779,7 @@ mod tests {
     #[test]
     fn test_csd001_ac_6_1_duplicate_month_rejected() {
         let mut income = Income::default();
-        let id = job_with(&mut income, "2024-03-01", "");
+        let id = job_with(&mut income, "01/03/2024", "");
         add(&mut income, id, "2026-09", "3000.00");
         let error = income
             .add_paycheck(id, month("2026-09"), amounts("3100.00", "", ""), today())
@@ -791,8 +793,8 @@ mod tests {
     #[test]
     fn test_csd001_ac_6_2_same_month_on_another_job_is_allowed() {
         let mut income = Income::default();
-        let first = job_with(&mut income, "2024-03-01", "");
-        let second = job_with(&mut income, "2025-01-01", "");
+        let first = job_with(&mut income, "01/03/2024", "");
+        let second = job_with(&mut income, "01/01/2025", "");
         add(&mut income, first, "2026-09", "3000.00");
         add(&mut income, second, "2026-09", "1000.00");
         assert_eq!(income.paycheck_count(first), 1);
@@ -813,7 +815,7 @@ mod tests {
         ];
         for (gross, holiday, bonus, code) in cases {
             let mut income = Income::default();
-            let id = job_with(&mut income, "2024-03-01", "");
+            let id = job_with(&mut income, "01/03/2024", "");
             let error = Amounts::parse(gross, holiday, bonus).unwrap_err();
             assert_eq!(error.code(), code, "{gross} {holiday} {bonus}");
             assert_eq!(income.paychecks(id).unwrap().len(), 0);
@@ -823,7 +825,7 @@ mod tests {
     #[test]
     fn test_csd001_ac_7_2_boundary_amount_accepted() {
         let mut income = Income::default();
-        let id = job_with(&mut income, "2024-03-01", "");
+        let id = job_with(&mut income, "01/03/2024", "");
         add(&mut income, id, "2026-09", "1000000.00");
         assert_eq!(income.paycheck_count(id), 1);
     }
@@ -833,7 +835,7 @@ mod tests {
     #[test]
     fn test_csd001_ac_8_1_edit_amounts() {
         let mut income = Income::default();
-        let id = job_with(&mut income, "2024-03-01", "");
+        let id = job_with(&mut income, "01/03/2024", "");
         add(&mut income, id, "2026-05", "3000.00");
         let updated = income
             .update_paycheck(id, month("2026-05"), amounts("3000.00", "2400.00", "0.00"))
@@ -845,7 +847,7 @@ mod tests {
     #[test]
     fn test_csd001_ac_8_2_invalid_edit_rejected() {
         let mut income = Income::default();
-        let id = job_with(&mut income, "2024-03-01", "");
+        let id = job_with(&mut income, "01/03/2024", "");
         add(&mut income, id, "2026-05", "3000.00");
         let error = Amounts::parse("-1.00", "", "").unwrap_err();
         assert_eq!(error.code(), "PAYCHECK_AMOUNT_NEGATIVE");
@@ -856,7 +858,7 @@ mod tests {
     #[test]
     fn test_csd001_ac_8_3_delete_paycheck() {
         let mut income = Income::default();
-        let id = job_with(&mut income, "2024-03-01", "");
+        let id = job_with(&mut income, "01/03/2024", "");
         add(&mut income, id, "2026-04", "3000.00");
         add(&mut income, id, "2026-05", "3000.00");
         income.delete_paycheck(id, month("2026-05")).unwrap();
@@ -872,7 +874,7 @@ mod tests {
     #[test]
     fn test_csd001_ac_8_4_month_stays_fixed_on_edit() {
         let mut income = Income::default();
-        let id = job_with(&mut income, "2024-03-01", "");
+        let id = job_with(&mut income, "01/03/2024", "");
         add(&mut income, id, "2026-05", "3000.00");
         let updated = income
             .update_paycheck(id, month("2026-05"), amounts("3100.00", "", ""))
@@ -885,7 +887,7 @@ mod tests {
     #[test]
     fn editing_or_deleting_a_missing_paycheck_is_rejected() {
         let mut income = Income::default();
-        let id = job_with(&mut income, "2024-03-01", "");
+        let id = job_with(&mut income, "01/03/2024", "");
         assert_eq!(
             income
                 .update_paycheck(id, month("2026-05"), amounts("1.00", "", ""))
@@ -903,7 +905,7 @@ mod tests {
     #[test]
     fn test_csd001_ac_9_1_form_prefilled_from_latest_paycheck() {
         let mut income = Income::default();
-        let id = job_with(&mut income, "2024-03-01", "");
+        let id = job_with(&mut income, "01/03/2024", "");
         add(&mut income, id, "2026-07", "3000.00");
         income
             .add_paycheck(
@@ -923,7 +925,7 @@ mod tests {
     #[test]
     fn test_csd001_ac_9_2_no_paycheck_to_copy() {
         let mut income = Income::default();
-        let id = job_with(&mut income, "2024-03-01", "");
+        let id = job_with(&mut income, "01/03/2024", "");
         let prefill = income.prefill_from_latest(id).unwrap();
         assert_eq!(prefill.gross_salary, None);
         assert_eq!(prefill.holiday_pay.to_string(), "0.00");
@@ -943,7 +945,7 @@ mod tests {
     #[test]
     fn test_csd001_ac_11_1_totals_per_calendar_year() {
         let mut income = Income::default();
-        let id = job_with(&mut income, "2024-03-01", "");
+        let id = job_with(&mut income, "01/03/2024", "");
         add(&mut income, id, "2025-11", "3000.00");
         income
             .add_paycheck(
@@ -981,15 +983,15 @@ mod tests {
     #[test]
     fn test_csd001_ac_11_2_no_paychecks_gives_no_totals() {
         let mut income = Income::default();
-        let id = job_with(&mut income, "2024-03-01", "");
+        let id = job_with(&mut income, "01/03/2024", "");
         assert_eq!(income.yearly_totals(id).unwrap().len(), 0);
     }
 
     #[test]
     fn yearly_totals_only_count_the_given_job() {
         let mut income = Income::default();
-        let first = job_with(&mut income, "2024-03-01", "");
-        let second = job_with(&mut income, "2025-01-01", "");
+        let first = job_with(&mut income, "01/03/2024", "");
+        let second = job_with(&mut income, "01/01/2025", "");
         add(&mut income, first, "2026-09", "3000.00");
         add(&mut income, second, "2026-09", "1000.00");
         let totals = income.yearly_totals(first).unwrap();
@@ -1001,8 +1003,8 @@ mod tests {
     #[test]
     fn test_csd001_ac_12_1_newest_first() {
         let mut income = Income::default();
-        let old = job_with(&mut income, "2020-01-01", "");
-        let recent = job_with(&mut income, "2024-03-01", "");
+        let old = job_with(&mut income, "01/01/2020", "");
+        let recent = job_with(&mut income, "01/03/2024", "");
         add(&mut income, recent, "2026-07", "3000.00");
         add(&mut income, recent, "2026-09", "3000.00");
         let jobs: Vec<JobId> = income.jobs().iter().map(|job| job.id).collect();
@@ -1026,9 +1028,105 @@ mod tests {
     #[test]
     fn test_csd001_ac_13_2_job_without_paychecks_is_not_an_error() {
         let mut income = Income::default();
-        let id = job_with(&mut income, "2024-03-01", "");
+        let id = job_with(&mut income, "01/03/2024", "");
         assert_eq!(income.paychecks(id).unwrap().len(), 0);
         assert_eq!(income.yearly_totals(id).unwrap().len(), 0);
+    }
+
+    // ---- REQ-22: date format ----
+
+    #[test]
+    fn test_csd001_ac_22_1_typed_dates_become_calendar_dates() {
+        let mut income = Income::default();
+        let job = income
+            .create_job(&input("Example Employer", "01/03/2024", "31/01/2025", ""))
+            .unwrap();
+        // The domain stores real dates; commands return them as ISO 8601 and the
+        // frontend shows them as dd/mm/yyyy (manual checklist for the display).
+        assert_eq!(job.start_date.to_string(), "2024-03-01");
+        assert_eq!(job.end_date.unwrap().to_string(), "2025-01-31");
+        let json = serde_json::to_value(&job).unwrap();
+        assert_eq!(json["start_date"], "2024-03-01");
+        assert_eq!(json["end_date"], "2025-01-31");
+    }
+
+    #[test]
+    fn test_csd001_ac_22_2_other_date_formats_are_rejected() {
+        let cases = [
+            ("2024-03-01", "year first"),
+            ("1/3/2024", "no two-digit day and month"),
+            ("1/03/2024", "no two-digit day"),
+            ("01/3/2024", "no two-digit month"),
+            ("03-01-2024", "wrong separator"),
+            ("31/02/2024", "not a calendar date"),
+            ("29/02/2023", "not a leap year"),
+            ("01/13/2024", "month 13"),
+            ("00/03/2024", "day 0"),
+            ("01/03/24", "two-digit year"),
+            ("01/03/20244", "five-digit year"),
+            ("01.03.2024", "dots"),
+            ("1 March 2024", "words"),
+            ("01/03/2024 10:00", "time attached"),
+        ];
+        for (start, reason) in cases {
+            let mut income = Income::default();
+            let error = income
+                .create_job(&input("Example Employer", start, "", ""))
+                .unwrap_err();
+            assert_eq!(error.code(), "JOB_DATE_INVALID", "{start:?}: {reason}");
+            assert_eq!(income.jobs().len(), 0, "{start:?}: {reason}");
+        }
+    }
+
+    #[test]
+    fn test_csd001_ac_22_2_end_date_uses_the_same_format() {
+        let mut income = Income::default();
+        let error = income
+            .create_job(&input("Example Employer", "01/03/2024", "2025-01-31", ""))
+            .unwrap_err();
+        assert_eq!(error, DomainError::JobDateInvalid);
+        let id = job_with(&mut income, "01/03/2024", "");
+        let error = income
+            .update_job(
+                id,
+                &input("Example Employer", "01/03/2024", "31-01-2025", ""),
+            )
+            .unwrap_err();
+        assert_eq!(error, DomainError::JobDateInvalid);
+    }
+
+    #[test]
+    fn dates_are_accepted_with_surrounding_whitespace_and_on_leap_days() {
+        let mut income = Income::default();
+        let job = income
+            .create_job(&input("Example Employer", " 29/02/2024 ", "", ""))
+            .unwrap();
+        assert_eq!(job.start_date.to_string(), "2024-02-29");
+    }
+
+    #[test]
+    fn the_date_error_message_names_the_expected_format() {
+        assert_eq!(
+            DomainError::JobDateInvalid.to_string(),
+            "Enter dates as dd/mm/yyyy."
+        );
+    }
+
+    #[test]
+    fn test_csd001_ac_22_3_months_stay_year_month() {
+        let mut income = Income::default();
+        let id = job_with(&mut income, "01/03/2024", "");
+        let paycheck = add(&mut income, id, "2026-09", "3000.00");
+        assert_eq!(paycheck.month.to_string(), "2026-09");
+        let json = serde_json::to_value(&paycheck).unwrap();
+        assert_eq!(json["month"], "2026-09");
+        for bad in ["09/2026", "01/09/2026", "09-2026"] {
+            assert_eq!(
+                YearMonth::parse(bad).unwrap_err(),
+                DomainError::PaycheckMonthInvalid,
+                "{bad:?}"
+            );
+        }
     }
 
     // ---- supporting types ----
@@ -1051,7 +1149,7 @@ mod tests {
     #[test]
     fn validate_rejects_inconsistent_data() {
         let mut income = Income::default();
-        let id = job_with(&mut income, "2024-03-01", "");
+        let id = job_with(&mut income, "01/03/2024", "");
         add(&mut income, id, "2026-09", "3000.00");
         assert!(income.validate().is_ok());
 

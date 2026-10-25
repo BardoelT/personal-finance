@@ -54,7 +54,7 @@ fn job_input() -> Value {
     json!({
         "employer": "Example Employer",
         "title": "",
-        "start_date": "2024-03-01",
+        "start_date": "01/03/2024",
         "end_date": "",
         "currency": "EUR"
     })
@@ -152,10 +152,18 @@ fn errors_reach_the_frontend_as_code_and_safe_message() {
     let app = harness();
     let error = app.err(
         "create_job",
-        json!({ "input": { "employer": "", "start_date": "2024-03-01" } }),
+        json!({ "input": { "employer": "", "start_date": "01/03/2024" } }),
     );
     assert_eq!(error["code"], "JOB_EMPLOYER_REQUIRED");
     assert!(error["message"].as_str().unwrap().contains("employer"));
+
+    // REQ-22: ISO dates are not accepted as typed input.
+    let iso = app.err(
+        "create_job",
+        json!({ "input": { "employer": "Example Employer", "start_date": "2024-03-01" } }),
+    );
+    assert_eq!(iso["code"], "JOB_DATE_INVALID");
+    assert!(iso["message"].as_str().unwrap().contains("dd/mm/yyyy"));
 
     let job = app.ok("create_job", json!({ "input": job_input() }));
     let job_id = job["id"].as_str().unwrap().to_owned();
@@ -189,14 +197,14 @@ fn errors_reach_the_frontend_as_code_and_safe_message() {
 
     let locked = app.err(
         "update_job",
-        json!({ "jobId": job_id, "input": { "employer": "Example Employer", "start_date": "2024-03-01", "currency": "USD" } }),
+        json!({ "jobId": job_id, "input": { "employer": "Example Employer", "start_date": "01/03/2024", "currency": "USD" } }),
     );
     assert_eq!(locked["code"], "JOB_CURRENCY_LOCKED");
 
     // A job edit without a currency keeps the current one (the frontend omits it while locked).
     let kept = app.ok(
         "update_job",
-        json!({ "jobId": job_id, "input": { "employer": "Renamed", "start_date": "2024-03-01" } }),
+        json!({ "jobId": job_id, "input": { "employer": "Renamed", "start_date": "01/03/2024" } }),
     );
     assert_eq!(kept["currency"], "EUR");
     assert_eq!(kept["employer"], "Renamed");

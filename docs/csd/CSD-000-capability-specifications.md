@@ -3,8 +3,8 @@ id: CSD-000
 title: Capability Specification Documents (CSD): reading, interpreting and writing
 status: approved
 owner: Thijs Bardoel
-version: 2.1
-last_updated: 2026-10-25
+version: 2.2
+last_updated: 25/10/2026
 location: docs/csd/CSD-000-capability-specifications.md
 applies_to: all humans and agents (Claude Code) working in this repository
 ---
@@ -289,7 +289,7 @@ title: <capability name>
 status: draft
 owner: Thijs Bardoel
 version: 0.1
-last_updated: YYYY-MM-DD
+last_updated: dd/mm/yyyy
 related: [CSD-YYY]          # optional
 superseded_by:              # only when deprecated
 ---
@@ -361,7 +361,7 @@ How to prove it's done: which `cargo test` filter covers which ACs, environments
 - OQ-1: <question>. Owner: Thijs. Blocks: REQ-n.
 
 ## 9. Changelog
-- 0.1 (YYYY-MM-DD): initial draft.
+- 0.1 (dd/mm/yyyy): initial draft.
 ````
 
 ### 5.3 Required vs optional sections
@@ -375,6 +375,7 @@ Sections 1, 2, 4, 7 and 9 are **required**. Sections 3, 5, 6 and 8 may be omitte
 - **CON-4:** Language: English. Rationale: consistent with code and tooling.
 - **CON-5:** No secrets, credentials, or real financial data (including PII) in CSDs. Use synthetic examples (e.g. "Example Bank", round amounts in EUR). Rationale: specs are widely read and fed into agent context; the repo is public.
 - **CON-6:** IDs (`REQ`, `AC`, `NG`, `CON`, `OQ`) are stable. Removed items are marked `(removed in vX)`, never renumbered. Rationale: tests and PRs reference them.
+- **CON-7:** Dates are written dd/mm/yyyy (for example 25/10/2026), in CSDs and in everything the app shows or accepts: front matter, changelogs, Gherkin examples, screens and messages. Months are written YYYY-MM. Machine-facing data (the project file and IPC) may use ISO 8601 and is converted at the edge. Rationale: one unambiguous convention for the owner, and no mix of formats in the specs.
 
 ## 7. Verification
 
@@ -394,9 +395,10 @@ This CSD is working when:
 
 ## 9. Changelog
 
-- 2.1 (2026-10-25): Test names now include the CSD number (`test_csd<NNN>_ac_n_m_…`) because AC numbers restart in every CSD (REQ-6, OQ-3, Appendix B).
-- 2.0 (2026-10-25): Adapted from the original template for the personal-finance project. GitLab → GitHub; MR → PR; BDD runner references updated for Rust; worked example replaced with a personal finance domain scenario; `.feature` file layout removed (OQ-3 left open); template flow diagram updated to reflect Tauri layered architecture.
-- 1.0 (2026-10-25): initial version.
+- 2.2 (25/10/2026): Dates are written dd/mm/yyyy everywhere (new CON-7, template placeholders, Appendix A checklist, existing dates converted). Months stay YYYY-MM.
+- 2.1 (25/10/2026): Test names now include the CSD number (`test_csd<NNN>_ac_n_m_…`) because AC numbers restart in every CSD (REQ-6, OQ-3, Appendix B).
+- 2.0 (25/10/2026): Adapted from the original template for the personal-finance project. GitLab → GitHub; MR → PR; BDD runner references updated for Rust; worked example replaced with a personal finance domain scenario; `.feature` file layout removed (OQ-3 left open); template flow diagram updated to reflect Tauri layered architecture.
+- 1.0 (25/10/2026): initial version.
 
 ---
 
@@ -406,7 +408,7 @@ This CSD is working when:
 - [ ] Intent explains the problem, not the solution
 - [ ] At least one non-goal is listed
 - [ ] Every REQ is a single EARS pattern with one "shall", and its pattern is labelled
-- [ ] Every REQ has ≥1 Gherkin scenario tagged `@AC-n.m` with concrete values (amounts in EUR with two decimal places, dates as YYYY-MM-DD, etc.)
+- [ ] Every REQ has ≥1 Gherkin scenario tagged `@AC-n.m` with concrete values (amounts in EUR with two decimal places, dates as dd/mm/yyyy, months as YYYY-MM, etc.)
 - [ ] Every event-driven REQ has at least one unwanted-behaviour or edge-case scenario
 - [ ] No vague words ("fast", "robust", "gracefully", "intuitive") without measurable criteria
 - [ ] A Mermaid diagram is present for multi-actor, stateful or branching flows, and it matches the ACs

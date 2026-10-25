@@ -1,5 +1,5 @@
 // Employment income: jobs, monthly paychecks and yearly totals (CSD-001).
-import { invoke, errorText, h, formatAmount, confirmAction, showToast } from './api.js';
+import { invoke, errorText, h, formatAmount, formatDate, confirmAction, showToast } from './api.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -12,7 +12,7 @@ function selectedJob() {
 }
 
 function jobDates(job) {
-  return `${job.start_date} – ${job.end_date ?? 'present'}`;
+  return `${formatDate(job.start_date)} – ${job.end_date ? formatDate(job.end_date) : 'present'}`;
 }
 
 function jobMeta(job) {
@@ -152,8 +152,8 @@ function openJobDialog(job) {
   if (job) {
     form.elements.employer.value = job.employer;
     form.elements.title.value = job.title ?? '';
-    form.elements.start_date.value = job.start_date;
-    form.elements.end_date.value = job.end_date ?? '';
+    form.elements.start_date.value = formatDate(job.start_date);
+    form.elements.end_date.value = job.end_date ? formatDate(job.end_date) : '';
     form.elements.currency.value = job.currency;
   }
   $('job-dialog').showModal();

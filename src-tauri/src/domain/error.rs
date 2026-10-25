@@ -11,7 +11,7 @@ pub enum DomainError {
     JobStartRequired,
     #[error("The end date cannot be before the start date.")]
     JobEndBeforeStart,
-    #[error("Enter dates as YYYY-MM-DD.")]
+    #[error("Enter dates as dd/mm/yyyy.")]
     JobDateInvalid,
     #[error("Employer and title can be at most 200 characters.")]
     JobFieldTooLong,

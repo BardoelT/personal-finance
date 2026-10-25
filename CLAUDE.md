@@ -80,6 +80,7 @@ module_name_repetitions = "allow"
 - Every amount carries its currency (`Money { amount: Decimal, currency: Currency }`). Never add amounts with different currencies without an explicit conversion.
 - Rounding is explicit and documented (banker's rounding unless stated otherwise).
 - Dates: use `time` or `chrono` with explicit time zones; store UTC, display local.
+- Dates the user sees or types are `dd/mm/yyyy` (months `YYYY-MM`), in the UI, in messages and in all docs and CSDs. The project file and IPC use ISO 8601 internally (CSD-000 CON-7).
 
 ### Errors
 - Library-style errors with `thiserror` in `domain/` and `storage/`; one `AppError` in `error.rs`.

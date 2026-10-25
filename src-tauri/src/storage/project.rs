@@ -225,7 +225,7 @@ mod tests {
             .income_mut()
             .create_job(&JobInput {
                 employer: employer.to_owned(),
-                start_date: Some("2024-03-01".to_owned()),
+                start_date: Some("01/03/2024".to_owned()),
                 ..JobInput::default()
             })
             .unwrap()
