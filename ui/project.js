@@ -89,4 +89,8 @@ export async function initProject({ onReplaced }) {
   );
 
   await refreshProjectStatus();
+
+  // The last project could not be reopened at start (CSD-002 REQ-11).
+  const notice = await invoke('take_startup_notice');
+  if (notice) showToast(`Your last project could not be reopened. ${errorText(notice)}`);
 }

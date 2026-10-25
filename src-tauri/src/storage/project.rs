@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
-use super::{file, StorageError};
+use super::{file, LastProject, StorageError};
 use crate::domain::Income;
 
 /// The extension of project files.
@@ -38,6 +38,10 @@ pub struct Project {
     income: Income,
     saved: Income,
     path: Option<PathBuf>,
+    /// Where the last used path is remembered, if anywhere (REQ-10).
+    memory: Option<LastProject>,
+    /// Why the remembered file could not be reopened at start (REQ-11).
+    startup_notice: Option<StorageError>,
 }
 
 impl Project {
@@ -69,8 +73,45 @@ impl Project {
     }
 
     /// Replaces the project with an empty one that has no path (REQ-6).
+    ///
+    /// The remembered path is left alone: starting a new project is not using
+    /// another file (REQ-10).
     pub fn reset(&mut self) {
+        let memory = self.memory.take();
         *self = Self::new();
+        self.memory = memory;
+    }
+
+    /// Starts using `memory` and reopens the file it remembers, if any (REQ-8).
+    ///
+    /// If that file cannot be opened the project stays empty, the path is
+    /// forgotten so the error does not repeat, and the reason is kept for
+    /// [`Project::take_startup_notice`] (REQ-11).
+    pub fn restore(&mut self, memory: LastProject) {
+        let remembered = memory.load();
+        self.memory = Some(memory);
+        let Some(path) = remembered else {
+            return;
+        };
+        if let Err(error) = self.open(&path) {
+            if let Some(memory) = &self.memory {
+                memory.clear();
+            }
+            self.startup_notice = Some(error);
+        }
+    }
+
+    /// The reason the last project was not reopened, once.
+    pub fn take_startup_notice(&mut self) -> Option<StorageError> {
+        self.startup_notice.take()
+    }
+
+    /// Remembers the current path. Best effort: a project that was saved or
+    /// opened fine must not fail because the settings could not be written.
+    fn remember(&self) {
+        if let (Some(memory), Some(path)) = (&self.memory, &self.path) {
+            let _ = memory.store(path);
+        }
     }
 
     /// Writes to the current path.
@@ -92,6 +133,7 @@ impl Project {
         file::write(&path, &self.income)?;
         self.saved = self.income.clone();
         self.path = Some(path);
+        self.remember();
         Ok(())
     }
 
@@ -139,6 +181,7 @@ impl Project {
         self.saved = income.clone();
         self.income = income;
         self.path = Some(path.to_path_buf());
+        self.remember();
         Ok(())
     }
 
@@ -539,17 +582,170 @@ mod tests {
         assert_eq!(file_job_count(&path), 1);
     }
 
-    // ---- REQ-8: start empty ----
+    // ---- REQ-8, REQ-10, REQ-11: reopen the last project ----
+
+    fn memory_in(dir: &TempDir) -> LastProject {
+        LastProject::in_dir(&dir.path().join("config"))
+    }
+
+    /// A fresh "process": an empty project that then restores the last file.
+    fn restart(dir: &TempDir) -> Project {
+        let mut project = Project::new();
+        project.restore(memory_in(dir));
+        project
+    }
 
     #[test]
-    fn test_csd002_ac_8_1_fresh_launch_is_empty_with_no_path() {
+    fn test_csd002_ac_8_1_first_launch_has_nothing_to_reopen() {
         let dir = TempDir::new().unwrap();
-        let (_, _path) = saved_project(&dir, "example-a.wealth");
-        // A new process builds its state with Project::new() and reads nothing.
-        let project = Project::new();
+        let mut project = restart(&dir);
         assert_eq!(job_count(&project), 0);
         assert!(!project.status().has_path);
         assert!(!project.status().unsaved_changes);
+        assert!(project.take_startup_notice().is_none());
+    }
+
+    #[test]
+    fn test_csd002_ac_8_2_the_last_project_is_reopened() {
+        let dir = TempDir::new().unwrap();
+        let mut project = restart(&dir);
+        add_job(&mut project, "Example Employer");
+        let path = dir.path().join("example-a.wealth");
+        project.save_as(path.clone()).unwrap();
+        drop(project);
+
+        let mut next = restart(&dir);
+        assert_eq!(job_count(&next), 1);
+        assert_eq!(
+            next.status(),
+            ProjectStatus {
+                unsaved_changes: false,
+                has_path: true
+            }
+        );
+        assert!(next.take_startup_notice().is_none());
+        // Saving goes back to the reopened file without asking for a path.
+        add_job(&mut next, "Second Example Employer");
+        next.save().unwrap();
+        assert_eq!(file_job_count(&path), 2);
+    }
+
+    #[test]
+    fn test_csd002_ac_10_1_save_remembers_the_path() {
+        let dir = TempDir::new().unwrap();
+        let mut project = restart(&dir);
+        add_job(&mut project, "Example Employer");
+        project
+            .save_as(dir.path().join("example-a.wealth"))
+            .unwrap();
+        assert_eq!(
+            memory_in(&dir).load(),
+            Some(dir.path().join("example-a.wealth"))
+        );
+    }
+
+    #[test]
+    fn test_csd002_ac_10_2_open_and_save_as_move_the_remembered_path() {
+        let dir = TempDir::new().unwrap();
+        let (_, path_a) = saved_project(&dir, "example-a.wealth");
+        let mut project = restart(&dir);
+        project.open(&path_a).unwrap();
+        assert_eq!(memory_in(&dir).load(), Some(path_a));
+
+        let path_c = dir.path().join("example-c.wealth");
+        project.save_as(path_c.clone()).unwrap();
+        assert_eq!(memory_in(&dir).load(), Some(path_c.clone()));
+        let next = restart(&dir);
+        assert!(next.status().has_path);
+        assert_eq!(job_count(&next), 1);
+    }
+
+    #[test]
+    fn test_csd002_ac_10_3_new_project_keeps_the_remembered_path() {
+        let dir = TempDir::new().unwrap();
+        let mut project = restart(&dir);
+        add_job(&mut project, "Example Employer");
+        let path = dir.path().join("example-a.wealth");
+        project.save_as(path.clone()).unwrap();
+
+        project.reset();
+        add_job(&mut project, "Unsaved Example Employer");
+        drop(project); // quit without saving
+
+        assert_eq!(memory_in(&dir).load(), Some(path));
+        let next = restart(&dir);
+        assert_eq!(job_count(&next), 1);
+    }
+
+    #[test]
+    fn test_csd002_ac_10_4_a_failed_save_keeps_the_remembered_path() {
+        let dir = TempDir::new().unwrap();
+        let mut project = restart(&dir);
+        add_job(&mut project, "Example Employer");
+        let path = dir.path().join("example-a.wealth");
+        project.save_as(path.clone()).unwrap();
+
+        let unwritable = dir.path().join("no-such-dir").join("example-b.wealth");
+        assert!(project.save_as(unwritable).is_err());
+        assert_eq!(memory_in(&dir).load(), Some(path));
+    }
+
+    #[test]
+    fn test_csd002_ac_11_1_missing_or_invalid_file_starts_empty_with_a_notice() {
+        let cases = [
+            ("missing", None, "PROJECT_OPEN_FAILED"),
+            (
+                "invalid",
+                Some("this is not a project file"),
+                "PROJECT_INVALID_FILE",
+            ),
+        ];
+        for (name, content, code) in cases {
+            let dir = TempDir::new().unwrap();
+            let path = dir.path().join("example-a.wealth");
+            if let Some(content) = content {
+                fs::write(&path, content).unwrap();
+            }
+            memory_in(&dir).store(&path).unwrap();
+
+            let mut project = restart(&dir);
+            assert_eq!(job_count(&project), 0, "{name}");
+            assert!(!project.status().has_path, "{name}");
+            let notice = project.take_startup_notice().expect(name);
+            assert_eq!(notice.code(), code, "{name}");
+            let text = notice.to_string();
+            assert!(
+                !text.contains(dir.path().to_str().unwrap()),
+                "{name}: {text}"
+            );
+            assert!(!text.contains("example-a"), "{name}: {text}");
+            assert!(project.take_startup_notice().is_none(), "{name}: only once");
+            assert_eq!(memory_in(&dir).load(), None, "{name}: path is forgotten");
+        }
+    }
+
+    #[test]
+    fn test_csd002_ac_11_2_the_error_is_not_repeated_at_the_next_start() {
+        let dir = TempDir::new().unwrap();
+        memory_in(&dir)
+            .store(&dir.path().join("example-a.wealth"))
+            .unwrap();
+        let mut first = restart(&dir);
+        assert!(first.take_startup_notice().is_some());
+
+        let mut second = restart(&dir);
+        assert!(second.take_startup_notice().is_none());
+        assert_eq!(job_count(&second), 0);
+        assert!(!second.status().has_path);
+    }
+
+    #[test]
+    fn a_project_without_memory_still_saves_and_opens() {
+        let dir = TempDir::new().unwrap();
+        let (project, path) = saved_project(&dir, "example-a.wealth");
+        assert_eq!(job_count(&project), 1);
+        assert_eq!(file_job_count(&path), 1);
+        assert_eq!(memory_in(&dir).load(), None);
     }
 
     // ---- constraints ----

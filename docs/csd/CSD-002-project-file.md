@@ -3,7 +3,7 @@ id: CSD-002
 title: Project file (save, open, new)
 status: approved
 owner: Thijs Bardoel
-version: 0.3
+version: 0.4
 last_updated: 2026-10-25
 related: [CSD-001]
 ---
@@ -19,13 +19,15 @@ The app keeps all of the user's data in one local project file instead of a data
 - Unsaved-changes tracking and the confirmations that protect unsaved data.
 - Safe writing, so a failed save never damages an existing file.
 - The project file format and its versioning.
+- Reopening the last used project when the app starts.
 
 ### 2.2 Non-goals
-- NG-1: Encryption of the project file, and remembering or auto-opening the last used file.
+- NG-1: Encryption of the project file. (Remembering the last used file moved into scope in v0.4: REQ-8, REQ-10, REQ-11.)
 - NG-2: Autosave and backup or recovery copies.
 - NG-3: Multiple projects open at once.
 - NG-4: Cloud sync or sharing of the file.
 - NG-5: Buttons for these actions inside the app window, and an Open Recent list.
+- NG-6: Remembering more than one file, and opening a file by double-clicking it in Finder.
 
 ## 3. Definitions
 | Term | Meaning |
@@ -203,16 +205,24 @@ Scenario: New project without unsaved changes
   Then no confirmation is asked
 ```
 
-**REQ-8: Start empty** *(ubiquitous)*
-The app shall start with an empty project and shall not open or remember the previously used file.
+**REQ-8: Reopen last project** *(event-driven)*
+When the app starts, the app shall open the project file that was last opened or saved, or start with an empty project that has no path if there is none.
 
 ```gherkin
 @AC-8.1
-Scenario: Fresh launch
-  Given a project was saved to "example-a.wealth" in an earlier session
+Scenario: First launch has nothing to reopen
+  Given no project file was ever opened or saved
   When the app starts
   Then no jobs exist
   And no path is set
+
+@AC-8.2
+Scenario: The last project is reopened
+  Given a project with 1 job was saved to "example-a.wealth" in an earlier session
+  When the app starts
+  Then 1 job exists
+  And the path is "example-a.wealth"
+  And no unsaved indicator is shown
 ```
 
 **REQ-9: File menu** *(ubiquitous)*
@@ -244,11 +254,65 @@ Scenario: Menu actions respect unsaved changes
   Then a confirmation is asked before the project is replaced
 ```
 
+**REQ-10: Remember the last project** *(event-driven)*
+When a project is opened, saved or saved under a new name, the app shall remember its path for the next start, and shall leave the remembered path unchanged when the user starts a new project.
+
+```gherkin
+@AC-10.1
+Scenario: Save remembers the path
+  Given a new project with a job
+  When the user saves it to "example-a.wealth"
+  Then the next start reopens "example-a.wealth"
+
+@AC-10.2
+Scenario: Open and Save As move the remembered path
+  Given "example-a.wealth" and "example-b.wealth" exist
+  When the user opens "example-a.wealth" and then saves it as "example-c.wealth"
+  Then the next start reopens "example-c.wealth"
+
+@AC-10.3
+Scenario: New project keeps the remembered path
+  Given a project saved to "example-a.wealth"
+  When the user starts a new project and quits without saving
+  Then the next start reopens "example-a.wealth"
+
+@AC-10.4
+Scenario: A failed save does not change the remembered path
+  Given a project saved to "example-a.wealth"
+  When the user chooses a path that is not writable and saving fails
+  Then the next start still reopens "example-a.wealth"
+```
+
+**REQ-11: Remembered file cannot be reopened** *(unwanted behaviour)*
+If the remembered project file cannot be opened at start, then the app shall start with an empty project, show a notice once without the file path, and forget the remembered path.
+
+```gherkin
+@AC-11.1
+Scenario Outline: Missing, unreadable or invalid file
+  Given the remembered file "example-a.wealth" is <problem>
+  When the app starts
+  Then no jobs exist and no path is set
+  And a notice with code "<code>" is available once
+  And the notice text does not contain the file path
+
+  Examples:
+    | problem                 | code                 |
+    | missing                 | PROJECT_OPEN_FAILED  |
+    | not a valid project file | PROJECT_INVALID_FILE |
+
+@AC-11.2
+Scenario: The error is not repeated
+  Given the remembered file was missing at the last start
+  When the app starts again
+  Then no notice is shown
+  And no jobs exist and no path is set
+```
+
 ## 5. Interfaces and contracts
 
 Menu: Rust builds the File menu items `project-new`, `project-open`, `project-save` and `project-save-as`. Choosing one emits the event `menu-action` with the item id to the frontend, which runs the same flow the buttons used to run, including the confirmations of REQ-7.
 
-Commands: `new_project()`, `open_project()`, `save_project()`, `save_project_as()`, `project_status()` (returns whether there are unsaved changes and whether a path is set). The save and open commands show the native dialog themselves and take no path from the frontend.
+Commands: `take_startup_notice()` (returns the REQ-11 notice once, then nothing), `new_project()`, `open_project()`, `save_project()`, `save_project_as()`, `project_status()` (returns whether there are unsaved changes and whether a path is set). The save and open commands show the native dialog themselves and take no path from the frontend.
 
 Project file: JSON with the extension `.wealth`, a top-level integer `format_version` (currently 1) and amounts as decimal strings. Each capability owns one section of the file. Income (CSD-001) is the first.
 
@@ -261,13 +325,14 @@ Error codes (code plus safe message): `PROJECT_SAVE_FAILED`, `PROJECT_INVALID_FI
 - CON-4: Errors shown to the user never contain file paths or OS details. Rationale: `CLAUDE.md` error rules.
 - CON-5: Tests use a temporary directory and synthetic data only, never real app data or real financial data. Rationale: `CLAUDE.md` testing and privacy rules, and the repo is public.
 - CON-6: The menu uses Tauri's built-in menu API: no plugin and no extra permission. It keeps the standard macOS menus (app, Edit, View, Window), because the Edit menu is what makes copy, paste and undo work in text fields. Rationale: least privilege per `CLAUDE.md`, and no loss of standard behaviour.
+- CON-7: The remembered path is kept in `last-project.json` in the app's own config folder, outside the project file, written like the project file (atomic, owner-only). It holds the path only, never project data, and is never committed. Rationale: it must be readable before any project is open, and it can reveal a user name through the path. It uses Tauri's built-in path API: no plugin and no permission.
 
 ## 7. Verification
 The unsaved flag and the project state live in Rust, so these are proven by `cargo test`, with file round-trips in a temporary directory.
 
 | Requirement | Command |
 |---|---|
-| REQ-1, REQ-2, REQ-3, REQ-5, REQ-6, REQ-8 | `cargo test test_csd002_` (tests are named `test_csd002_ac_<n>_<m>_<description>`, CSD-000 REQ-6). One requirement, e.g. REQ-1: `cargo test test_csd002_ac_1_` |
+| REQ-1, REQ-2, REQ-3, REQ-5, REQ-6, REQ-8, REQ-10, REQ-11 | `cargo test test_csd002_` (tests are named `test_csd002_ac_<n>_<m>_<description>`, CSD-000 REQ-6). One requirement, e.g. REQ-1: `cargo test test_csd002_ac_1_` |
 | REQ-9 (AC-9.1) | `cargo test test_csd002_ac_9_` checks the table the menu is built from (ids, labels, shortcuts). Native menus can only be created on the main thread, so the built menu is on the manual checklist |
 | REQ-4, REQ-7, REQ-9 | Manual checklist: the real File menu items and shortcuts, AC-9.2 to AC-9.4, confirmation dialogs on close, New and Open with and without unsaved changes, no buttons in the window. There is no frontend test setup and none is added |
 
@@ -278,6 +343,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 - OQ-2: When approved, `CLAUDE.md` is updated in the same PR: replace "SQLite" with "local project file (JSON), no database", drop the SQLite-crate item from Ask first, and reword the `storage/` layout line. Owner: Thijs. Blocks: approval PR.
 
 ## 9. Changelog
+- 0.4 (2026-10-25): The app reopens the last used project at start. REQ-8 changes from "Start empty" to "Reopen last project" (AC-8.1 reworded, AC-8.2 added), new REQ-10 and REQ-11, NG-1 narrowed, NG-6 and CON-7 added, command `take_startup_notice`.
 - 0.3 (2026-10-25): Project actions move from four in-window buttons to the native macOS File menu (REQ-9, NG-5, CON-6, menu event in section 5). Behaviour of REQ-1 to REQ-8 is unchanged. CON-2 reworded: dialogs open from Rust, so no webview permission is needed.
 - 0.2 (2026-10-25): Resolved OQ-1. Verification uses the `test_csd002_` filter.
 - 0.1 (2026-10-25): initial draft, split out of CSD-001 v0.3 (its REQ-14 to REQ-21 and CON-7 to CON-9).

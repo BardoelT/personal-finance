@@ -102,6 +102,12 @@ pub fn project_status(state: State<'_, AppState>) -> Result<ProjectStatus, AppEr
     status_of(&state)
 }
 
+/// The reason the last project was not reopened at start, once (CSD-002 REQ-11).
+#[tauri::command]
+pub fn take_startup_notice(state: State<'_, AppState>) -> Result<Option<AppError>, AppError> {
+    Ok(state.project()?.take_startup_notice().map(AppError::from))
+}
+
 #[tauri::command]
 pub fn new_project(state: State<'_, AppState>) -> Result<ProjectStatus, AppError> {
     let mut project = state.project()?;

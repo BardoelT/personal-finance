@@ -45,6 +45,7 @@ fn configure<R: Runtime>(builder: tauri::Builder<R>, utc_offset: UtcOffset) -> t
             income::copy_previous_paycheck,
             income::yearly_totals,
             project::project_status,
+            project::take_startup_notice,
             project::new_project,
             project::open_project,
             project::save_project,
@@ -71,6 +72,16 @@ pub fn run() {
     let built = configure(
         tauri::Builder::default()
             .plugin(tauri_plugin_dialog::init())
+            .setup(|app| {
+                // CSD-002 REQ-8: reopen the last used project. Without a config
+                // folder the app simply starts empty.
+                if let Ok(dir) = app.path().app_config_dir() {
+                    if let Ok(mut project) = app.state::<AppState>().project() {
+                        project.restore(storage::LastProject::in_dir(&dir));
+                    }
+                }
+                Ok(())
+            })
             // Native menus need the main thread, so the IPC tests skip this.
             .menu(menu::build),
         utc_offset,
