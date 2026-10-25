@@ -44,10 +44,10 @@ mod tests {
 
     #[test]
     fn serializes_to_code_and_safe_message() {
-        let error = AppError::from(DomainError::JobCurrencyLocked);
+        let error = AppError::from(DomainError::JobNotFound);
         let json = serde_json::to_value(&error).unwrap();
-        assert_eq!(json["code"], "JOB_CURRENCY_LOCKED");
-        assert_eq!(json["message"], DomainError::JobCurrencyLocked.to_string());
+        assert_eq!(json["code"], "JOB_NOT_FOUND");
+        assert_eq!(json["message"], DomainError::JobNotFound.to_string());
     }
 
     #[test]

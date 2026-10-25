@@ -84,6 +84,16 @@
         </button>
       </nav>
 
+      <div class="sidebar-settings">
+        <button class="nav-item" data-section="settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>
+          </svg>
+          Settings
+        </button>
+      </div>
+
       <div class="sidebar-project" aria-label="Project file">
         <div class="project-state" id="project-state" role="status" aria-live="polite">
           <span class="project-dot" aria-hidden="true"></span>
@@ -187,49 +197,10 @@
           <button type="button" class="btn primary" id="job-add-first">Add your first job</button>
         </div>
 
-        <div class="panel" id="jobs-panel" hidden>
-          <div class="panel-header"><span class="panel-title">Jobs</span></div>
-          <ul class="job-list" id="job-list"></ul>
-        </div>
-
-        <div id="job-detail" hidden>
+        <div id="income-content" hidden>
           <div class="panel">
-            <div class="panel-header">
-              <div>
-                <span class="panel-title" id="job-detail-title"></span>
-                <div class="panel-sub" id="job-detail-meta"></div>
-              </div>
-              <div class="btn-row">
-                <button type="button" class="btn" id="job-edit">Edit job</button>
-                <button type="button" class="btn danger" id="job-delete">Delete job</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="panel">
-            <div class="panel-header">
-              <span class="panel-title" id="paycheck-title">Paychecks</span>
-              <div class="btn-row">
-                <button type="button" class="btn" id="paycheck-copy">Copy previous month</button>
-                <button type="button" class="btn primary" id="paycheck-add">Add paycheck</button>
-              </div>
-            </div>
-            <p class="empty-note" id="paycheck-empty" hidden>No paychecks yet for this job.</p>
-            <div class="table-wrap">
-              <table class="data-table" id="paycheck-table" hidden>
-                <thead>
-                  <tr>
-                    <th scope="col">Month</th>
-                    <th scope="col" class="num">Gross salary</th>
-                    <th scope="col" class="num">Holiday pay</th>
-                    <th scope="col" class="num">Bonus</th>
-                    <th scope="col" class="num">Total gross</th>
-                    <th scope="col"><span class="visually-hidden">Actions</span></th>
-                  </tr>
-                </thead>
-                <tbody id="paycheck-rows"></tbody>
-              </table>
-            </div>
+            <div class="panel-header"><span class="panel-title">Jobs</span></div>
+            <ul class="job-list" id="job-list"></ul>
           </div>
 
           <div class="panel">
@@ -250,6 +221,51 @@
                 <tbody id="totals-rows"></tbody>
               </table>
             </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title" id="paycheck-title">Paychecks</span>
+              <button type="button" class="btn primary" id="paycheck-add">Add paycheck</button>
+            </div>
+            <p class="empty-note" id="paycheck-empty" hidden>No paychecks yet.</p>
+            <div class="table-wrap">
+              <table class="data-table" id="paycheck-table" hidden>
+                <thead>
+                  <tr>
+                    <th scope="col">Month</th>
+                    <th scope="col">Job</th>
+                    <th scope="col" class="num">Gross salary</th>
+                    <th scope="col" class="num">Holiday pay</th>
+                    <th scope="col" class="num">Bonus</th>
+                    <th scope="col" class="num">Total gross</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody id="paycheck-rows"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Settings -->
+      <section class="section" id="settings" aria-labelledby="settings-title">
+        <div class="section-header">
+          <h1 class="section-title" id="settings-title">Project settings</h1>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">General</span></div>
+          <div class="setting-row">
+            <div class="setting-text">
+              <label class="setting-name" for="setting-currency">Currency</label>
+              <p class="setting-help">The currency of every amount in this project. Changing it does not convert any amount.</p>
+            </div>
+            <select id="setting-currency">
+              <option value="EUR">EUR</option>
+              <option value="USD">USD</option>
+              <option value="GBP">GBP</option>
+            </select>
           </div>
         </div>
       </section>
@@ -367,21 +383,13 @@
         <input type="text" name="title" maxlength="200" autocomplete="off">
       </label>
       <div class="field-row">
-        <label class="field">Start date
-          <input type="date" name="start_date" required>
+        <label class="field">Start date (dd/mm/yyyy)
+          <input type="text" name="start_date" inputmode="numeric" placeholder="01/03/2024" maxlength="10" autocomplete="off" required>
         </label>
         <label class="field">End date (optional)
-          <input type="date" name="end_date">
+          <input type="text" name="end_date" inputmode="numeric" placeholder="dd/mm/yyyy" maxlength="10" autocomplete="off">
         </label>
       </div>
-      <label class="field">Currency
-        <select name="currency">
-          <option value="EUR">EUR</option>
-          <option value="USD">USD</option>
-          <option value="GBP">GBP</option>
-        </select>
-        <span class="field-hint" id="job-currency-hint" hidden>The currency cannot change once the job has paychecks.</span>
-      </label>
       <p class="form-error" id="job-error" role="alert" hidden></p>
       <div class="dialog-actions">
         <button type="button" class="btn" data-cancel>Cancel</button>
@@ -393,6 +401,12 @@
   <dialog id="paycheck-dialog" aria-labelledby="paycheck-dialog-title">
     <form method="dialog" id="paycheck-form" novalidate>
       <h2 id="paycheck-dialog-title">Add paycheck</h2>
+      <label class="field">Job
+        <select name="job_id"></select>
+      </label>
+      <div class="field-action">
+        <button type="button" class="btn" id="paycheck-copy">Copy previous month</button>
+      </div>
       <label class="field">Month (YYYY-MM)
         <input type="text" name="month" inputmode="numeric" placeholder="2026-09" maxlength="7" autocomplete="off" required>
       </label>

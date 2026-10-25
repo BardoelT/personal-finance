@@ -11,10 +11,11 @@ pub const MAX_AMOUNT: Decimal = Decimal::from_parts(100_000_000, 0, 0, false, 2)
 /// Longest accepted amount text, a bound on untrusted input.
 const MAX_AMOUNT_TEXT_LEN: usize = 32;
 
-/// Currencies a job can be paid in.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+/// Currencies a project can use (CSD-003).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum Currency {
+    #[default]
     Eur,
     Usd,
     Gbp,

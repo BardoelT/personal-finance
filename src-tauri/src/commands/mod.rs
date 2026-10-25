@@ -2,6 +2,7 @@
 
 pub mod income;
 pub mod project;
+pub mod settings;
 
 use std::sync::{Mutex, MutexGuard};
 

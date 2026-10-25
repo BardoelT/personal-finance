@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 
 use super::{file, LastProject, StorageError};
-use crate::domain::Income;
+use crate::domain::{Income, ProjectData, Settings};
 
 /// The extension of project files.
 const EXTENSION: &str = "wealth";
@@ -35,8 +35,8 @@ pub enum OpenOutcome {
 /// written to or read from that file (CSD-002).
 #[derive(Debug, Default)]
 pub struct Project {
-    income: Income,
-    saved: Income,
+    data: ProjectData,
+    saved: ProjectData,
     path: Option<PathBuf>,
     /// Where the last used path is remembered, if anywhere (REQ-10).
     memory: Option<LastProject>,
@@ -54,20 +54,32 @@ impl Project {
     /// The income data.
     #[must_use]
     pub fn income(&self) -> &Income {
-        &self.income
+        &self.data.income
     }
 
     /// Mutable income data. Edits show up in [`Project::status`] by comparison
     /// with the last saved state, so no separate flag can go stale (REQ-3).
     pub fn income_mut(&mut self) -> &mut Income {
-        &mut self.income
+        &mut self.data.income
+    }
+
+    /// The project settings (CSD-003).
+    #[must_use]
+    pub fn settings(&self) -> &Settings {
+        &self.data.settings
+    }
+
+    /// Mutable project settings. Like the income data, changes show up in
+    /// [`Project::status`] by comparison (CSD-003 AC-4.2).
+    pub fn settings_mut(&mut self) -> &mut Settings {
+        &mut self.data.settings
     }
 
     /// Unsaved-changes indicator and whether a path is set.
     #[must_use]
     pub fn status(&self) -> ProjectStatus {
         ProjectStatus {
-            unsaved_changes: self.income != self.saved,
+            unsaved_changes: self.data != self.saved,
             has_path: self.path.is_some(),
         }
     }
@@ -130,8 +142,8 @@ impl Project {
     /// Returns `SaveFailed`; the project keeps its previous path and stays unsaved.
     pub fn save_as(&mut self, path: PathBuf) -> Result<(), StorageError> {
         let path = with_extension(path);
-        file::write(&path, &self.income)?;
-        self.saved = self.income.clone();
+        file::write(&path, &self.data)?;
+        self.saved = self.data.clone();
         self.path = Some(path);
         self.remember();
         Ok(())
@@ -177,9 +189,9 @@ impl Project {
     /// # Errors
     /// Returns `OpenFailed` or `InvalidFile`; the project is left unchanged.
     pub fn open(&mut self, path: &Path) -> Result<(), StorageError> {
-        let income = file::read(path)?;
-        self.saved = income.clone();
-        self.income = income;
+        let data = file::read(path)?;
+        self.saved = data.clone();
+        self.data = data;
         self.path = Some(path.to_path_buf());
         self.remember();
         Ok(())
@@ -225,7 +237,7 @@ mod tests {
             .income_mut()
             .create_job(&JobInput {
                 employer: employer.to_owned(),
-                start_date: Some("2024-03-01".to_owned()),
+                start_date: Some("01/03/2024".to_owned()),
                 ..JobInput::default()
             })
             .unwrap()
@@ -257,7 +269,7 @@ mod tests {
     }
 
     fn file_job_count(path: &Path) -> usize {
-        file::read(path).unwrap().jobs().len()
+        file::read(path).unwrap().income.jobs().len()
     }
 
     // ---- REQ-1: save ----
@@ -748,6 +760,89 @@ mod tests {
         assert_eq!(memory_in(&dir).load(), None);
     }
 
+    // ---- CSD-003: project settings ----
+
+    use crate::domain::Currency;
+
+    #[test]
+    fn test_csd003_ac_7_1_currency_survives_save_and_open() {
+        let dir = TempDir::new().unwrap();
+        let mut project = Project::new();
+        add_job(&mut project, "Example Employer");
+        project.settings_mut().set_currency("GBP").unwrap();
+        let path = dir.path().join("example-a.wealth");
+        project.save_as(path.clone()).unwrap();
+
+        let mut fresh = Project::new();
+        fresh.open(&path).unwrap();
+        assert_eq!(fresh.settings().currency, Currency::Gbp);
+        assert!(!fresh.status().unsaved_changes);
+    }
+
+    #[test]
+    fn test_csd003_ac_7_2_a_file_without_settings_opens_with_the_defaults() {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("example-a.wealth");
+        // Also has the old per-job currency, which is ignored (NG-5).
+        fs::write(
+            &path,
+            r#"{"format_version":1,"income":{"jobs":[{"id":"671166f4-5827-4794-bcdc-54d7824fb650",
+                "employer":"Example Employer","title":null,"start_date":"2024-03-01",
+                "end_date":null,"currency":"USD"}],"paychecks":[]}}"#,
+        )
+        .unwrap();
+        let mut project = Project::new();
+        project.open(&path).unwrap();
+        assert_eq!(project.settings().currency, Currency::Eur);
+        assert_eq!(job_count(&project), 1);
+    }
+
+    #[test]
+    fn test_csd003_ac_7_3_the_settings_are_a_section_of_the_file() {
+        let dir = TempDir::new().unwrap();
+        let mut project = Project::new();
+        project.settings_mut().set_currency("USD").unwrap();
+        let path = dir.path().join("example-a.wealth");
+        project.save_as(path.clone()).unwrap();
+        let value: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(value["settings"], serde_json::json!({ "currency": "USD" }));
+        assert!(value["income"].get("currency").is_none());
+    }
+
+    #[test]
+    fn test_csd003_ac_4_2_a_currency_change_is_an_unsaved_change() {
+        let dir = TempDir::new().unwrap();
+        let (mut project, _) = saved_project(&dir, "example-a.wealth");
+        assert!(!project.status().unsaved_changes);
+        project.settings_mut().set_currency("GBP").unwrap();
+        assert!(project.status().unsaved_changes);
+        project.save().unwrap();
+        assert!(!project.status().unsaved_changes);
+    }
+
+    #[test]
+    fn test_csd003_ac_4_3_choosing_the_current_currency_changes_nothing() {
+        let dir = TempDir::new().unwrap();
+        let (mut project, _) = saved_project(&dir, "example-a.wealth");
+        project.settings_mut().set_currency("EUR").unwrap();
+        assert!(!project.status().unsaved_changes);
+        // Changing and changing back is no change either.
+        project.settings_mut().set_currency("USD").unwrap();
+        assert!(project.status().unsaved_changes);
+        project.settings_mut().set_currency("EUR").unwrap();
+        assert!(!project.status().unsaved_changes);
+    }
+
+    #[test]
+    fn test_csd003_ac_3_1_a_new_project_starts_in_eur() {
+        let dir = TempDir::new().unwrap();
+        let (mut project, _) = saved_project(&dir, "example-a.wealth");
+        project.settings_mut().set_currency("USD").unwrap();
+        project.reset();
+        assert_eq!(project.settings().currency, Currency::Eur);
+    }
+
     // ---- constraints ----
 
     #[test]
@@ -767,7 +862,8 @@ mod tests {
         assert_eq!(paycheck["holiday_pay"], "0.00");
         assert_eq!(paycheck["month"], "2026-09");
         assert_eq!(value["income"]["jobs"][0]["start_date"], "2024-03-01");
-        assert_eq!(value["income"]["jobs"][0]["currency"], "EUR");
+        assert_eq!(value["income"]["jobs"][0].get("currency"), None);
+        assert_eq!(value["settings"]["currency"], "EUR");
     }
 
     #[test]
