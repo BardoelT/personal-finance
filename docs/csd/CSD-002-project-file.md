@@ -3,7 +3,7 @@ id: CSD-002
 title: Project file (save, open, new)
 status: approved
 owner: Thijs Bardoel
-version: 0.2
+version: 0.3
 last_updated: 2026-10-25
 related: [CSD-001]
 ---
@@ -15,7 +15,7 @@ The app keeps all of the user's data in one local project file instead of a data
 
 ## 2. Scope
 ### 2.1 In scope
-- New, Open, Save and Save As for the project file.
+- New, Open, Save and Save As for the project file, as items of the native macOS File menu.
 - Unsaved-changes tracking and the confirmations that protect unsaved data.
 - Safe writing, so a failed save never damages an existing file.
 - The project file format and its versioning.
@@ -25,6 +25,7 @@ The app keeps all of the user's data in one local project file instead of a data
 - NG-2: Autosave and backup or recovery copies.
 - NG-3: Multiple projects open at once.
 - NG-4: Cloud sync or sharing of the file.
+- NG-5: Buttons for these actions inside the app window, and an Open Recent list.
 
 ## 3. Definitions
 | Term | Meaning |
@@ -39,10 +40,12 @@ The app keeps all of the user's data in one local project file instead of a data
 ```mermaid
 sequenceDiagram
     actor U as User
+    participant MENU as macOS File menu
     participant UI as Frontend (ui/)
     participant CMD as commands/
     participant FS as Project file
-    U->>UI: Save
+    U->>MENU: File > Save
+    MENU->>UI: menu-action "save"
     UI->>CMD: save_project()
     alt project has no path
         CMD->>U: native save dialog
@@ -212,7 +215,38 @@ Scenario: Fresh launch
   And no path is set
 ```
 
+**REQ-9: File menu** *(ubiquitous)*
+The app shall offer New, Open, Save and Save As as items of the native macOS File menu with the shortcuts ⌘N, ⌘O, ⌘S and ⇧⌘S, and shall not offer them as buttons in the app window.
+
+```gherkin
+@AC-9.1
+Scenario: Menu items and shortcuts exist
+  Given the app has started
+  Then the File menu contains "New" with ⌘N, "Open…" with ⌘O, "Save" with ⌘S and "Save As…" with ⇧⌘S
+
+@AC-9.2
+Scenario: Choosing a menu item runs the action
+  Given a new project with a job and no path
+  When the user chooses File > Save
+  Then a native save dialog is shown
+  And after choosing a path the unsaved indicator is cleared
+
+@AC-9.3
+Scenario: No buttons in the window
+  Given the app has started
+  Then the app window has no New, Open, Save or Save As buttons
+  And the unsaved-changes indicator is still shown in the window
+
+@AC-9.4
+Scenario: Menu actions respect unsaved changes
+  Given unsaved changes
+  When the user chooses File > New or File > Open…
+  Then a confirmation is asked before the project is replaced
+```
+
 ## 5. Interfaces and contracts
+
+Menu: Rust builds the File menu items `project-new`, `project-open`, `project-save` and `project-save-as`. Choosing one emits the event `menu-action` with the item id to the frontend, which runs the same flow the buttons used to run, including the confirmations of REQ-7.
 
 Commands: `new_project()`, `open_project()`, `save_project()`, `save_project_as()`, `project_status()` (returns whether there are unsaved changes and whether a path is set). The save and open commands show the native dialog themselves and take no path from the frontend.
 
@@ -222,10 +256,11 @@ Error codes (code plus safe message): `PROJECT_SAVE_FAILED`, `PROJECT_INVALID_FI
 
 ## 6. Constraints
 - CON-1: The project file is plain, unencrypted JSON, written by writing a temporary file and renaming it over the target. It is never committed (`*.wealth` is git-ignored). Rationale: it holds real financial data and the repo is public. The atomic write backs REQ-5.
-- CON-2: File access uses only the Tauri dialog plugin with the save and open dialog permissions. There is no `fs` plugin, and file paths never come from the frontend. Rationale: least privilege per `CLAUDE.md`. Adding the plugin still needs approval at implementation time.
+- CON-2: File access uses only the Tauri dialog plugin, opened from Rust, so no dialog permission is granted to the webview. There is no `fs` plugin, and file paths never come from the frontend. Rationale: least privilege per `CLAUDE.md`. Adding the plugin still needs approval at implementation time.
 - CON-3: Amounts in the file are decimal strings and the file carries `format_version`. A newer version than the app knows is rejected. Rationale: no float rounding, and safe forward compatibility.
 - CON-4: Errors shown to the user never contain file paths or OS details. Rationale: `CLAUDE.md` error rules.
 - CON-5: Tests use a temporary directory and synthetic data only, never real app data or real financial data. Rationale: `CLAUDE.md` testing and privacy rules, and the repo is public.
+- CON-6: The menu uses Tauri's built-in menu API: no plugin and no extra permission. It keeps the standard macOS menus (app, Edit, View, Window), because the Edit menu is what makes copy, paste and undo work in text fields. Rationale: least privilege per `CLAUDE.md`, and no loss of standard behaviour.
 
 ## 7. Verification
 The unsaved flag and the project state live in Rust, so these are proven by `cargo test`, with file round-trips in a temporary directory.
@@ -233,7 +268,8 @@ The unsaved flag and the project state live in Rust, so these are proven by `car
 | Requirement | Command |
 |---|---|
 | REQ-1, REQ-2, REQ-3, REQ-5, REQ-6, REQ-8 | `cargo test test_csd002_` (tests are named `test_csd002_ac_<n>_<m>_<description>`, CSD-000 REQ-6). One requirement, e.g. REQ-1: `cargo test test_csd002_ac_1_` |
-| REQ-4, REQ-7 | Manual checklist: confirmation dialogs on close, New and Open, with and without unsaved changes. There is no frontend test setup and none is added |
+| REQ-9 (AC-9.1) | `cargo test test_csd002_ac_9_` checks the table the menu is built from (ids, labels, shortcuts). Native menus can only be created on the main thread, so the built menu is on the manual checklist |
+| REQ-4, REQ-7, REQ-9 | Manual checklist: the real File menu items and shortcuts, AC-9.2 to AC-9.4, confirmation dialogs on close, New and Open with and without unsaved changes, no buttons in the window. There is no frontend test setup and none is added |
 
 Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 
@@ -242,5 +278,6 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 - OQ-2: When approved, `CLAUDE.md` is updated in the same PR: replace "SQLite" with "local project file (JSON), no database", drop the SQLite-crate item from Ask first, and reword the `storage/` layout line. Owner: Thijs. Blocks: approval PR.
 
 ## 9. Changelog
+- 0.3 (2026-10-25): Project actions move from four in-window buttons to the native macOS File menu (REQ-9, NG-5, CON-6, menu event in section 5). Behaviour of REQ-1 to REQ-8 is unchanged. CON-2 reworded: dialogs open from Rust, so no webview permission is needed.
 - 0.2 (2026-10-25): Resolved OQ-1. Verification uses the `test_csd002_` filter.
 - 0.1 (2026-10-25): initial draft, split out of CSD-001 v0.3 (its REQ-14 to REQ-21 and CON-7 to CON-9).
