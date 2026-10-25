@@ -3,9 +3,9 @@ id: CSD-001
 title: Employment income tracking
 status: approved
 owner: Thijs Bardoel
-version: 0.7
+version: 0.8
 last_updated: 25/10/2026
-related: [CSD-000, CSD-002]
+related: [CSD-000, CSD-002, CSD-003]
 ---
 
 # CSD-001: Employment income tracking
@@ -59,14 +59,14 @@ sequenceDiagram
 ### 4.1 Jobs
 
 **REQ-1: Add a job** *(event-driven)*
-When the user submits a new job with an employer name and a start date, the app shall create the job with currency EUR unless USD or GBP is chosen.
+When the user submits a new job with an employer name and a start date, the app shall create the job.
 
 ```gherkin
 @AC-1.1
 Scenario: Job created with defaults
   Given no jobs exist
   When the user adds a job with employer "Example Employer" and start date 01/03/2024
-  Then one job exists with employer "Example Employer", start date 01/03/2024 and currency "EUR"
+  Then one job exists with employer "Example Employer" and start date 01/03/2024
   And the job has no title and no end date
 
 @AC-1.2
@@ -82,19 +82,9 @@ Scenario Outline: Invalid job is rejected
     | Example Employer |            |            | JOB_START_REQUIRED    |
     | Example Employer | 01/03/2024 | 29/02/2024 | JOB_END_BEFORE_START  |
 
-@AC-1.3
-Scenario: Supported non-default currency
-  Given no jobs exist
-  When the user adds a job with employer "Example Employer", start date 01/03/2024 and currency "GBP"
-  Then the job has currency "GBP"
-
-@AC-1.4
-Scenario: Unsupported currency is rejected
-  Given no jobs exist
-  When the user adds a job with employer "Example Employer", start date 01/03/2024 and currency "CHF"
-  Then the job is rejected with error code "JOB_CURRENCY_UNSUPPORTED"
-  And no job exists
 ```
+
+AC-1.3 and AC-1.4 (removed in v0.8): a job no longer has a currency. The project has one (CSD-003).
 
 **REQ-2: Edit a job** *(event-driven)*
 When the user edits a job's employer, title, start date or end date, the app shall apply the change regardless of existing paychecks.
@@ -115,23 +105,7 @@ Scenario: End date before start date is rejected on edit
   And the job has no end date
 ```
 
-**REQ-3: Currency is locked once paychecks exist** *(unwanted behaviour)*
-If the user changes the currency of a job that has at least one paycheck, then the app shall reject the change.
-
-```gherkin
-@AC-3.1
-Scenario: Currency change rejected
-  Given a job in "EUR" with one paycheck
-  When the user changes the job's currency to "USD"
-  Then the change is rejected with error code "JOB_CURRENCY_LOCKED"
-  And the job currency is "EUR"
-
-@AC-3.2
-Scenario: Currency change allowed without paychecks
-  Given a job in "EUR" with no paychecks
-  When the user changes the job's currency to "USD"
-  Then the job currency is "USD"
-```
+**REQ-3: (removed in v0.8)** Jobs no longer have a currency, so there is nothing to lock. The project has one currency (CSD-003). AC-3.1 and AC-3.2 are removed.
 
 **REQ-4: Delete a job** *(event-driven)*
 When the user confirms deletion of a job, the app shall remove the job and all of its paychecks.
@@ -311,7 +285,7 @@ Scenario: Total is the sum
 ### 4.3 Views
 
 **REQ-11: Yearly totals** *(event-driven)*
-When the user views the employment overview, the app shall show, for each calendar year with at least one paycheck of any job, the sums over all jobs of gross salary, holiday pay, bonus and total gross and the number of paychecks, without extrapolating partial years and without converting currencies.
+When the user views the employment overview, the app shall show, for each calendar year with at least one paycheck of any job, the sums over all jobs of gross salary, holiday pay, bonus and total gross and the number of paychecks, without extrapolating partial years.
 
 ```gherkin
 @AC-11.1
@@ -335,13 +309,9 @@ Scenario: Totals add up all jobs
   When the user views the yearly totals
   Then there is one row for 2026 with gross 7000.00, holiday pay 0.00, bonus 500.00, total 7500.00, count 3
 
-@AC-11.4
-Scenario: Currencies are not converted
-  Given an EUR job with paycheck 2026-09 (gross 3000.00)
-  And a USD job with paycheck 2026-09 (gross 1000.00)
-  When the user views the yearly totals
-  Then the row for 2026 shows gross 4000.00
 ```
+
+AC-11.4 (removed in v0.8): the project has one currency, so there is nothing to convert (CSD-003).
 
 **REQ-12: Ordering** *(ubiquitous)*
 The app shall list jobs by start date, newest first, the paychecks of all jobs by month, newest first and, within a month, by job in job order, and the yearly totals by year, newest first.
@@ -413,7 +383,7 @@ Scenario: Month stays YYYY-MM
 ```
 
 **REQ-23: Employment view layout** *(ubiquitous)*
-The app shall show the employment view as the sections Jobs, Yearly totals and Paychecks in that order, with Edit job and Delete job on each job in the Jobs section, a Job column and a Currency column in the paychecks, and no job selection that changes what the sections show.
+The app shall show the employment view as the sections Jobs, Yearly totals and Paychecks in that order, with Edit job and Delete job on each job in the Jobs section, a Job column in the paychecks, and no job selection that changes what the sections show.
 
 ```gherkin
 @AC-23.1
@@ -425,14 +395,14 @@ Scenario: Sections in order
 @AC-23.2
 Scenario: Job rows carry their actions and paycheck count
   Given job "Example Employer" with 2 paychecks
-  Then its row in the Jobs section shows the employer, dates, currency and "2 paychecks"
+  Then its row in the Jobs section shows the employer, dates and "2 paychecks"
   And the row has the buttons "Edit job" and "Delete job"
 
 @AC-23.3
 Scenario: Paychecks of all jobs with their job
-  Given job "Example Employer" with a paycheck for 2026-09 (EUR) and job "Older Example Employer" with a paycheck for 2026-08 (USD)
+  Given job "Example Employer" with a paycheck for 2026-09 and job "Older Example Employer" with a paycheck for 2026-08
   Then the Paychecks section lists both paychecks
-  And the Job column shows "Example Employer" and "Older Example Employer" and the Currency column shows "EUR" and "USD"
+  And the Job column shows "Example Employer" and "Older Example Employer"
 
 @AC-23.4
 Scenario: Clicking a job changes nothing
@@ -457,7 +427,6 @@ erDiagram
         string title "optional"
         date start_date
         date end_date "optional"
-        Currency currency "EUR, USD or GBP; default EUR"
     }
     PAYCHECK {
         JobId job_id
@@ -469,12 +438,12 @@ erDiagram
 ```
 
 Commands (all inputs validated in Rust; amounts cross IPC as decimal strings):
-`list_jobs`, `create_job`, `update_job`, `delete_job`, `list_paychecks()` (all jobs, each with its employer and currency), `add_paycheck`, `update_paycheck`, `delete_paycheck`, `copy_previous_paycheck(job_id)`, `yearly_totals()` (over all jobs). Project commands (save, open, new) are in CSD-002. The income data is stored as one section of the project file defined there.
+`list_jobs`, `create_job`, `update_job`, `delete_job`, `list_paychecks()` (all jobs, each with its employer), `add_paycheck`, `update_paycheck`, `delete_paycheck`, `copy_previous_paycheck(job_id)`, `yearly_totals()` (over all jobs). Project commands (save, open, new) are in CSD-002. The income data is stored as one section of the project file defined there.
 
-Error codes (returned as code plus safe message): `JOB_EMPLOYER_REQUIRED`, `JOB_START_REQUIRED`, `JOB_END_BEFORE_START`, `JOB_CURRENCY_UNSUPPORTED`, `JOB_CURRENCY_LOCKED`, `PAYCHECK_MONTH_IN_FUTURE`, `PAYCHECK_DUPLICATE_MONTH`, `PAYCHECK_GROSS_INVALID`, `PAYCHECK_AMOUNT_NEGATIVE`, `PAYCHECK_AMOUNT_PRECISION`, `PAYCHECK_AMOUNT_TOO_LARGE`, `JOB_DATE_INVALID`. Project error codes are in CSD-002.
+Error codes (returned as code plus safe message): `JOB_EMPLOYER_REQUIRED`, `JOB_START_REQUIRED`, `JOB_END_BEFORE_START`, `PAYCHECK_MONTH_IN_FUTURE`, `PAYCHECK_DUPLICATE_MONTH`, `PAYCHECK_GROSS_INVALID`, `PAYCHECK_AMOUNT_NEGATIVE`, `PAYCHECK_AMOUNT_PRECISION`, `PAYCHECK_AMOUNT_TOO_LARGE`, `JOB_DATE_INVALID`. Project error codes are in CSD-002.
 
 ## 6. Constraints
-- CON-1: Amounts use `rust_decimal::Decimal` and carry the job's currency. Temporary exception (v0.7): the yearly totals add the amounts of all jobs without converting currencies (REQ-11, AC-11.4). Rationale: `CLAUDE.md` money rules apply, except that the owner will make the whole project file single-currency (OQ-8), which removes the exception.
+- CON-1: Amounts use `rust_decimal::Decimal` and are in the project currency (CSD-003), so adding amounts across jobs never mixes currencies. Rationale: `CLAUDE.md` money rules. (The v0.7 exception for mixed currencies is gone.)
 - CON-2: The frontend displays figures computed in Rust and computes none itself. Rationale: `CLAUDE.md` layout rule.
 - CON-3: No network access. Rationale: `CLAUDE.md` Tauri security rules.
 - CON-4: Errors shown to the user never contain file paths or OS details. Rationale: `CLAUDE.md` error rules.
@@ -491,7 +460,7 @@ All ACs are proven by `cargo test`, with domain logic tested in `domain/`. Tests
 |---|---|
 | All of REQ-1 to REQ-13, and AC-22.2 and AC-22.3 | `cargo test test_csd001_` |
 | AC-5.6, AC-22.1, REQ-23 (AC-23.1, AC-23.2, AC-23.4) and the display parts of AC-9.3, AC-11.2, AC-13.2 | Manual checklist: section order and contents, job buttons and paycheck counts, no selection, dd/mm/yyyy dates, default job in the add form. There is no frontend test setup |
-| AC-23.3 (data) | `cargo test test_csd001_ac_23_` covers the data of the paychecks table (all jobs, employer, currency) |
+| AC-23.3 (data) | `cargo test test_csd001_ac_23_` covers the data of the paychecks table (all jobs and their employer) |
 | One requirement, e.g. REQ-5 | `cargo test test_csd001_ac_5_` |
 
 Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
@@ -500,13 +469,14 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 - OQ-1: (moved to CSD-002 in v0.4) File format, resolved there.
 - OQ-2: (moved to CSD-002 in v0.4) Dialog plugin and permissions, resolved there.
 - OQ-3: (moved to CSD-002 OQ-2 in v0.4) The `CLAUDE.md` update at approval.
-- OQ-4: (resolved in v0.2) Currencies are EUR, USD and GBP.
+- OQ-4: (resolved in v0.2, moved to CSD-003 in v0.8) Currencies are EUR, USD and GBP.
 - OQ-5: (moved to CSD-002 in v0.4) Testing the unsaved state, resolved there.
 - OQ-6: (resolved in v0.2) The month of an existing paycheck is not editable.
 - OQ-7: (resolved in v0.2) Deleting a single paycheck needs no confirmation.
-- OQ-8: The project file will become single-currency. Then the per-job currency, `JOB_CURRENCY_*` codes, the Currency column and the CON-1 exception are removed in a later version. Owner: Thijs. Blocks: nothing now.
+- OQ-8: (resolved in v0.8) The project is single-currency: per-job currency, `JOB_CURRENCY_*`, the Currency column and the CON-1 exception are removed (CSD-003).
 
 ## 9. Changelog
+- 0.8 (25/10/2026): Currency moves from the job to the project (CSD-003). REQ-1 no longer sets a currency, REQ-3 removed, AC-1.3, AC-1.4 and AC-11.4 removed, the Currency column and job currency removed from REQ-23, the CON-1 exception removed, OQ-8 resolved, `JOB_CURRENCY_*` codes removed.
 - 0.7 (25/10/2026): The employment view no longer has a selected job. Yearly totals are summed over all jobs (REQ-11, AC-11.3, AC-11.4), the paychecks of all jobs are listed together with Job and Currency columns (REQ-12, REQ-23), the job is chosen in the add form and "copy previous month" moves into it (REQ-5, AC-5.6, REQ-9, AC-9.3). NG-6 narrowed to charts. CON-1 gets a temporary exception for summing mixed currencies (OQ-8). Commands `list_paychecks()` and `yearly_totals()` no longer take a job.
 - 0.6 (25/10/2026): Dates are written dd/mm/yyyy (CSD-000 2.2, CON-7). New REQ-22 (date format, AC-22.1 to AC-22.3), error code `JOB_DATE_INVALID` listed, existing examples converted. Months stay YYYY-MM; the file and commands keep ISO 8601 internally.
 - 0.5 (25/10/2026): Verification uses the `test_csd001_` filter (CSD-000 2.1 naming).

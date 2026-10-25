@@ -9,7 +9,7 @@ use time::Date;
 use uuid::Uuid;
 
 use super::error::DomainError;
-use super::money::{zero, Amounts, Currency};
+use super::money::{zero, Amounts};
 
 const MAX_TEXT_CHARS: usize = 200;
 const FIRST_YEAR: i32 = 1900;
@@ -136,7 +136,6 @@ pub struct Job {
     pub start_date: Date,
     #[serde(default, with = "iso_date::option")]
     pub end_date: Option<Date>,
-    pub currency: Currency,
 }
 
 /// The monthly pay record of one job (CSD-001 REQ-5).
@@ -159,9 +158,6 @@ pub struct JobInput {
     pub start_date: Option<String>,
     #[serde(default)]
     pub end_date: Option<String>,
-    /// `None` means EUR when creating and "unchanged" when editing.
-    #[serde(default)]
-    pub currency: Option<String>,
 }
 
 struct ValidJob {
@@ -169,7 +165,6 @@ struct ValidJob {
     title: Option<String>,
     start_date: Date,
     end_date: Option<Date>,
-    currency: Option<Currency>,
 }
 
 impl JobInput {
@@ -190,9 +185,6 @@ impl JobInput {
         let end_date = non_blank(self.end_date.as_deref())
             .map(parse_date)
             .transpose()?;
-        let currency = non_blank(self.currency.as_deref())
-            .map(|text| Currency::parse(text).ok_or(DomainError::JobCurrencyUnsupported))
-            .transpose()?;
         if end_date.is_some_and(|end| end < start_date) {
             return Err(DomainError::JobEndBeforeStart);
         }
@@ -201,7 +193,6 @@ impl JobInput {
             title: title.map(str::to_owned),
             start_date,
             end_date,
-            currency,
         })
     }
 }
@@ -237,7 +228,7 @@ pub struct Income {
 }
 
 impl Income {
-    /// Creates a job, in EUR unless the input names another currency.
+    /// Creates a job.
     ///
     /// # Errors
     /// Returns the validation error of the first invalid field.
@@ -249,30 +240,22 @@ impl Income {
             title: valid.title,
             start_date: valid.start_date,
             end_date: valid.end_date,
-            currency: valid.currency.unwrap_or(Currency::Eur),
         };
         self.jobs.push(job.clone());
         Ok(job)
     }
 
-    /// Replaces the fields of a job. Dates never conflict with paychecks, but
-    /// the currency is locked once the job has any paycheck (REQ-3).
+    /// Replaces the fields of a job. Dates never conflict with paychecks.
     ///
     /// # Errors
-    /// Returns `JobNotFound`, a validation error, or `JobCurrencyLocked`.
+    /// Returns `JobNotFound` or a validation error.
     pub fn update_job(&mut self, id: JobId, input: &JobInput) -> Result<Job, DomainError> {
         let valid = input.validate()?;
-        let has_paychecks = self.paycheck_count(id) > 0;
         let job = self.job_mut(id)?;
-        let currency = valid.currency.unwrap_or(job.currency);
-        if currency != job.currency && has_paychecks {
-            return Err(DomainError::JobCurrencyLocked);
-        }
         job.employer = valid.employer;
         job.title = valid.title;
         job.start_date = valid.start_date;
         job.end_date = valid.end_date;
-        job.currency = currency;
         Ok(job.clone())
     }
 
@@ -418,8 +401,7 @@ impl Income {
     }
 
     /// Sums per calendar year over all jobs, newest year first, without
-    /// extrapolating partial years (REQ-11). Currencies are not converted: the
-    /// amounts are added as they are (CON-1, temporary exception).
+    /// extrapolating partial years (REQ-11).
     #[must_use]
     pub fn yearly_totals(&self) -> Vec<YearlyTotal> {
         let mut by_year: BTreeMap<i32, YearlyTotal> = BTreeMap::new();
@@ -513,19 +495,18 @@ mod tests {
         month("2026-10")
     }
 
-    fn input(employer: &str, start: &str, end: &str, currency: &str) -> JobInput {
+    fn input(employer: &str, start: &str, end: &str) -> JobInput {
         JobInput {
             employer: employer.to_owned(),
             title: None,
             start_date: Some(start.to_owned()),
             end_date: Some(end.to_owned()),
-            currency: Some(currency.to_owned()),
         }
     }
 
     fn job_with(income: &mut Income, start: &str, end: &str) -> JobId {
         income
-            .create_job(&input("Example Employer", start, end, ""))
+            .create_job(&input("Example Employer", start, end))
             .unwrap()
             .id
     }
@@ -555,7 +536,6 @@ mod tests {
         assert_eq!(income.jobs().len(), 1);
         assert_eq!(job.employer, "Example Employer");
         assert_eq!(job.start_date.to_string(), "2024-03-01");
-        assert_eq!(job.currency, Currency::Eur);
         assert_eq!(job.title, None);
         assert_eq!(job.end_date, None);
     }
@@ -581,9 +561,7 @@ mod tests {
         ];
         for (employer, start, end, expected) in cases {
             let mut income = Income::default();
-            let error = income
-                .create_job(&input(employer, start, end, ""))
-                .unwrap_err();
+            let error = income.create_job(&input(employer, start, end)).unwrap_err();
             assert_eq!(error, expected, "{employer:?} {start:?} {end:?}");
             assert_eq!(income.jobs().len(), 0);
         }
@@ -603,30 +581,11 @@ mod tests {
     }
 
     #[test]
-    fn test_csd001_ac_1_3_supported_non_default_currency() {
-        let mut income = Income::default();
-        let job = income
-            .create_job(&input("Example Employer", "01/03/2024", "", "GBP"))
-            .unwrap();
-        assert_eq!(job.currency, Currency::Gbp);
-    }
-
-    #[test]
-    fn test_csd001_ac_1_4_unsupported_currency_is_rejected() {
-        let mut income = Income::default();
-        let error = income
-            .create_job(&input("Example Employer", "01/03/2024", "", "CHF"))
-            .unwrap_err();
-        assert_eq!(error.code(), "JOB_CURRENCY_UNSUPPORTED");
-        assert_eq!(income.jobs().len(), 0);
-    }
-
-    #[test]
     fn overlong_text_is_rejected() {
         let mut income = Income::default();
         let long = "x".repeat(201);
         let error = income
-            .create_job(&input(&long, "01/03/2024", "", ""))
+            .create_job(&input(&long, "01/03/2024", ""))
             .unwrap_err();
         assert_eq!(error, DomainError::JobFieldTooLong);
     }
@@ -639,10 +598,7 @@ mod tests {
         let id = job_with(&mut income, "01/03/2024", "");
         add(&mut income, id, "2024-03", "3000.00");
         let updated = income
-            .update_job(
-                id,
-                &input("Example Employer", "01/06/2024", "31/01/2025", ""),
-            )
+            .update_job(id, &input("Example Employer", "01/06/2024", "31/01/2025"))
             .unwrap();
         assert_eq!(updated.start_date.to_string(), "2024-06-01");
         assert_eq!(
@@ -657,10 +613,7 @@ mod tests {
         let mut income = Income::default();
         let id = job_with(&mut income, "01/03/2024", "");
         let error = income
-            .update_job(
-                id,
-                &input("Example Employer", "01/03/2024", "01/02/2024", ""),
-            )
+            .update_job(id, &input("Example Employer", "01/03/2024", "01/02/2024"))
             .unwrap_err();
         assert_eq!(error.code(), "JOB_END_BEFORE_START");
         assert_eq!(income.jobs()[0].end_date, None);
@@ -672,45 +625,10 @@ mod tests {
         let error = income
             .update_job(
                 JobId::generate(),
-                &input("Example Employer", "01/03/2024", "", ""),
+                &input("Example Employer", "01/03/2024", ""),
             )
             .unwrap_err();
         assert_eq!(error, DomainError::JobNotFound);
-    }
-
-    // ---- REQ-3: currency lock ----
-
-    #[test]
-    fn test_csd001_ac_3_1_currency_change_rejected_with_paychecks() {
-        let mut income = Income::default();
-        let id = job_with(&mut income, "01/03/2024", "");
-        add(&mut income, id, "2026-09", "3000.00");
-        let error = income
-            .update_job(id, &input("Example Employer", "01/03/2024", "", "USD"))
-            .unwrap_err();
-        assert_eq!(error.code(), "JOB_CURRENCY_LOCKED");
-        assert_eq!(income.jobs()[0].currency, Currency::Eur);
-    }
-
-    #[test]
-    fn test_csd001_ac_3_2_currency_change_allowed_without_paychecks() {
-        let mut income = Income::default();
-        let id = job_with(&mut income, "01/03/2024", "");
-        let updated = income
-            .update_job(id, &input("Example Employer", "01/03/2024", "", "USD"))
-            .unwrap();
-        assert_eq!(updated.currency, Currency::Usd);
-    }
-
-    #[test]
-    fn keeping_the_same_currency_is_allowed_with_paychecks() {
-        let mut income = Income::default();
-        let id = job_with(&mut income, "01/03/2024", "");
-        add(&mut income, id, "2026-09", "3000.00");
-        income
-            .update_job(id, &input("Renamed Employer", "01/03/2024", "", "EUR"))
-            .unwrap();
-        assert_eq!(income.jobs()[0].employer, "Renamed Employer");
     }
 
     // ---- REQ-4: delete a job ----
@@ -1036,21 +954,6 @@ mod tests {
         assert_eq!(year.paycheck_count, 3);
     }
 
-    #[test]
-    fn test_csd001_ac_11_4_currencies_are_not_converted() {
-        let mut income = Income::default();
-        let eur = job_with(&mut income, "01/03/2024", "");
-        let usd = income
-            .create_job(&input("Other Example Employer", "01/01/2020", "", "USD"))
-            .unwrap()
-            .id;
-        add(&mut income, eur, "2026-09", "3000.00");
-        add(&mut income, usd, "2026-09", "1000.00");
-        let totals = income.yearly_totals();
-        assert_eq!(totals.len(), 1);
-        assert_eq!(totals[0].gross_salary.to_string(), "4000.00");
-    }
-
     // ---- REQ-12: ordering ----
 
     #[test]
@@ -1128,34 +1031,24 @@ mod tests {
     #[test]
     fn test_csd001_ac_23_3_paychecks_of_all_jobs_come_with_their_job() {
         let mut income = Income::default();
-        let eur = job_with(&mut income, "01/03/2024", "");
-        let usd = income
-            .create_job(&input("Older Example Employer", "01/01/2020", "", "USD"))
+        let recent = job_with(&mut income, "01/03/2024", "");
+        let older = income
+            .create_job(&input("Older Example Employer", "01/01/2020", ""))
             .unwrap()
             .id;
-        add(&mut income, eur, "2026-09", "3000.00");
-        add(&mut income, usd, "2026-08", "1000.00");
+        add(&mut income, recent, "2026-09", "3000.00");
+        add(&mut income, older, "2026-08", "1000.00");
 
-        let rows: Vec<(&str, Currency, String)> = income
+        let rows: Vec<(&str, String)> = income
             .all_paychecks()
             .into_iter()
-            .map(|(job, paycheck)| {
-                (
-                    job.employer.as_str(),
-                    job.currency,
-                    paycheck.month.to_string(),
-                )
-            })
+            .map(|(job, paycheck)| (job.employer.as_str(), paycheck.month.to_string()))
             .collect();
         assert_eq!(
             rows,
             [
-                ("Example Employer", Currency::Eur, "2026-09".to_owned()),
-                (
-                    "Older Example Employer",
-                    Currency::Usd,
-                    "2026-08".to_owned()
-                ),
+                ("Example Employer", "2026-09".to_owned()),
+                ("Older Example Employer", "2026-08".to_owned()),
             ]
         );
     }
@@ -1166,7 +1059,7 @@ mod tests {
     fn test_csd001_ac_22_1_typed_dates_become_calendar_dates() {
         let mut income = Income::default();
         let job = income
-            .create_job(&input("Example Employer", "01/03/2024", "31/01/2025", ""))
+            .create_job(&input("Example Employer", "01/03/2024", "31/01/2025"))
             .unwrap();
         // The domain stores real dates; commands return them as ISO 8601 and the
         // frontend shows them as dd/mm/yyyy (manual checklist for the display).
@@ -1198,7 +1091,7 @@ mod tests {
         for (start, reason) in cases {
             let mut income = Income::default();
             let error = income
-                .create_job(&input("Example Employer", start, "", ""))
+                .create_job(&input("Example Employer", start, ""))
                 .unwrap_err();
             assert_eq!(error.code(), "JOB_DATE_INVALID", "{start:?}: {reason}");
             assert_eq!(income.jobs().len(), 0, "{start:?}: {reason}");
@@ -1209,15 +1102,12 @@ mod tests {
     fn test_csd001_ac_22_2_end_date_uses_the_same_format() {
         let mut income = Income::default();
         let error = income
-            .create_job(&input("Example Employer", "01/03/2024", "2025-01-31", ""))
+            .create_job(&input("Example Employer", "01/03/2024", "2025-01-31"))
             .unwrap_err();
         assert_eq!(error, DomainError::JobDateInvalid);
         let id = job_with(&mut income, "01/03/2024", "");
         let error = income
-            .update_job(
-                id,
-                &input("Example Employer", "01/03/2024", "31-01-2025", ""),
-            )
+            .update_job(id, &input("Example Employer", "01/03/2024", "31-01-2025"))
             .unwrap_err();
         assert_eq!(error, DomainError::JobDateInvalid);
     }
@@ -1226,7 +1116,7 @@ mod tests {
     fn dates_are_accepted_with_surrounding_whitespace_and_on_leap_days() {
         let mut income = Income::default();
         let job = income
-            .create_job(&input("Example Employer", " 29/02/2024 ", "", ""))
+            .create_job(&input("Example Employer", " 29/02/2024 ", ""))
             .unwrap();
         assert_eq!(job.start_date.to_string(), "2024-02-29");
     }

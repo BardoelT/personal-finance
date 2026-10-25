@@ -16,9 +16,7 @@ pub enum DomainError {
     #[error("Employer and title can be at most 200 characters.")]
     JobFieldTooLong,
     #[error("Choose EUR, USD or GBP.")]
-    JobCurrencyUnsupported,
-    #[error("The currency cannot change once the job has paychecks.")]
-    JobCurrencyLocked,
+    ProjectCurrencyUnsupported,
     #[error("This job does not exist.")]
     JobNotFound,
     #[error("Enter the month as YYYY-MM.")]
@@ -53,8 +51,7 @@ impl DomainError {
             Self::JobEndBeforeStart => "JOB_END_BEFORE_START",
             Self::JobDateInvalid => "JOB_DATE_INVALID",
             Self::JobFieldTooLong => "JOB_FIELD_TOO_LONG",
-            Self::JobCurrencyUnsupported => "JOB_CURRENCY_UNSUPPORTED",
-            Self::JobCurrencyLocked => "JOB_CURRENCY_LOCKED",
+            Self::ProjectCurrencyUnsupported => "PROJECT_CURRENCY_UNSUPPORTED",
             Self::JobNotFound => "JOB_NOT_FOUND",
             Self::PaycheckMonthInvalid => "PAYCHECK_MONTH_INVALID",
             Self::PaycheckMonthInFuture => "PAYCHECK_MONTH_IN_FUTURE",

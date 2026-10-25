@@ -8,8 +8,7 @@ use tauri::State;
 
 use super::AppState;
 use crate::domain::{
-    Amounts, Currency, Income, Job, JobId, JobInput, Paycheck, PaycheckPrefill, YearMonth,
-    YearlyTotal,
+    Amounts, Income, Job, JobId, JobInput, Paycheck, PaycheckPrefill, YearMonth, YearlyTotal,
 };
 use crate::error::AppError;
 
@@ -36,7 +35,6 @@ pub struct PaycheckView {
     paycheck: Paycheck,
     total_gross: String,
     employer: String,
-    currency: Currency,
 }
 
 impl PaycheckView {
@@ -45,7 +43,6 @@ impl PaycheckView {
             total_gross: paycheck.amounts.total_gross().to_string(),
             paycheck: paycheck.clone(),
             employer: job.employer.clone(),
-            currency: job.currency,
         }
     }
 

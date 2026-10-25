@@ -55,8 +55,7 @@ fn job_input() -> Value {
         "employer": "Example Employer",
         "title": "",
         "start_date": "01/03/2024",
-        "end_date": "",
-        "currency": "EUR"
+        "end_date": ""
     })
 }
 
@@ -80,7 +79,8 @@ fn income_flow_through_ipc_matches_what_the_frontend_expects() {
     assert_eq!(job["title"], Value::Null);
     assert_eq!(job["start_date"], "2024-03-01");
     assert_eq!(job["end_date"], Value::Null);
-    assert_eq!(job["currency"], "EUR");
+    // Jobs carry no currency: the project has one (CSD-003).
+    assert!(job.get("currency").is_none());
     assert_eq!(job["paycheck_count"], 0);
     assert_eq!(app.ok("project_status", json!({}))["unsaved_changes"], true);
 
@@ -110,7 +110,7 @@ fn income_flow_through_ipc_matches_what_the_frontend_expects() {
     assert_eq!(paychecks[0]["total_gross"], "5400.00");
     // The paychecks table needs the job without another round trip.
     assert_eq!(paychecks[0]["employer"], "Example Employer");
-    assert_eq!(paychecks[0]["currency"], "EUR");
+    assert!(paychecks[0].get("currency").is_none());
     assert_eq!(paychecks[0]["job_id"], job_id);
     assert_eq!(added["employer"], "Example Employer");
 
@@ -200,19 +200,12 @@ fn errors_reach_the_frontend_as_code_and_safe_message() {
     );
     assert_eq!(letters["code"], "PAYCHECK_AMOUNT_INVALID");
 
-    let locked = app.err(
-        "update_job",
-        json!({ "jobId": job_id, "input": { "employer": "Example Employer", "start_date": "01/03/2024", "currency": "USD" } }),
-    );
-    assert_eq!(locked["code"], "JOB_CURRENCY_LOCKED");
-
-    // A job edit without a currency keeps the current one (the frontend omits it while locked).
-    let kept = app.ok(
+    // A job can be renamed even though it has paychecks.
+    let renamed = app.ok(
         "update_job",
         json!({ "jobId": job_id, "input": { "employer": "Renamed", "start_date": "01/03/2024" } }),
     );
-    assert_eq!(kept["currency"], "EUR");
-    assert_eq!(kept["employer"], "Renamed");
+    assert_eq!(renamed["employer"], "Renamed");
 
     let missing = app.err("copy_previous_paycheck", json!({ "jobId": "not-a-job" }));
     assert_eq!(missing["code"], "JOB_NOT_FOUND");
@@ -250,16 +243,15 @@ fn close_is_prevented_only_while_there_are_unsaved_changes() {
 #[test]
 fn test_csd001_ac_23_3_paychecks_and_totals_span_all_jobs_over_ipc() {
     let app = harness();
-    let eur = app.ok("create_job", json!({ "input": job_input() }));
-    let usd = app.ok(
+    let recent = app.ok("create_job", json!({ "input": job_input() }));
+    let older = app.ok(
         "create_job",
-        json!({ "input": {
-            "employer": "Older Example Employer",
-            "start_date": "01/01/2020",
-            "currency": "USD"
-        } }),
+        json!({ "input": { "employer": "Older Example Employer", "start_date": "01/01/2020" } }),
     );
-    let (eur_id, usd_id) = (eur["id"].as_str().unwrap(), usd["id"].as_str().unwrap());
+    let (eur_id, usd_id) = (
+        recent["id"].as_str().unwrap(),
+        older["id"].as_str().unwrap(),
+    );
     app.ok(
         "add_paycheck",
         json!({ "jobId": eur_id, "month": "2026-09", "amounts": amounts("3000.00", "", "") }),
@@ -274,7 +266,7 @@ fn test_csd001_ac_23_3_paychecks_and_totals_span_all_jobs_over_ipc() {
     );
 
     let rows = app.ok("list_paychecks", json!({}));
-    let table: Vec<(&str, &str, &str)> = rows
+    let table: Vec<(&str, &str)> = rows
         .as_array()
         .unwrap()
         .iter()
@@ -282,20 +274,19 @@ fn test_csd001_ac_23_3_paychecks_and_totals_span_all_jobs_over_ipc() {
             (
                 row["month"].as_str().unwrap(),
                 row["employer"].as_str().unwrap(),
-                row["currency"].as_str().unwrap(),
             )
         })
         .collect();
     assert_eq!(
         table,
         [
-            ("2026-09", "Example Employer", "EUR"),
-            ("2026-09", "Older Example Employer", "USD"),
-            ("2026-08", "Older Example Employer", "USD"),
+            ("2026-09", "Example Employer"),
+            ("2026-09", "Older Example Employer"),
+            ("2026-08", "Older Example Employer"),
         ]
     );
 
-    // One row for the year, all jobs added together (currencies not converted).
+    // One row for the year, all jobs added together.
     let totals = app.ok("yearly_totals", json!({}));
     assert_eq!(totals.as_array().unwrap().len(), 1);
     assert_eq!(totals[0]["year"], 2026);
@@ -303,4 +294,50 @@ fn test_csd001_ac_23_3_paychecks_and_totals_span_all_jobs_over_ipc() {
     assert_eq!(totals[0]["bonus"], "500.00");
     assert_eq!(totals[0]["total_gross"], "5500.00");
     assert_eq!(totals[0]["paycheck_count"], 3);
+}
+
+#[test]
+fn test_csd003_settings_over_ipc() {
+    let app = harness();
+    // A new project uses EUR and has no paychecks.
+    assert_eq!(
+        app.ok("get_settings", json!({})),
+        json!({ "currency": "EUR", "paycheck_count": 0 })
+    );
+    assert_eq!(
+        app.ok("project_status", json!({}))["unsaved_changes"],
+        false
+    );
+
+    let changed = app.ok("set_currency", json!({ "currency": "USD" }));
+    assert_eq!(changed, json!({ "currency": "USD", "paycheck_count": 0 }));
+    assert_eq!(app.ok("get_settings", json!({}))["currency"], "USD");
+    // AC-4.2: the change is an unsaved change.
+    assert_eq!(app.ok("project_status", json!({}))["unsaved_changes"], true);
+
+    // AC-6.1: unsupported currencies are rejected and the currency is kept.
+    for bad in ["CHF", "euro", ""] {
+        let error = app.err("set_currency", json!({ "currency": bad }));
+        assert_eq!(error["code"], "PROJECT_CURRENCY_UNSUPPORTED", "{bad:?}");
+    }
+    assert_eq!(app.ok("get_settings", json!({}))["currency"], "USD");
+
+    // The paycheck count tells the frontend whether to ask for a confirmation (AC-5).
+    let job = app.ok("create_job", json!({ "input": job_input() }));
+    let job_id = job["id"].as_str().unwrap();
+    app.ok(
+        "add_paycheck",
+        json!({ "jobId": job_id, "month": "2026-09", "amounts": amounts("3000.00", "", "") }),
+    );
+    let settings = app.ok("get_settings", json!({}));
+    assert_eq!(settings["paycheck_count"], 1);
+
+    // AC-4.1: changing the currency converts nothing.
+    app.ok("set_currency", json!({ "currency": "GBP" }));
+    let paychecks = app.ok("list_paychecks", json!({}));
+    assert_eq!(paychecks[0]["gross_salary"], "3000.00");
+
+    // AC-3.1: a new project is back to EUR.
+    app.ok("new_project", json!({}));
+    assert_eq!(app.ok("get_settings", json!({}))["currency"], "EUR");
 }

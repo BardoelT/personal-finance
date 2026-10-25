@@ -11,7 +11,7 @@ function jobDates(job) {
 }
 
 function jobMeta(job) {
-  return [job.title, jobDates(job), job.currency].filter(Boolean).join(' · ');
+  return [job.title, jobDates(job)].filter(Boolean).join(' · ');
 }
 
 function currentMonth() {
@@ -78,7 +78,6 @@ function renderPaychecks(paychecks) {
         {},
         h('th', { scope: 'row' }, p.month),
         h('td', { class: 'wrap' }, p.employer),
-        h('td', {}, p.currency),
         amountCell(p.gross_salary),
         amountCell(p.holiday_pay),
         amountCell(p.bonus),
@@ -97,6 +96,9 @@ function renderPaychecks(paychecks) {
 /** Reloads everything from Rust. */
 export async function reloadIncome() {
   jobs = await invoke('list_jobs');
+  const { currency } = await invoke('get_settings');
+  $('totals-title').textContent = `Yearly totals · ${currency}`;
+  $('paycheck-title').textContent = `Paychecks · ${currency}`;
   renderJobs();
   if (jobs.length === 0) return;
   const [totals, paychecks] = await Promise.all([invoke('yearly_totals'), invoke('list_paychecks')]);
@@ -125,15 +127,11 @@ function openJobDialog(job) {
   form.reset();
   $('job-error').hidden = true;
   $('job-dialog-title').textContent = job ? 'Edit job' : 'Add job';
-  const locked = Boolean(job && job.paycheck_count > 0);
-  form.elements.currency.disabled = locked;
-  $('job-currency-hint').hidden = !locked;
   if (job) {
     form.elements.employer.value = job.employer;
     form.elements.title.value = job.title ?? '';
     form.elements.start_date.value = formatDate(job.start_date);
     form.elements.end_date.value = job.end_date ? formatDate(job.end_date) : '';
-    form.elements.currency.value = job.currency;
   }
   $('job-dialog').showModal();
   form.elements.employer.focus();
@@ -148,7 +146,6 @@ async function submitJob(event) {
     start_date: form.elements.start_date.value,
     end_date: form.elements.end_date.value,
   };
-  if (!form.elements.currency.disabled) input.currency = form.elements.currency.value;
   try {
     if (editingJob) {
       await invoke('update_job', { jobId: editingJob.id, input });

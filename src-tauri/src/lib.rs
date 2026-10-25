@@ -9,7 +9,7 @@ mod storage;
 use tauri::{Emitter, Manager, RunEvent, Runtime, WindowEvent};
 use time::UtcOffset;
 
-use commands::{income, project, AppState};
+use commands::{income, project, settings, AppState};
 
 /// Event the frontend listens for to ask "quit with unsaved changes?".
 const CLOSE_REQUESTED_EVENT: &str = "close-requested";
@@ -29,7 +29,7 @@ fn configure<R: Runtime>(builder: tauri::Builder<R>, utc_offset: UtcOffset) -> t
         .on_menu_event(|app, event| {
             // CSD-002 REQ-9: the frontend runs the action behind the item.
             let id = event.id().as_ref();
-            if menu::is_project_item(id) {
+            if menu::is_forwarded_item(id) {
                 let _ = app.emit(menu::MENU_EVENT, id);
             }
         })
@@ -44,6 +44,8 @@ fn configure<R: Runtime>(builder: tauri::Builder<R>, utc_offset: UtcOffset) -> t
             income::delete_paycheck,
             income::copy_previous_paycheck,
             income::yearly_totals,
+            settings::get_settings,
+            settings::set_currency,
             project::project_status,
             project::take_startup_notice,
             project::new_project,

@@ -77,7 +77,7 @@ module_name_repetitions = "allow"
 
 ### Money and numbers
 - **Never use `f32`/`f64` for money.** Use `rust_decimal::Decimal` (or integer minor units) everywhere: domain, storage, and IPC.
-- Every amount carries its currency (`Money { amount: Decimal, currency: Currency }`). Never add amounts with different currencies without an explicit conversion.
+- Amounts are in the project currency, one per project and a project setting (CSD-003), so amounts are never mixed. Add an explicit conversion before ever allowing a second currency.
 - Rounding is explicit and documented (banker's rounding unless stated otherwise).
 - Dates: use `time` or `chrono` with explicit time zones; store UTC, display local.
 - Dates the user sees or types are `dd/mm/yyyy` (months `YYYY-MM`), in the UI, in messages and in all docs and CSDs. The project file and IPC use ISO 8601 internally (CSD-000 CON-7).
