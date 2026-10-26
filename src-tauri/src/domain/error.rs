@@ -88,6 +88,20 @@ pub enum DomainError {
     InvestmentBalanceTooLarge,
     #[error("A note can be at most 2000 characters.")]
     InvestmentNoteTooLong,
+    #[error("Enter the net deposits as a number such as 300.00 or -250.00.")]
+    InvestmentNetDepositsInvalid,
+    #[error("Net deposits can have at most 2 decimal places.")]
+    InvestmentNetDepositsPrecision,
+    #[error("Net deposits can be at most 1000000000.00, or -1000000000.00.")]
+    InvestmentNetDepositsTooLarge,
+    #[error("Enter the capital growth as a number such as 200.00 or -150.00.")]
+    InvestmentGrowthInvalid,
+    #[error("Capital growth can have at most 2 decimal places.")]
+    InvestmentGrowthPrecision,
+    #[error("Capital growth can be at most 1000000000.00, or -1000000000.00.")]
+    InvestmentGrowthTooLarge,
+    #[error("There is no earlier statement, so there is no capital growth to enter.")]
+    InvestmentGrowthUnavailable,
     #[error("The investment data is not consistent.")]
     InvestmentDataInvalid,
 }
@@ -137,6 +151,13 @@ impl DomainError {
             Self::InvestmentBalancePrecision => "INVESTMENT_BALANCE_PRECISION",
             Self::InvestmentBalanceTooLarge => "INVESTMENT_BALANCE_TOO_LARGE",
             Self::InvestmentNoteTooLong => "INVESTMENT_NOTE_TOO_LONG",
+            Self::InvestmentNetDepositsInvalid => "INVESTMENT_NET_DEPOSITS_INVALID",
+            Self::InvestmentNetDepositsPrecision => "INVESTMENT_NET_DEPOSITS_PRECISION",
+            Self::InvestmentNetDepositsTooLarge => "INVESTMENT_NET_DEPOSITS_TOO_LARGE",
+            Self::InvestmentGrowthInvalid => "INVESTMENT_GROWTH_INVALID",
+            Self::InvestmentGrowthPrecision => "INVESTMENT_GROWTH_PRECISION",
+            Self::InvestmentGrowthTooLarge => "INVESTMENT_GROWTH_TOO_LARGE",
+            Self::InvestmentGrowthUnavailable => "INVESTMENT_GROWTH_UNAVAILABLE",
             Self::InvestmentDataInvalid => "INVESTMENT_DATA_INVALID",
         }
     }

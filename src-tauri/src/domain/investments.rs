@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use super::error::DomainError;
 use super::income::{PayPeriod, Year, YearMonth};
-use super::money::{parse_plain_decimal, with_two_decimals};
+use super::money::{parse_plain_decimal, with_two_decimals, zero};
 
 const MAX_NAME_CHARS: usize = 100;
 const MAX_NOTE_CHARS: usize = 2000;
@@ -158,6 +158,80 @@ impl Balance {
     }
 }
 
+/// Checks a signed amount: at most two decimals and an absolute value up to
+/// 1,000,000,000.00 (CSD-005 REQ-22, REQ-25).
+fn signed_amount(
+    value: Decimal,
+    precision: DomainError,
+    too_large: DomainError,
+) -> Result<Decimal, DomainError> {
+    if value.normalize().scale() > 2 {
+        return Err(precision);
+    }
+    if value.abs() > MAX_BALANCE {
+        return Err(too_large);
+    }
+    Ok(with_two_decimals(value))
+}
+
+/// The net deposits of a statement: what the user put in minus what was taken
+/// out during the period, signed, with exactly two decimals (CSD-005 REQ-22).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct NetDeposits(Decimal);
+
+impl Default for NetDeposits {
+    fn default() -> Self {
+        Self(zero())
+    }
+}
+
+impl NetDeposits {
+    /// Builds net deposits from a decimal.
+    ///
+    /// # Errors
+    /// Returns `InvestmentNetDepositsPrecision` for more than two decimals and
+    /// `InvestmentNetDepositsTooLarge` above 1,000,000,000.00 in absolute value.
+    pub fn new(value: Decimal) -> Result<Self, DomainError> {
+        signed_amount(
+            value,
+            DomainError::InvestmentNetDepositsPrecision,
+            DomainError::InvestmentNetDepositsTooLarge,
+        )
+        .map(Self)
+    }
+
+    /// Parses net deposits typed by the user. Empty text means `0.00`.
+    ///
+    /// # Errors
+    /// Returns `InvestmentNetDepositsInvalid` for text that is not a plain
+    /// decimal number, and otherwise the rules of [`NetDeposits::new`].
+    pub fn parse(text: &str) -> Result<Self, DomainError> {
+        if text.trim().is_empty() {
+            return Ok(Self::default());
+        }
+        parse_plain_decimal(text)
+            .ok_or(DomainError::InvestmentNetDepositsInvalid)
+            .and_then(Self::new)
+    }
+
+    /// The net deposits as a decimal.
+    #[must_use]
+    pub fn value(self) -> Decimal {
+        self.0
+    }
+}
+
+/// Parses a capital growth typed by the user (CSD-005 REQ-25).
+fn parse_growth(text: &str) -> Result<Decimal, DomainError> {
+    let value = parse_plain_decimal(text).ok_or(DomainError::InvestmentGrowthInvalid)?;
+    signed_amount(
+        value,
+        DomainError::InvestmentGrowthPrecision,
+        DomainError::InvestmentGrowthTooLarge,
+    )
+}
+
 /// The optional plain-text note of a statement, at most 2,000 characters
 /// (CSD-005 REQ-10). It is kept exactly as typed.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -197,6 +271,8 @@ pub struct Statement {
     pub account_id: InvestmentAccountId,
     pub period: Period,
     pub balance: Balance,
+    #[serde(default)]
+    pub net_deposits: NetDeposits,
     #[serde(default)]
     pub note: Note,
 }
@@ -259,10 +335,29 @@ pub struct InvestmentsOverview {
 }
 
 /// Form values for "copy previous month" or "copy previous year" (CSD-005
-/// REQ-13): the note is never copied.
+/// REQ-13): the note is never copied and the net deposits start at `0.00`.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct StatementPrefill {
     pub balance: Option<Decimal>,
+    pub net_deposits: Decimal,
+}
+
+/// Which of balance and capital growth the user typed in the statement form
+/// (CSD-005 REQ-24).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CalculationInput {
+    Balance,
+    Growth,
+}
+
+/// The balance and capital growth the statement form shows after a
+/// calculation. The capital growth is `None` when there is no earlier
+/// statement (CSD-005 REQ-24).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct StatementCalculation {
+    pub balance: Decimal,
+    pub capital_growth: Option<Decimal>,
 }
 
 /// All investment accounts with their statements.
@@ -368,6 +463,7 @@ impl Investments {
         account_id: InvestmentAccountId,
         period: Period,
         balance: Balance,
+        net_deposits: NetDeposits,
         note: Note,
         today: YearMonth,
     ) -> Result<Statement, DomainError> {
@@ -384,13 +480,15 @@ impl Investments {
             account_id,
             period,
             balance,
+            net_deposits,
             note,
         };
         self.statements.push(statement.clone());
         Ok(statement)
     }
 
-    /// Changes the balance and note of a statement. The period is fixed (REQ-11).
+    /// Changes the balance, net deposits and note of a statement. The period is
+    /// fixed (REQ-11).
     ///
     /// # Errors
     /// Returns `InvestmentAccountNotFound` or `InvestmentStatementNotFound`.
@@ -399,6 +497,7 @@ impl Investments {
         account_id: InvestmentAccountId,
         period: Period,
         balance: Balance,
+        net_deposits: NetDeposits,
         note: Note,
     ) -> Result<Statement, DomainError> {
         self.account(account_id)?;
@@ -408,6 +507,7 @@ impl Investments {
             .find(|s| s.account_id == account_id && s.period == period)
             .ok_or(DomainError::InvestmentStatementNotFound)?;
         statement.balance = balance;
+        statement.net_deposits = net_deposits;
         statement.note = note;
         Ok(statement.clone())
     }
@@ -492,7 +592,62 @@ impl Investments {
         self.account(id)?;
         Ok(StatementPrefill {
             balance: self.latest(id).map(|statement| statement.balance.value()),
+            net_deposits: zero(),
         })
+    }
+
+    /// The capital growth of a statement: its balance minus the balance of the
+    /// previous statement of the account minus its net deposits. `None` for
+    /// the first statement of an account (CSD-005 REQ-23).
+    #[must_use]
+    pub fn capital_growth(&self, statement: &Statement) -> Option<Decimal> {
+        let previous = self.previous_balance(statement.account_id, statement.period)?;
+        Some(with_two_decimals(
+            statement.balance.value() - previous - statement.net_deposits.value(),
+        ))
+    }
+
+    /// Calculates the other one of balance and capital growth for the
+    /// statement form, from the value the user typed in and the net deposits.
+    /// Nothing is stored (CSD-005 REQ-24, REQ-25).
+    ///
+    /// # Errors
+    /// Returns `InvestmentAccountNotFound`, `InvestmentPeriodMismatch`, the
+    /// net deposits and balance or growth errors of REQ-22, REQ-9 and REQ-25,
+    /// or `InvestmentGrowthUnavailable` when a growth is typed in and there is
+    /// no earlier statement.
+    pub fn calculate(
+        &self,
+        account_id: InvestmentAccountId,
+        period: Period,
+        net_deposits: &str,
+        input: CalculationInput,
+        value: &str,
+    ) -> Result<StatementCalculation, DomainError> {
+        if self.account(account_id)?.statement_period != period.kind() {
+            return Err(DomainError::InvestmentPeriodMismatch);
+        }
+        let net_deposits = NetDeposits::parse(net_deposits)?.value();
+        let previous = self.previous_balance(account_id, period);
+        match input {
+            CalculationInput::Balance => {
+                let balance = Balance::parse(value)?.value();
+                Ok(StatementCalculation {
+                    balance,
+                    capital_growth: previous
+                        .map(|previous| with_two_decimals(balance - previous - net_deposits)),
+                })
+            }
+            CalculationInput::Growth => {
+                let previous = previous.ok_or(DomainError::InvestmentGrowthUnavailable)?;
+                let growth = parse_growth(value)?;
+                let balance = Balance::new(previous + net_deposits + growth)?;
+                Ok(StatementCalculation {
+                    balance: balance.value(),
+                    capital_growth: Some(growth),
+                })
+            }
+        }
     }
 
     /// Checks that data read from a file follows the rules of CSD-005, so a
@@ -522,6 +677,7 @@ impl Investments {
             if !matches_account
                 || !seen.insert((statement.account_id, statement.period))
                 || Balance::new(statement.balance.value()).is_err()
+                || NetDeposits::new(statement.net_deposits.value()).is_err()
                 || Note::new(statement.note.as_str()).is_err()
             {
                 return Err(invalid);
@@ -551,6 +707,16 @@ impl Investments {
         self.statements
             .iter()
             .find(|s| s.account_id == account_id && s.period == period)
+    }
+
+    /// The balance of the statement of the account with the latest period
+    /// before `period`, also when periods in between have none.
+    fn previous_balance(&self, id: InvestmentAccountId, period: Period) -> Option<Decimal> {
+        self.statements
+            .iter()
+            .filter(|s| s.account_id == id && s.period.sort_key() < period.sort_key())
+            .max_by_key(|s| s.period.sort_key())
+            .map(|s| s.balance.value())
     }
 
     /// The statement with the most recent period of an account.
@@ -595,6 +761,64 @@ mod tests {
         Note::default()
     }
 
+    fn deposits(text: &str) -> NetDeposits {
+        NetDeposits::parse(text).unwrap()
+    }
+
+    fn no_deposits() -> NetDeposits {
+        NetDeposits::default()
+    }
+
+    fn add_with_deposits(
+        investments: &mut Investments,
+        id: InvestmentAccountId,
+        period: &str,
+        amount: &str,
+        net_deposits: &str,
+    ) {
+        investments
+            .add_statement(
+                id,
+                month(period),
+                balance(amount),
+                deposits(net_deposits),
+                no_note(),
+                today(),
+            )
+            .unwrap();
+    }
+
+    /// The capital growth of the statement of `period`, as text.
+    fn growth(investments: &Investments, id: InvestmentAccountId, period: &str) -> Option<String> {
+        let (_, statement) = investments
+            .all_statements()
+            .into_iter()
+            .find(|(account, statement)| account.id == id && statement.period == month(period))
+            .unwrap();
+        investments
+            .capital_growth(statement)
+            .map(|value| value.to_string())
+    }
+
+    fn calculate(
+        investments: &Investments,
+        id: InvestmentAccountId,
+        period: &str,
+        net_deposits: &str,
+        input: CalculationInput,
+        value: &str,
+    ) -> Result<StatementCalculation, DomainError> {
+        investments.calculate(id, month(period), net_deposits, input, value)
+    }
+
+    /// A monthly account with a statement for 2026-08 of 12000.00.
+    fn account_with_august() -> (Investments, InvestmentAccountId) {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add(&mut investments, id, "2026-08", "12000.00");
+        (investments, id)
+    }
+
     fn input(name: &str, period: Option<&str>) -> AccountInput {
         AccountInput {
             name: name.to_owned(),
@@ -611,7 +835,14 @@ mod tests {
 
     fn add(investments: &mut Investments, id: InvestmentAccountId, period: &str, amount: &str) {
         investments
-            .add_statement(id, month(period), balance(amount), no_note(), today())
+            .add_statement(
+                id,
+                month(period),
+                balance(amount),
+                no_deposits(),
+                no_note(),
+                today(),
+            )
             .unwrap();
     }
 
@@ -799,7 +1030,14 @@ mod tests {
         let id = add_account(&mut investments, "Example Brokerage", "Monthly");
         let note = Note::new("Bought example fund").unwrap();
         let statement = investments
-            .add_statement(id, month("2026-09"), balance("12500.00"), note, today())
+            .add_statement(
+                id,
+                month("2026-09"),
+                balance("12500.00"),
+                no_deposits(),
+                note,
+                today(),
+            )
             .unwrap();
         assert_eq!(statement.balance.value().to_string(), "12500.00");
         assert_eq!(statement.note.as_str(), "Bought example fund");
@@ -810,7 +1048,14 @@ mod tests {
         let mut investments = Investments::default();
         let id = add_account(&mut investments, "Example Pension", "Yearly");
         let statement = investments
-            .add_statement(id, month("2025"), balance("80000.00"), no_note(), today())
+            .add_statement(
+                id,
+                month("2025"),
+                balance("80000.00"),
+                no_deposits(),
+                no_note(),
+                today(),
+            )
             .unwrap();
         assert_eq!(statement.balance.value().to_string(), "80000.00");
         assert_eq!(statement.note.as_str(), "");
@@ -838,6 +1083,7 @@ mod tests {
                 id,
                 month(period),
                 balance("1000.00"),
+                no_deposits(),
                 no_note(),
                 today(),
             );
@@ -873,13 +1119,21 @@ mod tests {
         let id = add_account(&mut investments, "Example Brokerage", "Monthly");
         let first = Note::new("First").unwrap();
         investments
-            .add_statement(id, month("2026-09"), balance("12500.00"), first, today())
+            .add_statement(
+                id,
+                month("2026-09"),
+                balance("12500.00"),
+                no_deposits(),
+                first,
+                today(),
+            )
             .unwrap();
         let error = investments
             .add_statement(
                 id,
                 month("2026-09"),
                 balance("13000.00"),
+                no_deposits(),
                 no_note(),
                 today(),
             )
@@ -906,7 +1160,14 @@ mod tests {
         let mut investments = Investments::default();
         let id = add_account(&mut investments, "Example Pension", "Yearly");
         let error = investments
-            .add_statement(id, month("2026-09"), balance("1000.00"), no_note(), today())
+            .add_statement(
+                id,
+                month("2026-09"),
+                balance("1000.00"),
+                no_deposits(),
+                no_note(),
+                today(),
+            )
             .unwrap_err();
         assert_eq!(error.code(), "INVESTMENT_PERIOD_MISMATCH");
     }
@@ -916,7 +1177,14 @@ mod tests {
         let mut investments = Investments::default();
         let id = add_account(&mut investments, "Example Brokerage", "Monthly");
         let error = investments
-            .add_statement(id, month("2025"), balance("1000.00"), no_note(), today())
+            .add_statement(
+                id,
+                month("2025"),
+                balance("1000.00"),
+                no_deposits(),
+                no_note(),
+                today(),
+            )
             .unwrap_err();
         assert_eq!(error.code(), "INVESTMENT_PERIOD_MISMATCH");
     }
@@ -1002,11 +1270,24 @@ mod tests {
         let id = add_account(&mut investments, "Example Brokerage", "Monthly");
         let first = Note::new("First").unwrap();
         investments
-            .add_statement(id, month("2026-09"), balance("12500.00"), first, today())
+            .add_statement(
+                id,
+                month("2026-09"),
+                balance("12500.00"),
+                no_deposits(),
+                first,
+                today(),
+            )
             .unwrap();
         let corrected = Note::new("Corrected").unwrap();
         let statement = investments
-            .update_statement(id, month("2026-09"), balance("12750.00"), corrected)
+            .update_statement(
+                id,
+                month("2026-09"),
+                balance("12750.00"),
+                no_deposits(),
+                corrected,
+            )
             .unwrap();
         assert_eq!(statement.balance.value().to_string(), "12750.00");
         assert_eq!(statement.note.as_str(), "Corrected");
@@ -1019,10 +1300,23 @@ mod tests {
         let id = add_account(&mut investments, "Example Brokerage", "Monthly");
         let first = Note::new("First").unwrap();
         investments
-            .add_statement(id, month("2026-09"), balance("12500.00"), first, today())
+            .add_statement(
+                id,
+                month("2026-09"),
+                balance("12500.00"),
+                no_deposits(),
+                first,
+                today(),
+            )
             .unwrap();
         let statement = investments
-            .update_statement(id, month("2026-09"), balance("12500.00"), no_note())
+            .update_statement(
+                id,
+                month("2026-09"),
+                balance("12500.00"),
+                no_deposits(),
+                no_note(),
+            )
             .unwrap();
         assert_eq!(statement.note.as_str(), "");
     }
@@ -1032,7 +1326,13 @@ mod tests {
         let mut investments = Investments::default();
         let id = add_account(&mut investments, "Example Brokerage", "Monthly");
         let error = investments
-            .update_statement(id, month("2026-09"), balance("1.00"), no_note())
+            .update_statement(
+                id,
+                month("2026-09"),
+                balance("1.00"),
+                no_deposits(),
+                no_note(),
+            )
             .unwrap_err();
         assert_eq!(error.code(), "INVESTMENT_STATEMENT_NOT_FOUND");
     }
@@ -1061,7 +1361,14 @@ mod tests {
         add(&mut investments, id, "2026-07", "12000.00");
         let note = Note::new("Bought example fund").unwrap();
         investments
-            .add_statement(id, month("2026-08"), balance("12500.00"), note, today())
+            .add_statement(
+                id,
+                month("2026-08"),
+                balance("12500.00"),
+                no_deposits(),
+                note,
+                today(),
+            )
             .unwrap();
         let prefill = investments.prefill_from_latest(id).unwrap();
         assert_eq!(prefill.balance.unwrap().to_string(), "12500.00");
@@ -1217,7 +1524,14 @@ mod tests {
         let id = add_account(&mut investments, "Example Pension", "Yearly");
         let note = Note::new("Line one\nLine two").unwrap();
         investments
-            .add_statement(id, month("2025"), balance("80000.00"), note, today())
+            .add_statement(
+                id,
+                month("2025"),
+                balance("80000.00"),
+                no_deposits(),
+                note,
+                today(),
+            )
             .unwrap();
         let json = serde_json::to_string(&investments).unwrap();
         assert!(json.contains("\"balance\":\"80000.00\""), "{json}");
@@ -1231,6 +1545,556 @@ mod tests {
         let investments: Investments = serde_json::from_str("{}").unwrap();
         assert_eq!(investments, Investments::default());
         investments.validate().unwrap();
+    }
+
+    // ---- REQ-13: net deposits are not copied ----
+
+    #[test]
+    fn test_csd005_ac_13_3_net_deposits_are_not_copied() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add_with_deposits(&mut investments, id, "2026-08", "12500.00", "300.00");
+        let prefill = investments.prefill_from_latest(id).unwrap();
+        assert_eq!(prefill.balance.unwrap().to_string(), "12500.00");
+        assert_eq!(prefill.net_deposits.to_string(), "0.00");
+    }
+
+    // ---- REQ-19: net deposits in the file ----
+
+    #[test]
+    fn test_csd005_ac_19_3_net_deposits_round_trip() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add_with_deposits(&mut investments, id, "2026-09", "12500.00", "-250.00");
+        let json = serde_json::to_string(&investments).unwrap();
+        assert!(json.contains("\"net_deposits\":\"-250.00\""), "{json}");
+        let back: Investments = serde_json::from_str(&json).unwrap();
+        assert_eq!(back, investments);
+        back.validate().unwrap();
+    }
+
+    #[test]
+    fn test_csd005_ac_19_4_a_statement_without_net_deposits_gets_zero() {
+        let id = Uuid::new_v4();
+        let json = format!(
+            r#"{{"accounts":[{{"id":"{id}","name":"Example","statement_period":"Monthly"}}],
+                "statements":[{{"account_id":"{id}","period":"2026-09","balance":"12500.00"}}]}}"#
+        );
+        let investments: Investments = serde_json::from_str(&json).unwrap();
+        investments.validate().unwrap();
+        let rows = investments.all_statements();
+        assert_eq!(rows[0].1.net_deposits.value().to_string(), "0.00");
+    }
+
+    #[test]
+    fn validate_rejects_net_deposits_out_of_range() {
+        let id = Uuid::new_v4();
+        let json = format!(
+            r#"{{"accounts":[{{"id":"{id}","name":"Example","statement_period":"Monthly"}}],
+                "statements":[{{"account_id":"{id}","period":"2026-09","balance":"1.00",
+                "net_deposits":"1000000000.01"}}]}}"#
+        );
+        let investments: Investments = serde_json::from_str(&json).unwrap();
+        assert_eq!(
+            investments.validate().unwrap_err().code(),
+            "INVESTMENT_DATA_INVALID"
+        );
+    }
+
+    // ---- REQ-21, REQ-22: net deposits ----
+
+    #[test]
+    fn test_csd005_ac_21_1_net_deposits_default_to_zero() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        let statement = investments
+            .add_statement(
+                id,
+                month("2026-09"),
+                balance("12500.00"),
+                NetDeposits::parse("").unwrap(),
+                no_note(),
+                today(),
+            )
+            .unwrap();
+        assert_eq!(statement.net_deposits.value().to_string(), "0.00");
+        assert_eq!(
+            NetDeposits::parse("  ").unwrap().value().to_string(),
+            "0.00"
+        );
+    }
+
+    #[test]
+    fn test_csd005_ac_21_2_a_deposit_is_stored() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add_with_deposits(&mut investments, id, "2026-09", "12500.00", "300.00");
+        let rows = investments.all_statements();
+        assert_eq!(rows[0].1.net_deposits.value().to_string(), "300.00");
+    }
+
+    #[test]
+    fn test_csd005_ac_21_3_a_net_withdrawal_is_stored() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add_with_deposits(&mut investments, id, "2026-09", "12500.00", "-250.00");
+        let rows = investments.all_statements();
+        assert_eq!(rows[0].1.net_deposits.value().to_string(), "-250.00");
+    }
+
+    #[test]
+    fn test_csd005_ac_21_4_editing_changes_the_net_deposits() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add_with_deposits(&mut investments, id, "2026-09", "12500.00", "300.00");
+        let statement = investments
+            .update_statement(
+                id,
+                month("2026-09"),
+                balance("12500.00"),
+                deposits("0.00"),
+                no_note(),
+            )
+            .unwrap();
+        assert_eq!(statement.balance.value().to_string(), "12500.00");
+        assert_eq!(statement.net_deposits.value().to_string(), "0.00");
+    }
+
+    #[test]
+    fn test_csd005_ac_22_1_invalid_net_deposits_are_rejected() {
+        for (text, code) in [
+            ("abc", "INVESTMENT_NET_DEPOSITS_INVALID"),
+            ("1e3", "INVESTMENT_NET_DEPOSITS_INVALID"),
+            ("300,50", "INVESTMENT_NET_DEPOSITS_INVALID"),
+            ("100.999", "INVESTMENT_NET_DEPOSITS_PRECISION"),
+            ("-100.999", "INVESTMENT_NET_DEPOSITS_PRECISION"),
+            ("1000000000.01", "INVESTMENT_NET_DEPOSITS_TOO_LARGE"),
+            ("-1000000000.01", "INVESTMENT_NET_DEPOSITS_TOO_LARGE"),
+        ] {
+            assert_eq!(NetDeposits::parse(text).unwrap_err().code(), code, "{text}");
+        }
+    }
+
+    #[test]
+    fn test_csd005_ac_22_2_boundary_net_deposits_are_accepted() {
+        for (text, shown) in [
+            ("0.00", "0.00"),
+            ("-0.00", "0.00"),
+            ("1000000000.00", "1000000000.00"),
+            ("-1000000000.00", "-1000000000.00"),
+            ("300.5", "300.50"),
+        ] {
+            assert_eq!(deposits(text).value().to_string(), shown, "{text}");
+        }
+    }
+
+    #[test]
+    fn test_csd005_ac_22_3_invalid_net_deposits_in_an_edit_change_nothing() {
+        // The command parses the net deposits before the domain is called.
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add_with_deposits(&mut investments, id, "2026-09", "12500.00", "300.00");
+        assert_eq!(
+            NetDeposits::parse("100.999").unwrap_err().code(),
+            "INVESTMENT_NET_DEPOSITS_PRECISION"
+        );
+        let rows = investments.all_statements();
+        assert_eq!(rows[0].1.net_deposits.value().to_string(), "300.00");
+    }
+
+    // ---- REQ-23: capital growth ----
+
+    #[test]
+    fn test_csd005_ac_23_1_growth_with_a_deposit() {
+        let (mut investments, id) = account_with_august();
+        add_with_deposits(&mut investments, id, "2026-09", "12500.00", "300.00");
+        assert_eq!(growth(&investments, id, "2026-09").unwrap(), "200.00");
+    }
+
+    #[test]
+    fn test_csd005_ac_23_2_a_loss_is_a_negative_growth() {
+        let (mut investments, id) = account_with_august();
+        add(&mut investments, id, "2026-09", "11000.00");
+        assert_eq!(growth(&investments, id, "2026-09").unwrap(), "-1000.00");
+    }
+
+    #[test]
+    fn test_csd005_ac_23_3_the_first_statement_has_no_growth() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add(&mut investments, id, "2026-09", "12500.00");
+        assert_eq!(growth(&investments, id, "2026-09"), None);
+    }
+
+    #[test]
+    fn test_csd005_ac_23_4_skipped_periods_are_bridged() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add(&mut investments, id, "2026-06", "10000.00");
+        add_with_deposits(&mut investments, id, "2026-09", "10900.00", "600.00");
+        assert_eq!(growth(&investments, id, "2026-09").unwrap(), "300.00");
+    }
+
+    #[test]
+    fn test_csd005_ac_23_5_a_yearly_account() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Pension", "Yearly");
+        add(&mut investments, id, "2024", "70000.00");
+        add_with_deposits(&mut investments, id, "2025", "80000.00", "6000.00");
+        assert_eq!(growth(&investments, id, "2025").unwrap(), "4000.00");
+    }
+
+    #[test]
+    fn test_csd005_ac_23_5_the_previous_statement_is_of_the_same_account() {
+        let mut investments = Investments::default();
+        let brokerage = add_account(&mut investments, "Example Brokerage", "Monthly");
+        let crypto = add_account(&mut investments, "Example Crypto", "Monthly");
+        add(&mut investments, crypto, "2026-08", "50.00");
+        add(&mut investments, brokerage, "2026-09", "12500.00");
+        assert_eq!(growth(&investments, brokerage, "2026-09"), None);
+    }
+
+    #[test]
+    fn test_csd005_ac_23_6_editing_an_earlier_balance_changes_the_later_growth() {
+        let (mut investments, id) = account_with_august();
+        add_with_deposits(&mut investments, id, "2026-09", "12500.00", "300.00");
+        investments
+            .update_statement(
+                id,
+                month("2026-08"),
+                balance("12100.00"),
+                no_deposits(),
+                no_note(),
+            )
+            .unwrap();
+        assert_eq!(growth(&investments, id, "2026-09").unwrap(), "100.00");
+    }
+
+    #[test]
+    fn test_csd005_ac_23_7_a_statement_added_before_the_first_gives_it_a_growth() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add(&mut investments, id, "2026-09", "12500.00");
+        add(&mut investments, id, "2026-07", "12000.00");
+        assert_eq!(growth(&investments, id, "2026-07"), None);
+        assert_eq!(growth(&investments, id, "2026-09").unwrap(), "500.00");
+    }
+
+    #[test]
+    fn test_csd005_ac_23_8_deleting_the_previous_statement_changes_the_growth() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add(&mut investments, id, "2026-07", "12000.00");
+        add(&mut investments, id, "2026-08", "12200.00");
+        add(&mut investments, id, "2026-09", "12500.00");
+        investments.delete_statement(id, month("2026-08")).unwrap();
+        assert_eq!(growth(&investments, id, "2026-09").unwrap(), "500.00");
+    }
+
+    #[test]
+    fn test_csd005_ac_23_9_growth_is_never_stored() {
+        let (mut investments, id) = account_with_august();
+        add_with_deposits(&mut investments, id, "2026-09", "12500.00", "300.00");
+        let json = serde_json::to_string(&investments).unwrap();
+        assert!(!json.contains("growth"), "{json}");
+    }
+
+    // ---- REQ-24, REQ-25: the form calculation ----
+
+    #[test]
+    fn test_csd005_ac_24_1_a_balance_gives_the_growth() {
+        let (investments, id) = account_with_august();
+        let result = calculate(
+            &investments,
+            id,
+            "2026-09",
+            "",
+            CalculationInput::Balance,
+            "12500.00",
+        )
+        .unwrap();
+        assert_eq!(result.balance.to_string(), "12500.00");
+        assert_eq!(result.capital_growth.unwrap().to_string(), "500.00");
+    }
+
+    #[test]
+    fn test_csd005_ac_24_2_a_growth_gives_the_balance() {
+        let (investments, id) = account_with_august();
+        let result = calculate(
+            &investments,
+            id,
+            "2026-09",
+            "300.00",
+            CalculationInput::Growth,
+            "200.00",
+        )
+        .unwrap();
+        assert_eq!(result.balance.to_string(), "12500.00");
+        assert_eq!(result.capital_growth.unwrap().to_string(), "200.00");
+    }
+
+    #[test]
+    fn test_csd005_ac_24_3_changing_net_deposits_recalculates_the_growth() {
+        let (investments, id) = account_with_august();
+        let result = calculate(
+            &investments,
+            id,
+            "2026-09",
+            "300.00",
+            CalculationInput::Balance,
+            "12500.00",
+        )
+        .unwrap();
+        assert_eq!(result.balance.to_string(), "12500.00");
+        assert_eq!(result.capital_growth.unwrap().to_string(), "200.00");
+    }
+
+    #[test]
+    fn test_csd005_ac_24_4_changing_net_deposits_recalculates_the_balance() {
+        let (investments, id) = account_with_august();
+        let result = calculate(
+            &investments,
+            id,
+            "2026-09",
+            "300.00",
+            CalculationInput::Growth,
+            "200.00",
+        )
+        .unwrap();
+        assert_eq!(result.balance.to_string(), "12500.00");
+        assert_eq!(result.capital_growth.unwrap().to_string(), "200.00");
+    }
+
+    #[test]
+    fn test_csd005_ac_24_5_a_negative_growth_and_net_withdrawal() {
+        let (investments, id) = account_with_august();
+        let result = calculate(
+            &investments,
+            id,
+            "2026-09",
+            "-500.00",
+            CalculationInput::Growth,
+            "-250.50",
+        )
+        .unwrap();
+        assert_eq!(result.balance.to_string(), "11249.50");
+    }
+
+    #[test]
+    fn test_csd005_ac_24_7_the_first_statement_has_no_growth_to_calculate() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        let result = calculate(
+            &investments,
+            id,
+            "2026-09",
+            "300.00",
+            CalculationInput::Balance,
+            "12500.00",
+        )
+        .unwrap();
+        assert_eq!(result.capital_growth, None);
+    }
+
+    #[test]
+    fn test_csd005_ac_24_12_a_growth_without_an_earlier_statement_is_rejected() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        let error = calculate(
+            &investments,
+            id,
+            "2026-09",
+            "",
+            CalculationInput::Growth,
+            "200.00",
+        )
+        .unwrap_err();
+        assert_eq!(error.code(), "INVESTMENT_GROWTH_UNAVAILABLE");
+    }
+
+    #[test]
+    fn test_csd005_ac_24_8_a_period_before_all_statements_has_no_growth_to_calculate() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add(&mut investments, id, "2026-09", "12500.00");
+        let result = calculate(
+            &investments,
+            id,
+            "2026-07",
+            "",
+            CalculationInput::Balance,
+            "12000.00",
+        )
+        .unwrap();
+        assert_eq!(result.capital_growth, None);
+    }
+
+    #[test]
+    fn test_csd005_ac_24_9_calculating_stores_nothing() {
+        let (investments, id) = account_with_august();
+        let before = investments.clone();
+        calculate(
+            &investments,
+            id,
+            "2026-09",
+            "300.00",
+            CalculationInput::Growth,
+            "200.00",
+        )
+        .unwrap();
+        assert_eq!(investments, before);
+    }
+
+    #[test]
+    fn test_csd005_ac_24_10_the_edit_form_shows_the_calculated_growth() {
+        let (mut investments, id) = account_with_august();
+        add_with_deposits(&mut investments, id, "2026-09", "12500.00", "300.00");
+        // Opening the statement calculates the growth from its stored balance
+        // and net deposits, without the statement itself being the previous one.
+        let result = calculate(
+            &investments,
+            id,
+            "2026-09",
+            "300.00",
+            CalculationInput::Balance,
+            "12500.00",
+        )
+        .unwrap();
+        assert_eq!(result.capital_growth.unwrap().to_string(), "200.00");
+    }
+
+    #[test]
+    fn test_csd005_ac_24_11_a_yearly_account_calculates_against_the_previous_year() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Pension", "Yearly");
+        add(&mut investments, id, "2024", "70000.00");
+        let result = investments
+            .calculate(
+                id,
+                month("2025"),
+                "6000.00",
+                CalculationInput::Balance,
+                "80000.00",
+            )
+            .unwrap();
+        assert_eq!(result.capital_growth.unwrap().to_string(), "4000.00");
+    }
+
+    #[test]
+    fn test_csd005_ac_25_1_a_growth_that_gives_a_negative_balance_is_rejected() {
+        let (investments, id) = account_with_august();
+        let error = calculate(
+            &investments,
+            id,
+            "2026-09",
+            "0.00",
+            CalculationInput::Growth,
+            "-12500.00",
+        )
+        .unwrap_err();
+        assert_eq!(error.code(), "INVESTMENT_BALANCE_NEGATIVE");
+    }
+
+    #[test]
+    fn test_csd005_ac_25_2_invalid_growth_is_rejected() {
+        let (investments, id) = account_with_august();
+        for (text, code) in [
+            ("abc", "INVESTMENT_GROWTH_INVALID"),
+            ("", "INVESTMENT_GROWTH_INVALID"),
+            ("100.999", "INVESTMENT_GROWTH_PRECISION"),
+            ("1000000000.01", "INVESTMENT_GROWTH_TOO_LARGE"),
+            ("-1000000000.01", "INVESTMENT_GROWTH_TOO_LARGE"),
+        ] {
+            let error = calculate(
+                &investments,
+                id,
+                "2026-09",
+                "",
+                CalculationInput::Growth,
+                text,
+            )
+            .unwrap_err();
+            assert_eq!(error.code(), code, "{text:?}");
+        }
+    }
+
+    #[test]
+    fn test_csd005_ac_25_3_a_growth_that_gives_a_balance_above_the_limit_is_rejected() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add(&mut investments, id, "2026-08", "999999999.00");
+        let error = calculate(
+            &investments,
+            id,
+            "2026-09",
+            "0.00",
+            CalculationInput::Growth,
+            "2.00",
+        )
+        .unwrap_err();
+        assert_eq!(error.code(), "INVESTMENT_BALANCE_TOO_LARGE");
+    }
+
+    #[test]
+    fn test_csd005_ac_25_4_invalid_net_deposits_in_the_form_are_rejected() {
+        let (investments, id) = account_with_august();
+        for (text, code) in [
+            ("100.999", "INVESTMENT_NET_DEPOSITS_PRECISION"),
+            ("abc", "INVESTMENT_NET_DEPOSITS_INVALID"),
+            ("1000000000.01", "INVESTMENT_NET_DEPOSITS_TOO_LARGE"),
+        ] {
+            let error = calculate(
+                &investments,
+                id,
+                "2026-09",
+                text,
+                CalculationInput::Balance,
+                "12500.00",
+            )
+            .unwrap_err();
+            assert_eq!(error.code(), code, "{text}");
+        }
+    }
+
+    #[test]
+    fn test_csd005_ac_25_5_an_invalid_balance_in_the_form_is_rejected() {
+        let (investments, id) = account_with_august();
+        let error = calculate(
+            &investments,
+            id,
+            "2026-09",
+            "",
+            CalculationInput::Balance,
+            "-1.00",
+        )
+        .unwrap_err();
+        assert_eq!(error.code(), "INVESTMENT_BALANCE_NEGATIVE");
+    }
+
+    #[test]
+    fn calculating_needs_an_existing_account_and_a_matching_period() {
+        let (investments, id) = account_with_august();
+        let missing = InvestmentAccountId::parse(&Uuid::new_v4().to_string()).unwrap();
+        assert_eq!(
+            calculate(
+                &investments,
+                missing,
+                "2026-09",
+                "",
+                CalculationInput::Balance,
+                "1.00"
+            )
+            .unwrap_err()
+            .code(),
+            "INVESTMENT_ACCOUNT_NOT_FOUND"
+        );
+        assert_eq!(
+            investments
+                .calculate(id, month("2026"), "", CalculationInput::Balance, "1.00")
+                .unwrap_err()
+                .code(),
+            "INVESTMENT_PERIOD_MISMATCH"
+        );
     }
 
     #[test]

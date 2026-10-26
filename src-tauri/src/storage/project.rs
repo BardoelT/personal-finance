@@ -1024,7 +1024,7 @@ mod investments_tests {
     use tempfile::TempDir;
 
     use super::*;
-    use crate::domain::{AccountInput, Balance, Note, Period, YearMonth};
+    use crate::domain::{AccountInput, Balance, NetDeposits, Note, Period, YearMonth};
 
     fn account(
         project: &mut Project,
@@ -1052,6 +1052,7 @@ mod investments_tests {
                 id,
                 Period::parse("2025").unwrap(),
                 Balance::parse("80000.00").unwrap(),
+                NetDeposits::parse("-250.00").unwrap(),
                 Note::new("Line one\nLine two").unwrap(),
                 YearMonth::parse("2026-10").unwrap(),
             )
@@ -1064,6 +1065,8 @@ mod investments_tests {
         assert_eq!(fresh.investments(), project.investments());
         let rows = fresh.investments().all_statements();
         assert_eq!(rows[0].1.note.as_str(), "Line one\nLine two");
+        // AC-19.3: net deposits survive the round trip.
+        assert_eq!(rows[0].1.net_deposits.value().to_string(), "-250.00");
         assert!(!fresh.status().unsaved_changes);
 
         // The section sits next to income and settings; the version stays 1.

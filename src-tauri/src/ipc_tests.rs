@@ -791,7 +791,7 @@ fn test_csd005_investment_statements_can_be_copied_edited_and_deleted_over_ipc()
             "copy_previous_investment_statement",
             json!({ "accountId": id })
         ),
-        json!({ "balance": null })
+        json!({ "balance": null, "net_deposits": "0.00" })
     );
     app.ok(
         "add_investment_statement",
@@ -803,7 +803,7 @@ fn test_csd005_investment_statements_can_be_copied_edited_and_deleted_over_ipc()
             "copy_previous_investment_statement",
             json!({ "accountId": id })
         ),
-        json!({ "balance": "12500.00" })
+        json!({ "balance": "12500.00", "net_deposits": "0.00" })
     );
     // AC-11.1: edit the balance and the note.
     let edited = app.ok(
@@ -857,4 +857,106 @@ fn test_csd005_new_project_clears_the_investments() {
         app.ok("list_investment_accounts", json!({})),
         json!({ "accounts": [], "total": null })
     );
+}
+
+#[test]
+fn test_csd005_ac_17_8_net_deposits_and_capital_growth_over_ipc() {
+    let app = harness();
+    let account = app.ok(
+        "create_investment_account",
+        json!({ "input": account_input("Example Brokerage", "Monthly") }),
+    );
+    let id = account["id"].as_str().unwrap();
+    app.ok(
+        "add_investment_statement",
+        json!({ "accountId": id, "period": "2026-08", "balance": "12000.00" }),
+    );
+    let added = app.ok(
+        "add_investment_statement",
+        json!({ "accountId": id, "period": "2026-09", "balance": "12500.00", "netDeposits": "300.00" }),
+    );
+    assert_eq!(added["net_deposits"], "300.00");
+    assert_eq!(added["capital_growth"], "200.00");
+
+    let rows = app.ok("list_investment_statements", json!({}));
+    let rows = rows.as_array().unwrap();
+    assert_eq!(rows[0]["period"], "2026-09");
+    assert_eq!(rows[0]["net_deposits"], "300.00");
+    assert_eq!(rows[0]["capital_growth"], "200.00");
+    assert_eq!(rows[1]["period"], "2026-08");
+    assert_eq!(rows[1]["net_deposits"], "0.00");
+    assert_eq!(rows[1]["capital_growth"], Value::Null);
+
+    // AC-21.4: edit the net deposits; the growth follows.
+    let edited = app.ok(
+        "update_investment_statement",
+        json!({ "accountId": id, "period": "2026-09", "balance": "12500.00", "netDeposits": "0.00" }),
+    );
+    assert_eq!(edited["capital_growth"], "500.00");
+
+    // AC-22.1 and AC-22.3: invalid net deposits are rejected and change nothing.
+    let error = app.err(
+        "update_investment_statement",
+        json!({ "accountId": id, "period": "2026-09", "balance": "12500.00", "netDeposits": "100.999" }),
+    );
+    assert_eq!(error["code"], "INVESTMENT_NET_DEPOSITS_PRECISION");
+    let rows = app.ok("list_investment_statements", json!({}));
+    assert_eq!(rows[0]["net_deposits"], "0.00");
+}
+
+#[test]
+fn test_csd005_ac_24_the_form_calculation_over_ipc() {
+    let app = harness();
+    let account = app.ok(
+        "create_investment_account",
+        json!({ "input": account_input("Example Brokerage", "Monthly") }),
+    );
+    let id = account["id"].as_str().unwrap();
+    app.ok(
+        "add_investment_statement",
+        json!({ "accountId": id, "period": "2026-08", "balance": "12000.00" }),
+    );
+    let before = app.ok("project_status", json!({}));
+
+    // AC-24.1: a balance gives the growth.
+    let result = app.ok(
+        "calculate_investment_statement",
+        json!({ "accountId": id, "period": "2026-09", "netDeposits": "", "input": "balance", "value": "12500.00" }),
+    );
+    assert_eq!(
+        result,
+        json!({ "balance": "12500.00", "capital_growth": "500.00" })
+    );
+
+    // AC-24.2: a growth gives the balance.
+    let result = app.ok(
+        "calculate_investment_statement",
+        json!({ "accountId": id, "period": "2026-09", "netDeposits": "300.00", "input": "growth", "value": "200.00" }),
+    );
+    assert_eq!(
+        result,
+        json!({ "balance": "12500.00", "capital_growth": "200.00" })
+    );
+
+    // AC-24.9: nothing was stored.
+    assert_eq!(
+        app.ok("list_investment_statements", json!({}))
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    assert_eq!(app.ok("project_status", json!({})), before);
+
+    // AC-25.1 and AC-25.2: errors reach the form as codes.
+    let error = app.err(
+        "calculate_investment_statement",
+        json!({ "accountId": id, "period": "2026-09", "netDeposits": "0.00", "input": "growth", "value": "-12500.00" }),
+    );
+    assert_eq!(error["code"], "INVESTMENT_BALANCE_NEGATIVE");
+    let error = app.err(
+        "calculate_investment_statement",
+        json!({ "accountId": id, "period": "2026-09", "netDeposits": "", "input": "growth", "value": "abc" }),
+    );
+    assert_eq!(error["code"], "INVESTMENT_GROWTH_INVALID");
 }

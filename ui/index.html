@@ -216,6 +216,8 @@
                     <th scope="col">Period</th>
                     <th scope="col">Account</th>
                     <th scope="col" class="num">Balance</th>
+                    <th scope="col" class="num">Net deposits</th>
+                    <th scope="col" class="num">Capital growth</th>
                     <th scope="col">Note</th>
                     <th scope="col"><span class="visually-hidden">Actions</span></th>
                   </tr>
@@ -356,13 +358,22 @@
       <label class="field"><span id="statement-period-label">Month (YYYY-MM)</span>
         <input type="text" name="period" inputmode="numeric" placeholder="2026-09" maxlength="7" autocomplete="off" required>
       </label>
-      <label class="field">Balance
+      <label class="field">Balance <span class="calc-tag" id="balance-calculated" hidden>calculated</span>
         <input type="text" name="balance" inputmode="decimal" placeholder="0.00" autocomplete="off" required>
       </label>
+      <div class="field-row">
+        <label class="field">Net deposits (optional)
+          <input type="text" name="net_deposits" inputmode="decimal" value="0.00" placeholder="0.00" autocomplete="off">
+        </label>
+        <label class="field">Capital growth <span class="calc-tag" id="growth-calculated" hidden>calculated</span>
+          <input type="text" name="growth" inputmode="decimal" placeholder="0.00" autocomplete="off">
+        </label>
+      </div>
+      <p class="field-hint" id="statement-growth-hint" hidden>This is the first statement of the account, so there is no capital growth.</p>
       <label class="field">Note (optional)
         <textarea name="note" rows="4" autocomplete="off"></textarea>
       </label>
-      <p class="field-hint">Use a dot for decimals, for example 12500.00. A note can be up to 2000 characters.</p>
+      <p class="field-hint">Use a dot for decimals, for example 12500.00. Net deposits is what you put in minus what you took out, so a withdrawal is negative. Enter the balance or the capital growth and the other is calculated. A note can be up to 2000 characters.</p>
       <p class="form-error" id="statement-error" role="alert" hidden></p>
       <div class="dialog-actions">
         <button type="button" class="btn" data-cancel>Cancel</button>

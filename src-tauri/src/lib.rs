@@ -56,6 +56,7 @@ fn configure<R: Runtime>(builder: tauri::Builder<R>, utc_offset: UtcOffset) -> t
             investments::update_investment_statement,
             investments::delete_investment_statement,
             investments::copy_previous_investment_statement,
+            investments::calculate_investment_statement,
             dashboard::get_dashboard,
             settings::get_settings,
             settings::set_currency,
