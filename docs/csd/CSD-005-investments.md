@@ -3,7 +3,7 @@ id: CSD-005
 title: Investments
 status: approved
 owner: Thijs Bardoel
-version: 0.3
+version: 0.4
 last_updated: 26/10/2026
 related: [CSD-000, CSD-001, CSD-002, CSD-003]
 ---
@@ -498,7 +498,7 @@ Scenario: Same period is ordered by account
 ```
 
 **REQ-17: Investments view layout** *(ubiquitous)*
-The app shall offer Investments as its own item in the left pane next to Employment, and shall show the view as the sections Accounts and Statements in that order, with the statement period, the statement count, the latest balance with its period and the buttons "Edit account" and "Delete account" on each account row, the total in a footer row of the Accounts section, the columns Period, Account, Balance and Note in the Statements section, and no account selection that changes what the sections show. A note longer than one line is cut to one line in the table and shown in full when the statement is edited.
+The app shall offer Investments as its own item in the left pane next to Employment, and shall show the view as the sections Accounts and Statements in that order, with the statement period, the statement count, the latest balance with its period and the icon buttons Edit (pencil) and Delete (trash) (flush right) on each account row, the button "Add account" in the header of the Accounts section, the icon buttons Edit (pencil) and Delete (trash) flush right on each statement row, the total in a footer row of the Accounts section, the columns Period, Account, Balance and Note in the Statements section, and no account selection that changes what the sections show. A note longer than one line is cut to one line in the table and shown in full when the statement is edited.
 
 ```gherkin
 @AC-17.1
@@ -513,7 +513,7 @@ Scenario: Account rows carry their period, count, latest balance and actions
   And yearly account "Example Pension" with 1 statement for 2025 with balance 80000.00
   Then the row of "Example Brokerage" shows "Monthly", "2 statements" and "12500.00" for 2026-09
   And the row of "Example Pension" shows "Yearly", "1 statement" and "80000.00" for 2025
-  And each row has the buttons "Edit account" and "Delete account"
+  And each row has the icon buttons Edit (pencil) and Delete (trash) at its right edge, each named for screen readers and in a tooltip, such as "Edit Example Employer"
   And the footer row shows the total "92500.00"
 
 @AC-17.3
@@ -539,6 +539,13 @@ Scenario: Clicking an account changes nothing
 Scenario: Notes are shown as plain text
   Given a statement with the note "<b>bold</b>"
   Then the Note column shows the characters "<b>bold</b>" and no formatting
+
+@AC-17.7
+Scenario: Add buttons sit in the section headers
+  Given an account
+  Then the header of the Accounts section holds the button "Add account" at its right edge
+  And the header of the Statements section holds the button "Add statement" at its right edge
+  And the page title row holds no button
 ```
 
 **REQ-18: Empty states** *(state-driven)*
@@ -559,21 +566,21 @@ Scenario: Account without statements
   And no error is shown
 ```
 
-**REQ-20: The currency is shown** *(ubiquitous)*
-The app shall show the project currency in the titles of the Accounts and Statements sections, and shall show no currency on the account rows or in the statements table.
+**REQ-20: No currency outside Settings** *(ubiquitous)*
+The app shall show no currency in the Accounts and Statements sections: not in their titles, on the account rows or in the statements table.
 
 ```gherkin
 @AC-20.1
-Scenario: Titles show the currency
+Scenario: No currency in the sections
   Given a project in "EUR" with an account and a statement
-  Then the sections are titled "Accounts · EUR" and "Statements · EUR"
+  Then the sections are titled "Accounts" and "Statements"
   And the account rows and the statements table show no currency
 
 @AC-20.2
-Scenario: The titles follow the project currency
+Scenario: Changing the currency changes no title
   Given a project in "EUR" with an account and a statement
   When the user changes the project currency to "USD" and confirms
-  Then the sections are titled "Accounts · USD" and "Statements · USD"
+  Then the sections are still titled "Accounts" and "Statements"
   And the balances are unchanged
 ```
 
@@ -638,7 +645,7 @@ All ACs are proven by `cargo test`, with domain logic tested in `domain/`. Tests
 | Requirement | Command |
 |---|---|
 | All of REQ-1 to REQ-13, REQ-15, REQ-16 and REQ-19 | `cargo test test_csd005_` |
-| AC-14.1 to AC-14.3, REQ-17 (all ACs), REQ-18, REQ-20 and AC-11.3, AC-17.4 | Manual checklist: form labels, section order and contents, section titles with the currency, left-pane item, empty states, note cut-off, plain-text note. There is no frontend test setup |
+| AC-14.1 to AC-14.3, REQ-17 (all ACs), REQ-18, REQ-20 and AC-11.3, AC-17.4, AC-17.7 | Manual checklist: form labels, section order and contents, section titles without a currency, button placement, left-pane item, empty states, note cut-off, plain-text note. There is no frontend test setup |
 | The currency confirmation for investment statements | Governed by CSD-003 REQ-5 (AC-5.5, AC-5.6), verified there |
 | AC-17.2, AC-17.3 (data) | `cargo test test_csd005_ac_17_` covers the data of the accounts and statements tables |
 | One requirement, e.g. REQ-6 | `cargo test test_csd005_ac_6_` |
@@ -651,6 +658,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 - OQ-3: (resolved in v0.2) Deleting a statement asks for a confirmation, unlike CSD-001 REQ-8, on purpose: the note of a statement cannot be recreated by copying the previous period (REQ-13). CSD-001 is unchanged.
 
 ## 9. Changelog
+- 0.4 (26/10/2026): Consistent action layout and no currency outside Settings. REQ-17: "Add account" moves to the Accounts section header, the row actions become the icon buttons Edit (pencil) and Delete (trash), flush right (AC-17.2 amended, AC-17.7 added). REQ-20 now says the sections show no currency (AC-20.1, AC-20.2 rewritten).
 - 0.3 (26/10/2026): Found while implementing (CSD-000 REQ-14): the error codes `INVESTMENT_BALANCE_INVALID` (text that is not a plain number, REQ-9, AC-9.4), `INVESTMENT_ACCOUNT_NOT_FOUND` and `INVESTMENT_STATEMENT_NOT_FOUND` were missing from section 5. No other behaviour changes.
 - 0.2 (26/10/2026): Resolved OQ-1 to OQ-3. New REQ-20 (the project currency in the section titles, AC-20.1, AC-20.2). Investment statements count for the currency confirmation of CSD-003 0.3.
 - 0.1 (26/10/2026): initial draft.

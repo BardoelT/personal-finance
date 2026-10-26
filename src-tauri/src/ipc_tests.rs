@@ -352,7 +352,7 @@ fn test_csd004_dashboard_over_ipc() {
     // AC-5.1: an empty project says there are no jobs and has no figures.
     let empty = app.ok("get_dashboard", json!({}));
     assert_eq!(empty["has_jobs"], false);
-    assert_eq!(empty["currency"], "EUR");
+    assert!(empty.get("currency").is_none());
     assert_eq!(empty["year"], this_month.year());
     assert_eq!(empty["year_to_date"], Value::Null);
     assert_eq!(empty["last_month_totals"], Value::Null);
@@ -394,15 +394,14 @@ fn test_csd004_dashboard_over_ipc() {
         if same_year { "4500.00" } else { "1000.00" }
     );
 
-    // AC-6.1: the currency is the project currency.
+    // AC-6.1: the dashboard names no currency.
     app.ok("set_currency", json!({ "currency": "USD" }));
-    assert_eq!(app.ok("get_dashboard", json!({}))["currency"], "USD");
+    assert!(app.ok("get_dashboard", json!({})).get("currency").is_none());
 
     // AC-7.2: a new project goes back to the empty state.
     app.ok("new_project", json!({}));
     let fresh = app.ok("get_dashboard", json!({}));
     assert_eq!(fresh["has_jobs"], false);
-    assert_eq!(fresh["currency"], "EUR");
 }
 
 /// A monthly and a yearly job, as their ids.

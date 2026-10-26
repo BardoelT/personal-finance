@@ -1,5 +1,5 @@
 // Employment income: jobs, yearly totals over all jobs, and the paychecks and annual statements of all jobs (CSD-001).
-import { invoke, errorText, h, formatAmount, formatDate, confirmAction, showToast } from './api.js';
+import { invoke, errorText, h, iconButton, formatAmount, formatDate, confirmAction, showToast } from './api.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -51,8 +51,8 @@ function renderJobs() {
         h(
           'span',
           { class: 'job-actions' },
-          h('button', { type: 'button', class: 'btn', onClick: () => openJobDialog(job) }, 'Edit job'),
-          h('button', { type: 'button', class: 'btn danger', onClick: () => deleteJob(job) }, 'Delete job'),
+          iconButton('edit', `Edit ${job.employer}`, () => openJobDialog(job)),
+          iconButton('delete', `Delete ${job.employer}`, () => deleteJob(job)),
         ),
       ),
     ),
@@ -95,8 +95,8 @@ function renderEntries(entries) {
         h(
           'td',
           { class: 'row-actions' },
-          h('button', { type: 'button', class: 'link-btn', onClick: () => openEntryDialog(e) }, 'Edit'),
-          h('button', { type: 'button', class: 'link-btn danger', onClick: () => deleteEntry(e) }, 'Delete'),
+          iconButton('edit', `Edit ${e.employer} ${e.period}`, () => openEntryDialog(e)),
+          iconButton('delete', `Delete ${e.employer} ${e.period}`, () => deleteEntry(e)),
         ),
       ),
     ),
@@ -106,9 +106,6 @@ function renderEntries(entries) {
 /** Reloads everything from Rust. */
 export async function reloadIncome() {
   jobs = await invoke('list_jobs');
-  const { currency } = await invoke('get_settings');
-  $('totals-title').textContent = `Yearly totals · ${currency}`;
-  $('paycheck-title').textContent = `Paychecks and statements · ${currency}`;
   renderJobs();
   if (jobs.length === 0) return;
   const [totals, entries] = await Promise.all([invoke('yearly_totals'), invoke('list_entries')]);

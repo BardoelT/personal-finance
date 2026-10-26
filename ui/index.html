@@ -116,7 +116,6 @@
       <section class="section" id="income" aria-labelledby="income-title">
         <div class="section-header">
           <h1 class="section-title" id="income-title">Employment income</h1>
-          <button type="button" class="btn primary push-right" id="job-add">Add job</button>
         </div>
 
         <div class="placeholder" id="income-empty" hidden>
@@ -126,12 +125,15 @@
 
         <div id="income-content" hidden>
           <div class="panel">
-            <div class="panel-header"><span class="panel-title">Jobs</span></div>
+            <div class="panel-header">
+              <span class="panel-title">Jobs</span>
+              <button type="button" class="btn primary" id="job-add">Add job</button>
+            </div>
             <ul class="job-list" id="job-list"></ul>
           </div>
 
           <div class="panel">
-            <div class="panel-header"><span class="panel-title" id="totals-title">Yearly totals</span></div>
+            <div class="panel-header"><span class="panel-title">Yearly totals</span></div>
             <p class="empty-note" id="totals-empty" hidden>No totals yet. Totals appear once there is a paycheck or an annual statement.</p>
             <div class="table-wrap">
               <table class="data-table" id="totals-table" hidden>
@@ -152,7 +154,7 @@
 
           <div class="panel">
             <div class="panel-header">
-              <span class="panel-title" id="paycheck-title">Paychecks and statements</span>
+              <span class="panel-title">Paychecks and statements</span>
               <button type="button" class="btn primary" id="paycheck-add">Add entry</button>
             </div>
             <p class="empty-note" id="paycheck-empty" hidden>No paychecks or annual statements yet.</p>
@@ -180,7 +182,6 @@
       <section class="section" id="investments" aria-labelledby="investments-title">
         <div class="section-header">
           <h1 class="section-title" id="investments-title">Investments</h1>
-          <button type="button" class="btn primary push-right" id="account-add">Add account</button>
         </div>
 
         <div class="placeholder" id="investments-empty" hidden>
@@ -190,7 +191,10 @@
 
         <div id="investments-content" hidden>
           <div class="panel">
-            <div class="panel-header"><span class="panel-title" id="accounts-title">Accounts</span></div>
+            <div class="panel-header">
+              <span class="panel-title">Accounts</span>
+              <button type="button" class="btn primary" id="account-add">Add account</button>
+            </div>
             <ul class="job-list" id="account-list"></ul>
             <div class="job-row account-total" id="account-total" hidden>
               <span class="job-name">Total of latest balances</span>
@@ -201,7 +205,7 @@
 
           <div class="panel">
             <div class="panel-header">
-              <span class="panel-title" id="statements-title">Statements</span>
+              <span class="panel-title">Statements</span>
               <button type="button" class="btn primary" id="statement-add">Add statement</button>
             </div>
             <p class="empty-note" id="statements-empty" hidden>No statements yet.</p>

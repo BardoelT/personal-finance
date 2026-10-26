@@ -3,7 +3,7 @@ id: CSD-003
 title: Project settings
 status: draft
 owner: Thijs Bardoel
-version: 0.3
+version: 0.4
 last_updated: 26/10/2026
 related: [CSD-001, CSD-002, CSD-005]
 ---
@@ -219,20 +219,21 @@ Scenario: The settings are in their own section
   Then the file has a settings section with the currency "USD"
 ```
 
-**REQ-8: The currency is shown** *(ubiquitous)*
-The app shall show the project currency in the titles of the Yearly totals and the Paychecks sections (and of the Investments sections, CSD-005 REQ-20), and shall show no currency on the jobs.
+**REQ-8: The currency is shown only in Settings** *(ubiquitous)*
+The app shall show the project currency only on the Settings page, and shall show no currency in any other view: not in section titles, on the jobs or accounts, or in the tables.
 
 ```gherkin
 @AC-8.1
-Scenario: Titles show the currency
+Scenario: Other views show no currency
   Given a project in "USD" with a job and a paycheck
-  Then the sections are titled "Yearly totals · USD" and "Paychecks · USD"
+  Then the sections are titled "Yearly totals" and "Paychecks and statements"
   And the Jobs section and the paychecks table show no currency
+  And only the Settings page shows "USD"
 ```
 
 ## 5. Interfaces and contracts
 
-Commands: `get_settings()` returns `{ currency, entry_count }`, and `set_currency(currency)` returns the same. `entry_count` (paychecks, annual statements and investment statements) lets the frontend decide whether REQ-5 applies.
+Commands: `get_settings()` returns `{ currency, entry_count }` (the frontend reads the currency only for the Settings page), and `set_currency(currency)` returns the same. `entry_count` (paychecks, annual statements and investment statements) lets the frontend decide whether REQ-5 applies.
 
 Menu: the item `open-settings` is added to the app menu, below About, with the accelerator ⌘,. Choosing it emits the event `menu-action` with that id, as the File menu items do (CSD-002 REQ-9).
 
@@ -254,7 +255,7 @@ All behaviour except the screens is proven by `cargo test`. Tests are named `tes
 |---|---|
 | REQ-3, REQ-4, REQ-6, REQ-7, and the data of REQ-5 and REQ-8 | `cargo test test_csd003_` |
 | AC-2.1 | `cargo test test_csd003_ac_2_1` checks the table the menu item is built from. Native menus can only be created on the main thread, so the built menu is on the manual checklist |
-| AC-1.1, AC-1.2, AC-2.2, AC-3.2 (display), AC-4.2 (indicator), AC-5.1 to AC-5.6 (dialogs), AC-8.1 | Manual checklist: the left pane order, the Settings page, ⌘, and the app menu item, the confirmation, and the titles. There is no frontend test setup |
+| AC-1.1, AC-1.2, AC-2.2, AC-3.2 (display), AC-4.2 (indicator), AC-5.1 to AC-5.6 (dialogs), AC-8.1 | Manual checklist: the left pane order, the Settings page, ⌘, and the app menu item, the confirmation, and the titles without a currency. There is no frontend test setup |
 
 Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 
@@ -262,6 +263,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.4 (26/10/2026): REQ-8 reversed: the currency is shown only on the Settings page, no longer in section titles (AC-8.1 rewritten).
 - 0.3 (26/10/2026): Investment statements (CSD-005) also count as entries for the currency confirmation: REQ-5 reworded, AC-5.5 and AC-5.6 added, `entry_count` counts them. REQ-8 points to the currency in the Investments section titles (CSD-005 REQ-20).
 - 0.2 (26/10/2026): The currency confirmation also applies to annual statements (CSD-001 0.9): REQ-5 says entries, AC-5.4 added, `paycheck_count` becomes `entry_count`.
 - 0.1 (25/10/2026): initial draft.

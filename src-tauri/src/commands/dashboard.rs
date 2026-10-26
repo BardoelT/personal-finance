@@ -7,14 +7,13 @@ use serde::Serialize;
 use tauri::State;
 
 use super::AppState;
-use crate::domain::{Currency, IncomeOverview};
+use crate::domain::IncomeOverview;
 use crate::error::AppError;
 
-/// What the dashboard shows (CSD-004): the project currency, whether there are
-/// jobs at all, and the two blocks of figures.
+/// What the dashboard shows (CSD-004): whether there are jobs at all, and the
+/// two blocks of figures.
 #[derive(Serialize)]
 pub struct DashboardView {
-    currency: Currency,
     has_jobs: bool,
     #[serde(flatten)]
     overview: IncomeOverview,
@@ -27,7 +26,6 @@ pub fn get_dashboard(state: State<'_, AppState>) -> Result<DashboardView, AppErr
     let today = state.today();
     let project = state.project()?;
     Ok(DashboardView {
-        currency: project.settings().currency,
         has_jobs: project.income().has_jobs(),
         overview: project.income().overview(today),
     })

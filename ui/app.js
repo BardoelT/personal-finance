@@ -27,13 +27,9 @@ async function start() {
       await reloadSettings();
     },
   });
-  // A new currency shows up in the titles of the income and investments views and the dashboard.
   initSettings({
     onChanged: async () => {
       await refreshProjectStatus();
-      await reloadIncome();
-      await reloadInvestments();
-      await reloadDashboard();
     },
   });
   await initProject({

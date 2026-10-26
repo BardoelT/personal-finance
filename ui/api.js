@@ -39,6 +39,30 @@ export function h(tag, attrs = {}, ...children) {
   return node;
 }
 
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const ICON_PATHS = {
+  edit: ['M12 20h9', 'M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'],
+  delete: ['M3 6h18', 'M8 6V4h8v2', 'M19 6l-1 14H6L5 6', 'M10 11v6', 'M14 11v6'],
+};
+
+/** A row action as an icon button; `label` names it for screen readers and the tooltip. */
+export function iconButton(kind, label, onClick) {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  for (const [key, value] of Object.entries({
+    viewBox: '0 0 24 24', width: '16', height: '16', fill: 'none', stroke: 'currentColor',
+    'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true',
+  })) {
+    svg.setAttribute(key, value);
+  }
+  for (const d of ICON_PATHS[kind]) {
+    const path = document.createElementNS(SVG_NS, 'path');
+    path.setAttribute('d', d);
+    svg.append(path);
+  }
+  const danger = kind === 'delete' ? ' danger' : '';
+  return h('button', { type: 'button', class: `icon-btn${danger}`, 'aria-label': label, title: label, onClick }, svg);
+}
+
 /** Shows an ISO date such as "2024-03-01" as dd/mm/yyyy (CSD-001 REQ-22). Display only. */
 export function formatDate(iso) {
   return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso.split('-').reverse().join('/') : String(iso);
