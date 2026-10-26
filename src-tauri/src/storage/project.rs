@@ -408,7 +408,7 @@ mod tests {
         let outcome = opened.open_asking(|| Some(path.clone())).unwrap();
         assert_eq!(outcome, OpenOutcome::Opened);
         assert_eq!(job_count(&opened), 1);
-        assert_eq!(opened.income().paycheck_count(job), 2);
+        assert_eq!(opened.income().entry_count(job), 2);
         assert!(opened.status().has_path);
     }
 
@@ -841,6 +841,135 @@ mod tests {
         project.settings_mut().set_currency("USD").unwrap();
         project.reset();
         assert_eq!(project.settings().currency, Currency::Eur);
+    }
+
+    // ---- annual statements in the project file (CSD-001 0.9) ----
+
+    fn add_yearly_job(project: &mut Project, employer: &str) -> JobId {
+        project
+            .income_mut()
+            .create_job(&JobInput {
+                employer: employer.to_owned(),
+                start_date: Some("01/03/2024".to_owned()),
+                pay_period: Some("Yearly".to_owned()),
+                ..JobInput::default()
+            })
+            .unwrap()
+            .id
+    }
+
+    #[test]
+    fn test_csd002_ac_1_1_annual_statements_round_trip() {
+        use crate::domain::Year;
+        let dir = TempDir::new().unwrap();
+        let mut project = Project::new();
+        let monthly = add_job(&mut project, "Example Employer");
+        add_paycheck(&mut project, monthly, "2026-09", "3000.00");
+        let yearly = add_yearly_job(&mut project, "Older Example Employer");
+        for (y, gross) in [("2024", "40000.00"), ("2025", "42000.00")] {
+            project
+                .income_mut()
+                .add_statement(
+                    yearly,
+                    Year::parse(y).unwrap(),
+                    Amounts::parse(gross, "", "3000").unwrap(),
+                    YearMonth::parse("2026-10").unwrap(),
+                )
+                .unwrap();
+        }
+        let path = dir.path().join("example-a.wealth");
+        project.save_as(path.clone()).unwrap();
+
+        let mut fresh = Project::new();
+        fresh.open(&path).unwrap();
+        assert_eq!(fresh.income(), project.income());
+        assert_eq!(fresh.income().entry_count(yearly), 2);
+        assert_eq!(fresh.income().entry_count(monthly), 1);
+        let totals = fresh.income().yearly_totals();
+        assert_eq!(totals[0].year, 2026);
+        assert_eq!(totals[1].total_gross.to_string(), "45000.00");
+        assert!(!fresh.status().unsaved_changes);
+    }
+
+    #[test]
+    fn test_csd001_the_file_keeps_pay_periods_and_statements_in_their_own_list() {
+        use crate::domain::Year;
+        let dir = TempDir::new().unwrap();
+        let mut project = Project::new();
+        add_job(&mut project, "Example Employer");
+        let yearly = add_yearly_job(&mut project, "Older Example Employer");
+        project
+            .income_mut()
+            .add_statement(
+                yearly,
+                Year::parse("2025").unwrap(),
+                Amounts::parse("40000.00", "", "").unwrap(),
+                YearMonth::parse("2026-10").unwrap(),
+            )
+            .unwrap();
+        let path = dir.path().join("example-a.wealth");
+        project.save_as(path.clone()).unwrap();
+
+        let value: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(value["format_version"], 1);
+        let periods: Vec<&str> = value["income"]["jobs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|j| j["pay_period"].as_str().unwrap())
+            .collect();
+        assert_eq!(periods.len(), 2);
+        assert!(periods.contains(&"Monthly") && periods.contains(&"Yearly"));
+        let statement = &value["income"]["statements"][0];
+        assert_eq!(statement["year"], "2025");
+        assert_eq!(statement["gross_salary"], "40000.00");
+        assert_eq!(value["income"]["paychecks"].as_array().unwrap().len(), 0);
+    }
+
+    #[test]
+    fn test_csd001_an_older_file_without_pay_periods_or_statements_opens_as_monthly() {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("example-a.wealth");
+        fs::write(
+            &path,
+            r#"{"format_version":1,"settings":{"currency":"EUR"},"income":{
+                "jobs":[{"id":"671166f4-5827-4794-bcdc-54d7824fb650","employer":"Example Employer",
+                    "title":null,"start_date":"2024-03-01","end_date":null}],
+                "paychecks":[{"job_id":"671166f4-5827-4794-bcdc-54d7824fb650","month":"2026-09",
+                    "gross_salary":"3000.00","holiday_pay":"0.00","bonus":"0.00"}]}}"#,
+        )
+        .unwrap();
+        let mut project = Project::new();
+        project.open(&path).unwrap();
+        let jobs = project.income().jobs();
+        assert_eq!(
+            jobs[0].pay_period,
+            crate::domain::income::PayPeriod::Monthly
+        );
+        assert_eq!(project.income().entry_count(jobs[0].id), 1);
+    }
+
+    #[test]
+    fn a_file_with_an_entry_of_the_wrong_kind_is_invalid() {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("example-a.wealth");
+        // An annual statement for a job that has no pay period, so it is monthly.
+        fs::write(
+            &path,
+            r#"{"format_version":1,"income":{
+                "jobs":[{"id":"671166f4-5827-4794-bcdc-54d7824fb650","employer":"Example Employer",
+                    "title":null,"start_date":"2024-03-01","end_date":null}],
+                "paychecks":[],
+                "statements":[{"job_id":"671166f4-5827-4794-bcdc-54d7824fb650","year":"2025",
+                    "gross_salary":"40000.00","holiday_pay":"0.00","bonus":"0.00"}]}}"#,
+        )
+        .unwrap();
+        let mut project = Project::new();
+        assert_eq!(
+            project.open(&path).unwrap_err().code(),
+            "PROJECT_INVALID_FILE"
+        );
     }
 
     // ---- constraints ----

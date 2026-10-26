@@ -81,7 +81,7 @@ fn income_flow_through_ipc_matches_what_the_frontend_expects() {
     assert_eq!(job["end_date"], Value::Null);
     // Jobs carry no currency: the project has one (CSD-003).
     assert!(job.get("currency").is_none());
-    assert_eq!(job["paycheck_count"], 0);
+    assert_eq!(job["entry_count"], 0);
     assert_eq!(app.ok("project_status", json!({}))["unsaved_changes"], true);
 
     // Paychecks: arguments use camelCase `jobId`, amounts are strings.
@@ -89,7 +89,8 @@ fn income_flow_through_ipc_matches_what_the_frontend_expects() {
         "add_paycheck",
         json!({ "jobId": job_id, "month": "2025-12", "amounts": amounts("3000.00", "", "1000.00") }),
     );
-    assert_eq!(added["month"], "2025-12");
+    assert_eq!(added["period"], "2025-12");
+    assert_eq!(added["kind"], "paycheck");
     assert_eq!(added["gross_salary"], "3000.00");
     assert_eq!(added["holiday_pay"], "0.00");
     assert_eq!(added["bonus"], "1000.00");
@@ -99,12 +100,12 @@ fn income_flow_through_ipc_matches_what_the_frontend_expects() {
         json!({ "jobId": job_id, "month": "2026-05", "amounts": amounts("3000", "2400", "") }),
     );
 
-    let paychecks = app.ok("list_paychecks", json!({}));
+    let paychecks = app.ok("list_entries", json!({}));
     let months: Vec<&str> = paychecks
         .as_array()
         .unwrap()
         .iter()
-        .map(|p| p["month"].as_str().unwrap())
+        .map(|p| p["period"].as_str().unwrap())
         .collect();
     assert_eq!(months, ["2026-05", "2025-12"], "newest first");
     assert_eq!(paychecks[0]["total_gross"], "5400.00");
@@ -117,11 +118,11 @@ fn income_flow_through_ipc_matches_what_the_frontend_expects() {
     let totals = app.ok("yearly_totals", json!({}));
     assert_eq!(totals[0]["year"], 2026);
     assert_eq!(totals[0]["total_gross"], "5400.00");
-    assert_eq!(totals[0]["paycheck_count"], 1);
+    assert_eq!(totals[0]["entry_count"], 1);
     assert_eq!(totals[1]["year"], 2025);
     assert_eq!(totals[1]["bonus"], "1000.00");
 
-    let prefill = app.ok("copy_previous_paycheck", json!({ "jobId": job_id }));
+    let prefill = app.ok("copy_previous_entry", json!({ "jobId": job_id }));
     assert_eq!(
         prefill,
         json!({ "gross_salary": "3000.00", "holiday_pay": "0.00", "bonus": "0.00" })
@@ -134,17 +135,14 @@ fn income_flow_through_ipc_matches_what_the_frontend_expects() {
     assert_eq!(updated["gross_salary"], "3100.00");
 
     let jobs = app.ok("list_jobs", json!({}));
-    assert_eq!(jobs[0]["paycheck_count"], 2);
+    assert_eq!(jobs[0]["entry_count"], 2);
 
     app.ok(
         "delete_paycheck",
         json!({ "jobId": job_id, "month": "2025-12" }),
     );
     assert_eq!(
-        app.ok("list_paychecks", json!({}))
-            .as_array()
-            .unwrap()
-            .len(),
+        app.ok("list_entries", json!({})).as_array().unwrap().len(),
         1
     );
 
@@ -207,7 +205,7 @@ fn errors_reach_the_frontend_as_code_and_safe_message() {
     );
     assert_eq!(renamed["employer"], "Renamed");
 
-    let missing = app.err("copy_previous_paycheck", json!({ "jobId": "not-a-job" }));
+    let missing = app.err("copy_previous_entry", json!({ "jobId": "not-a-job" }));
     assert_eq!(missing["code"], "JOB_NOT_FOUND");
 }
 
@@ -265,14 +263,14 @@ fn test_csd001_ac_23_3_paychecks_and_totals_span_all_jobs_over_ipc() {
         json!({ "jobId": usd_id, "month": "2026-08", "amounts": amounts("1000.00", "", "") }),
     );
 
-    let rows = app.ok("list_paychecks", json!({}));
+    let rows = app.ok("list_entries", json!({}));
     let table: Vec<(&str, &str)> = rows
         .as_array()
         .unwrap()
         .iter()
         .map(|row| {
             (
-                row["month"].as_str().unwrap(),
+                row["period"].as_str().unwrap(),
                 row["employer"].as_str().unwrap(),
             )
         })
@@ -293,7 +291,7 @@ fn test_csd001_ac_23_3_paychecks_and_totals_span_all_jobs_over_ipc() {
     assert_eq!(totals[0]["gross_salary"], "5000.00");
     assert_eq!(totals[0]["bonus"], "500.00");
     assert_eq!(totals[0]["total_gross"], "5500.00");
-    assert_eq!(totals[0]["paycheck_count"], 3);
+    assert_eq!(totals[0]["entry_count"], 3);
 }
 
 #[test]
@@ -302,7 +300,7 @@ fn test_csd003_settings_over_ipc() {
     // A new project uses EUR and has no paychecks.
     assert_eq!(
         app.ok("get_settings", json!({})),
-        json!({ "currency": "EUR", "paycheck_count": 0 })
+        json!({ "currency": "EUR", "entry_count": 0 })
     );
     assert_eq!(
         app.ok("project_status", json!({}))["unsaved_changes"],
@@ -310,7 +308,7 @@ fn test_csd003_settings_over_ipc() {
     );
 
     let changed = app.ok("set_currency", json!({ "currency": "USD" }));
-    assert_eq!(changed, json!({ "currency": "USD", "paycheck_count": 0 }));
+    assert_eq!(changed, json!({ "currency": "USD", "entry_count": 0 }));
     assert_eq!(app.ok("get_settings", json!({}))["currency"], "USD");
     // AC-4.2: the change is an unsaved change.
     assert_eq!(app.ok("project_status", json!({}))["unsaved_changes"], true);
@@ -330,11 +328,11 @@ fn test_csd003_settings_over_ipc() {
         json!({ "jobId": job_id, "month": "2026-09", "amounts": amounts("3000.00", "", "") }),
     );
     let settings = app.ok("get_settings", json!({}));
-    assert_eq!(settings["paycheck_count"], 1);
+    assert_eq!(settings["entry_count"], 1);
 
     // AC-4.1: changing the currency converts nothing.
     app.ok("set_currency", json!({ "currency": "GBP" }));
-    let paychecks = app.ok("list_paychecks", json!({}));
+    let paychecks = app.ok("list_entries", json!({}));
     assert_eq!(paychecks[0]["gross_salary"], "3000.00");
 
     // AC-3.1: a new project is back to EUR.
@@ -377,7 +375,7 @@ fn test_csd004_dashboard_over_ipc() {
     assert_eq!(last["last_month_totals"]["gross_salary"], "3000.00");
     assert_eq!(last["last_month_totals"]["bonus"], "500.00");
     assert_eq!(last["last_month_totals"]["total_gross"], "3500.00");
-    assert_eq!(last["last_month_totals"]["paycheck_count"], 1);
+    assert_eq!(last["last_month_totals"]["entry_count"], 1);
 
     // This year to date counts the current month, and last month too unless
     // that is still the previous year (January).
@@ -388,7 +386,7 @@ fn test_csd004_dashboard_over_ipc() {
     let year = app.ok("get_dashboard", json!({}));
     let same_year = last_month.year() == this_month.year();
     assert_eq!(
-        year["year_to_date"]["paycheck_count"],
+        year["year_to_date"]["entry_count"],
         if same_year { 2 } else { 1 }
     );
     assert_eq!(
@@ -405,4 +403,230 @@ fn test_csd004_dashboard_over_ipc() {
     let fresh = app.ok("get_dashboard", json!({}));
     assert_eq!(fresh["has_jobs"], false);
     assert_eq!(fresh["currency"], "EUR");
+}
+
+/// A monthly and a yearly job, as their ids.
+fn monthly_and_yearly_job(app: &Harness) -> (String, String) {
+    let monthly = app.ok("create_job", json!({ "input": job_input() }));
+    // AC-1.1, AC-1.5: Monthly by default, Yearly when chosen.
+    assert_eq!(monthly["pay_period"], "Monthly");
+    let yearly = app.ok(
+        "create_job",
+        json!({ "input": {
+            "employer": "Older Example Employer",
+            "start_date": "01/01/2020",
+            "pay_period": "Yearly"
+        } }),
+    );
+    assert_eq!(yearly["pay_period"], "Yearly");
+    (
+        monthly["id"].as_str().unwrap().to_owned(),
+        yearly["id"].as_str().unwrap().to_owned(),
+    )
+}
+
+#[test]
+fn test_csd001_annual_statements_are_listed_and_totalled_over_ipc() {
+    let app = harness();
+    let (monthly_id, yearly_id) = monthly_and_yearly_job(&app);
+    let unsupported = app.err(
+        "create_job",
+        json!({ "input": { "employer": "Example Employer", "start_date": "01/03/2024", "pay_period": "Weekly" } }),
+    );
+    assert_eq!(unsupported["code"], "JOB_PERIOD_UNSUPPORTED");
+
+    // AC-25.1: add a statement; the view carries kind and period.
+    let statement = app.ok(
+        "add_statement",
+        json!({ "jobId": yearly_id, "year": "2025", "amounts": amounts("40000.00", "", "3000") }),
+    );
+    assert_eq!(statement["kind"], "statement");
+    assert_eq!(statement["period"], "2025");
+    assert_eq!(statement["employer"], "Older Example Employer");
+    assert_eq!(statement["total_gross"], "43000.00");
+    app.ok(
+        "add_paycheck",
+        json!({ "jobId": monthly_id, "month": "2025-12", "amounts": amounts("3000.00", "", "") }),
+    );
+
+    // Entries of both kinds in one list, newest first.
+    let entries = app.ok("list_entries", json!({}));
+    let rows: Vec<(&str, &str)> = entries
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|e| (e["kind"].as_str().unwrap(), e["period"].as_str().unwrap()))
+        .collect();
+    assert_eq!(rows, [("paycheck", "2025-12"), ("statement", "2025")]);
+    assert_eq!(app.ok("list_jobs", json!({}))[0]["entry_count"], 1);
+
+    // AC-11.5: the statement counts in its own year, next to the paychecks.
+    let totals = app.ok("yearly_totals", json!({}));
+    assert_eq!(totals.as_array().unwrap().len(), 1);
+    assert_eq!(totals[0]["year"], 2025);
+    assert_eq!(totals[0]["gross_salary"], "43000.00");
+    assert_eq!(totals[0]["bonus"], "3000.00");
+    assert_eq!(totals[0]["total_gross"], "46000.00");
+    assert_eq!(totals[0]["entry_count"], 2);
+}
+
+#[test]
+fn test_csd001_annual_statement_errors_over_ipc() {
+    let app = harness();
+    let (monthly_id, yearly_id) = monthly_and_yearly_job(&app);
+    app.ok(
+        "add_statement",
+        json!({ "jobId": yearly_id, "year": "2025", "amounts": amounts("40000.00", "", "") }),
+    );
+    let code = |command: &str, args: Value| app.err(command, args)["code"].clone();
+    let one = amounts("1", "", "");
+
+    // REQ-26, REQ-27, REQ-25.
+    assert_eq!(
+        code(
+            "add_statement",
+            json!({ "jobId": yearly_id, "year": "2025", "amounts": one })
+        ),
+        "STATEMENT_DUPLICATE_YEAR"
+    );
+    assert_eq!(
+        code(
+            "add_paycheck",
+            json!({ "jobId": yearly_id, "month": "2025-11", "amounts": one })
+        ),
+        "JOB_PERIOD_MISMATCH"
+    );
+    assert_eq!(
+        code(
+            "add_statement",
+            json!({ "jobId": monthly_id, "year": "2024", "amounts": one })
+        ),
+        "JOB_PERIOD_MISMATCH"
+    );
+    assert_eq!(
+        code(
+            "add_statement",
+            json!({ "jobId": yearly_id, "year": "9999", "amounts": one })
+        ),
+        "STATEMENT_YEAR_IN_FUTURE"
+    );
+    for bad in ["26", "2026-05", "abcd", "1899"] {
+        assert_eq!(
+            code(
+                "add_statement",
+                json!({ "jobId": yearly_id, "year": bad, "amounts": one })
+            ),
+            "STATEMENT_YEAR_INVALID",
+            "{bad:?}"
+        );
+    }
+    // REQ-7 applies to statements too.
+    assert_eq!(
+        code(
+            "add_statement",
+            json!({ "jobId": yearly_id, "year": "2024", "amounts": amounts("-1", "", "") })
+        ),
+        "PAYCHECK_AMOUNT_NEGATIVE"
+    );
+
+    // REQ-24: the pay period is locked while the job has entries.
+    let job_input = |name: &str, period: &str| json!({ "employer": name, "start_date": "01/01/2020", "pay_period": period });
+    assert_eq!(
+        code(
+            "update_job",
+            json!({ "jobId": yearly_id, "input": job_input("Older Example Employer", "Monthly") })
+        ),
+        "JOB_PERIOD_LOCKED"
+    );
+    let renamed = app.ok(
+        "update_job",
+        json!({ "jobId": yearly_id, "input": job_input("Renamed Example Employer", "Yearly") }),
+    );
+    assert_eq!(renamed["pay_period"], "Yearly");
+}
+
+#[test]
+fn test_csd001_annual_statements_can_be_copied_edited_and_deleted_over_ipc() {
+    use crate::domain::YearMonth;
+
+    let app = harness();
+    let this_year = YearMonth::from_date(time::OffsetDateTime::now_utc().date()).year();
+    let (_, yearly_id) = monthly_and_yearly_job(&app);
+    app.ok(
+        "add_statement",
+        json!({ "jobId": yearly_id, "year": "2025", "amounts": amounts("40000.00", "", "3000") }),
+    );
+
+    // REQ-9: copy previous year.
+    let prefill = app.ok("copy_previous_entry", json!({ "jobId": yearly_id }));
+    assert_eq!(
+        prefill,
+        json!({ "gross_salary": "40000.00", "holiday_pay": "0.00", "bonus": "0.00" })
+    );
+
+    // REQ-8: edit and delete a statement.
+    let edited = app.ok(
+        "update_statement",
+        json!({ "jobId": yearly_id, "year": "2025", "amounts": amounts("40000.00", "2000", "3000") }),
+    );
+    assert_eq!(edited["total_gross"], "45000.00");
+    app.ok(
+        "delete_statement",
+        json!({ "jobId": yearly_id, "year": "2025" }),
+    );
+    assert_eq!(
+        app.ok("list_entries", json!({})).as_array().unwrap().len(),
+        0
+    );
+    assert_eq!(
+        app.err(
+            "delete_statement",
+            json!({ "jobId": yearly_id, "year": "2025" })
+        )["code"],
+        "STATEMENT_NOT_FOUND"
+    );
+
+    // AC-24.2: without entries the pay period can change.
+    let changed = app.ok(
+        "update_job",
+        json!({ "jobId": yearly_id, "input": {
+            "employer": "Older Example Employer",
+            "start_date": "01/01/2020",
+            "pay_period": "Monthly"
+        } }),
+    );
+    assert_eq!(changed["pay_period"], "Monthly");
+
+    // CSD-004 AC-2.4, AC-3.4: this year's statement counts in "This year" in full
+    // and never in "Last month".
+    let other = app.ok(
+        "create_job",
+        json!({ "input": { "employer": "Third Example Employer", "start_date": "01/01/2019", "pay_period": "Yearly" } }),
+    );
+    app.ok(
+        "add_statement",
+        json!({ "jobId": other["id"], "year": this_year.to_string(), "amounts": amounts("40000.00", "", "3000") }),
+    );
+    let dashboard = app.ok("get_dashboard", json!({}));
+    assert_eq!(dashboard["year_to_date"]["total_gross"], "43000.00");
+    assert_eq!(dashboard["year_to_date"]["entry_count"], 1);
+    assert_eq!(dashboard["last_month_totals"], Value::Null);
+
+    // AC-23.2 data: the job view counts statements for a yearly job.
+    let jobs = app.ok("list_jobs", json!({}));
+    let third = jobs
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|j| j["employer"] == "Third Example Employer")
+        .unwrap();
+    assert_eq!(third["pay_period"], "Yearly");
+    assert_eq!(third["entry_count"], 1);
+
+    // AC-4.1: deleting a job removes its statements too.
+    app.ok("delete_job", json!({ "jobId": other["id"] }));
+    assert_eq!(
+        app.ok("get_dashboard", json!({}))["year_to_date"],
+        Value::Null
+    );
 }

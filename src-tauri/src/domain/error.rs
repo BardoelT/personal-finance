@@ -19,6 +19,20 @@ pub enum DomainError {
     ProjectCurrencyUnsupported,
     #[error("This job does not exist.")]
     JobNotFound,
+    #[error("Choose Monthly or Yearly.")]
+    JobPeriodUnsupported,
+    #[error("The pay period cannot change once the job has paychecks or annual statements.")]
+    JobPeriodLocked,
+    #[error("A monthly job has paychecks and a yearly job has annual statements.")]
+    JobPeriodMismatch,
+    #[error("Enter the year as YYYY.")]
+    StatementYearInvalid,
+    #[error("An annual statement cannot be for a year that has not started yet.")]
+    StatementYearInFuture,
+    #[error("This job already has an annual statement for that year.")]
+    StatementDuplicateYear,
+    #[error("There is no annual statement for that year.")]
+    StatementNotFound,
     #[error("Enter the month as YYYY-MM.")]
     PaycheckMonthInvalid,
     #[error("A paycheck cannot be for a month that has not started yet.")]
@@ -53,6 +67,13 @@ impl DomainError {
             Self::JobFieldTooLong => "JOB_FIELD_TOO_LONG",
             Self::ProjectCurrencyUnsupported => "PROJECT_CURRENCY_UNSUPPORTED",
             Self::JobNotFound => "JOB_NOT_FOUND",
+            Self::JobPeriodUnsupported => "JOB_PERIOD_UNSUPPORTED",
+            Self::JobPeriodLocked => "JOB_PERIOD_LOCKED",
+            Self::JobPeriodMismatch => "JOB_PERIOD_MISMATCH",
+            Self::StatementYearInvalid => "STATEMENT_YEAR_INVALID",
+            Self::StatementYearInFuture => "STATEMENT_YEAR_IN_FUTURE",
+            Self::StatementDuplicateYear => "STATEMENT_DUPLICATE_YEAR",
+            Self::StatementNotFound => "STATEMENT_NOT_FOUND",
             Self::PaycheckMonthInvalid => "PAYCHECK_MONTH_INVALID",
             Self::PaycheckMonthInFuture => "PAYCHECK_MONTH_IN_FUTURE",
             Self::PaycheckDuplicateMonth => "PAYCHECK_DUPLICATE_MONTH",

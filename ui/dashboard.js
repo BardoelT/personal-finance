@@ -1,4 +1,5 @@
 // Dashboard: income this year to date and last month, over all jobs (CSD-004).
+// Entries are paychecks and annual statements.
 // The figures come from Rust; this file only displays them.
 import { invoke, h, formatAmount } from './api.js';
 
@@ -17,7 +18,7 @@ function cardsFor(totals) {
     card('Gross salary', formatAmount(totals.gross_salary)),
     card('Holiday pay', formatAmount(totals.holiday_pay)),
     card('Bonus', formatAmount(totals.bonus)),
-    card('Paychecks', String(totals.paycheck_count)),
+    card('Entries', String(totals.entry_count)),
   ];
 }
 
@@ -40,7 +41,7 @@ export async function reloadDashboard() {
     'year',
     `This year · ${d.year} · ${d.currency}`,
     d.year_to_date,
-    `No paychecks yet in ${d.year}.`,
+    `No entries yet in ${d.year}.`,
   );
   const month = d.last_month ?? '';
   renderBlock(

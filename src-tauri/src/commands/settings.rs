@@ -15,16 +15,16 @@ use crate::storage::Project;
 #[derive(Serialize)]
 pub struct SettingsView {
     currency: Currency,
-    /// How many paychecks exist, so the frontend knows whether changing the
+    /// How many entries (paychecks and annual statements) exist, so the frontend knows whether changing the
     /// currency needs a confirmation (REQ-5).
-    paycheck_count: usize,
+    entry_count: usize,
 }
 
 impl SettingsView {
     fn of(project: &Project) -> Self {
         Self {
             currency: project.settings().currency,
-            paycheck_count: project.income().all_paychecks().len(),
+            entry_count: project.income().all_entries().len(),
         }
     }
 }

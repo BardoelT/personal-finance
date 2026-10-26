@@ -4,8 +4,8 @@ A private, local-only desktop app for tracking personal wealth. It starts with *
 
 ## What it does today
 
-- **Dashboard:** your income this year to date and last month (total gross, gross salary, holiday pay, bonus and number of paychecks), summed over all jobs.
-- **Income:** any number of jobs, each with one monthly paycheck (gross salary, holiday pay and bonus). Yearly totals over all jobs and a list of all paychecks sit next to the jobs.
+- **Dashboard:** your income this year to date and last month (total gross, gross salary, holiday pay, bonus and number of entries), summed over all jobs. An annual statement counts in full in this year and not in last month.
+- **Income:** any number of jobs. A monthly job has one paycheck per month, a yearly job has one annual statement per year, both with gross salary, holiday pay and bonus. Yearly totals over all jobs and a list of all paychecks and annual statements sit next to the jobs.
 - **Settings:** project settings. The first one is the currency (EUR, USD or GBP) of the whole project. Changing it does not convert any amount.
 - **Project file:** everything is saved in one file you choose, and the app reopens the last one you used.
 

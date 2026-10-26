@@ -3,8 +3,8 @@ id: CSD-003
 title: Project settings
 status: draft
 owner: Thijs Bardoel
-version: 0.1
-last_updated: 25/10/2026
+version: 0.2
+last_updated: 26/10/2026
 related: [CSD-001, CSD-002]
 ---
 
@@ -135,7 +135,7 @@ Scenario: Choosing the current currency changes nothing
 ```
 
 **REQ-5: Confirm when amounts exist** *(event-driven)*
-While the project has paychecks, when the user chooses another currency, the app shall ask for confirmation, explaining that amounts are not converted, before changing the currency.
+While the project has entries (paychecks or annual statements), when the user chooses another currency, the app shall ask for confirmation, explaining that amounts are not converted, before changing the currency.
 
 ```gherkin
 @AC-5.1
@@ -153,10 +153,16 @@ Scenario: Confirming applies the change
 
 @AC-5.3
 Scenario: No confirmation without paychecks
-  Given a project in "EUR" with a job and no paychecks
+  Given a project in "EUR" with a job and no entries
   When the user chooses "USD"
   Then no confirmation is asked
   And the project currency is "USD"
+
+@AC-5.4
+Scenario: Confirmation with only an annual statement
+  Given a project in "EUR" with a yearly job and 1 annual statement
+  When the user chooses "USD"
+  Then a confirmation says the amounts are not converted
 ```
 
 **REQ-6: Unsupported currency** *(unwanted behaviour)*
@@ -212,7 +218,7 @@ Scenario: Titles show the currency
 
 ## 5. Interfaces and contracts
 
-Commands: `get_settings()` returns `{ currency, paycheck_count }`, and `set_currency(currency)` returns the same. `paycheck_count` lets the frontend decide whether REQ-5 applies.
+Commands: `get_settings()` returns `{ currency, entry_count }`, and `set_currency(currency)` returns the same. `entry_count` (paychecks and annual statements) lets the frontend decide whether REQ-5 applies.
 
 Menu: the item `open-settings` is added to the app menu, below About, with the accelerator ⌘,. Choosing it emits the event `menu-action` with that id, as the File menu items do (CSD-002 REQ-9).
 
@@ -234,7 +240,7 @@ All behaviour except the screens is proven by `cargo test`. Tests are named `tes
 |---|---|
 | REQ-3, REQ-4, REQ-6, REQ-7, and the data of REQ-5 and REQ-8 | `cargo test test_csd003_` |
 | AC-2.1 | `cargo test test_csd003_ac_2_1` checks the table the menu item is built from. Native menus can only be created on the main thread, so the built menu is on the manual checklist |
-| AC-1.1, AC-1.2, AC-2.2, AC-3.2 (display), AC-4.2 (indicator), AC-5.1 to AC-5.3 (dialogs), AC-8.1 | Manual checklist: the left pane order, the Settings page, ⌘, and the app menu item, the confirmation, and the titles. There is no frontend test setup |
+| AC-1.1, AC-1.2, AC-2.2, AC-3.2 (display), AC-4.2 (indicator), AC-5.1 to AC-5.4 (dialogs), AC-8.1 | Manual checklist: the left pane order, the Settings page, ⌘, and the app menu item, the confirmation, and the titles. There is no frontend test setup |
 
 Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 
@@ -242,4 +248,5 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.2 (26/10/2026): The currency confirmation also applies to annual statements (CSD-001 0.9): REQ-5 says entries, AC-5.4 added, `paycheck_count` becomes `entry_count`.
 - 0.1 (25/10/2026): initial draft.

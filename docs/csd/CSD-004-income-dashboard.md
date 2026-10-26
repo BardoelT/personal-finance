@@ -3,8 +3,8 @@ id: CSD-004
 title: Income dashboard
 status: draft
 owner: Thijs Bardoel
-version: 0.1
-last_updated: 25/10/2026
+version: 0.2
+last_updated: 26/10/2026
 related: [CSD-001, CSD-003]
 ---
 
@@ -32,7 +32,8 @@ The dashboard is the first page of the app, and today it shows example data that
 | **Today** | The current date in local time. |
 | **This year** | The current calendar year, from January up to and including the current month. |
 | **Last month** | The calendar month before the current month. For January this is December of the previous year. |
-| **Period totals** | The sums over all jobs of gross salary, holiday pay, bonus and total gross, and the number of paychecks, of the paychecks in a period. |
+| **Entry** | A paycheck of a monthly job or an annual statement of a yearly job (CSD-001). |
+| **Period totals** | The sums over all jobs of gross salary, holiday pay, bonus and total gross, and the number of entries, of the entries in a period. |
 
 ## 4. Requirements
 
@@ -69,7 +70,7 @@ Scenario: No example data
 ```
 
 **REQ-2: This year** *(event-driven)*
-When the user views the dashboard, the app shall show the period totals of this year, summed over all jobs, labelled with the year.
+When the user views the dashboard, the app shall show the period totals of this year, summed over all jobs, labelled with the year. An annual statement of this year counts in full, as one entry. The count is shown on a card labelled "Entries".
 
 ```gherkin
 @AC-2.1
@@ -78,25 +79,40 @@ Scenario: Year to date over all jobs
   And job "Example Employer" has paychecks 2026-08 (gross 3000.00), 2026-09 (gross 3000.00, bonus 500.00) and 2026-10 (gross 3000.00)
   And job "Older Example Employer" has a paycheck 2026-09 (gross 1000.00)
   When the user views the dashboard
-  Then "This year" for 2026 shows gross 10000.00, holiday pay 0.00, bonus 500.00, total 10500.00 and 4 paychecks
+  Then "This year" for 2026 shows gross 10000.00, holiday pay 0.00, bonus 500.00, total 10500.00 and 4 entries
 
 @AC-2.2
 Scenario: Other years are not counted
   Given today is 25/10/2026
   And a paycheck 2025-12 (gross 3000.00) and a paycheck 2026-09 (gross 1000.00)
   When the user views the dashboard
-  Then "This year" shows gross 1000.00 and 1 paycheck
+  Then "This year" shows gross 1000.00 and 1 entry
 
 @AC-2.3
 Scenario: Months after the current month are not counted
   Given today is 25/10/2026
   And a paycheck 2026-10 (gross 3000.00) and a paycheck 2026-12 (gross 3000.00) read from a project file
   When the user views the dashboard
-  Then "This year" shows gross 3000.00 and 1 paycheck
+  Then "This year" shows gross 3000.00 and 1 entry
+
+@AC-2.4
+Scenario: An annual statement counts in full
+  Given today is 25/10/2026
+  And a yearly job with an annual statement for 2026 (gross 40000.00, bonus 3000.00)
+  And a monthly job with a paycheck 2026-09 (gross 3000.00)
+  When the user views the dashboard
+  Then "This year" shows gross 43000.00, holiday pay 0.00, bonus 3000.00, total 46000.00 and 2 entries
+
+@AC-2.5
+Scenario: Annual statements of other years are not counted
+  Given today is 25/10/2026
+  And a yearly job with an annual statement for 2025 (gross 40000.00)
+  When the user views the dashboard
+  Then "This year" says there are no entries yet in 2026
 ```
 
 **REQ-3: Last month** *(event-driven)*
-When the user views the dashboard, the app shall show the period totals of last month, summed over all jobs, labelled with that month as YYYY-MM.
+When the user views the dashboard, the app shall show the period totals of last month, summed over all monthly jobs, labelled with that month as YYYY-MM. Annual statements are not counted, because they belong to no month.
 
 ```gherkin
 @AC-3.1
@@ -104,14 +120,14 @@ Scenario: Previous calendar month
   Given today is 25/10/2026
   And the paychecks of AC-2.1
   When the user views the dashboard
-  Then "Last month" for 2026-09 shows gross 4000.00, holiday pay 0.00, bonus 500.00, total 4500.00 and 2 paychecks
+  Then "Last month" for 2026-09 shows gross 4000.00, holiday pay 0.00, bonus 500.00, total 4500.00 and 2 entries
 
 @AC-3.2
 Scenario: January looks back to December
   Given today is 15/01/2027
   And a paycheck 2026-12 (gross 3000.00)
   When the user views the dashboard
-  Then "Last month" is 2026-12 and shows total 3000.00 and 1 paycheck
+  Then "Last month" is 2026-12 and shows total 3000.00 and 1 entry
 
 @AC-3.3
 Scenario: The current month is not last month
@@ -119,10 +135,18 @@ Scenario: The current month is not last month
   And a paycheck 2026-10 (gross 3000.00)
   When the user views the dashboard
   Then "Last month" is 2026-09 and has no paychecks
+
+@AC-3.4
+Scenario: Annual statements are not last month
+  Given today is 25/10/2026
+  And a yearly job with an annual statement for 2026 (gross 40000.00)
+  And no paycheck for 2026-09
+  When the user views the dashboard
+  Then "Last month" is 2026-09 and has no paychecks
 ```
 
-**REQ-4: Periods without paychecks** *(unwanted behaviour)*
-If there is no paycheck in a period, then the dashboard shall say so for that period and shall not show zero amounts.
+**REQ-4: Periods without entries** *(unwanted behaviour)*
+If there is no entry in a period (for last month: no paycheck), then the dashboard shall say so for that period and shall not show zero amounts.
 
 ```gherkin
 @AC-4.1
@@ -130,7 +154,7 @@ Scenario: Nothing earned this year yet
   Given today is 15/01/2027
   And a paycheck 2026-12 (gross 3000.00)
   When the user views the dashboard
-  Then "This year" says there are no paychecks yet in 2027
+  Then "This year" says there are no entries yet in 2027
   And it shows no amounts
 
 @AC-4.2
@@ -192,13 +216,13 @@ Command: `get_dashboard()` returns the project currency, whether jobs exist, and
   "currency": "EUR",
   "has_jobs": true,
   "year": 2026,
-  "year_to_date": { "gross_salary": "10000.00", "holiday_pay": "0.00", "bonus": "500.00", "total_gross": "10500.00", "paycheck_count": 4 },
+  "year_to_date": { "gross_salary": "10000.00", "holiday_pay": "0.00", "bonus": "500.00", "total_gross": "10500.00", "entry_count": 4 },
   "last_month": "2026-09",
   "last_month_totals": null
 }
 ```
 
-`year_to_date` and `last_month_totals` are `null` when the period has no paychecks. Amounts are decimal strings. Rust decides "today" (local time) and the periods, and the frontend only displays what it receives.
+`year_to_date` and `last_month_totals` are `null` when the period has no entries. `entry_count` counts paychecks and annual statements. Amounts are decimal strings. Rust decides "today" (local time) and the periods, and the frontend only displays what it receives.
 
 ## 6. Constraints
 - CON-1: The figures are computed in Rust and displayed as received. Rationale: `CLAUDE.md` layout rule.
@@ -220,4 +244,5 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.2 (26/10/2026): Annual statements (CSD-001 0.9). "This year" counts the statement of the current year in full (AC-2.4, AC-2.5), "Last month" counts monthly paychecks only (AC-3.4), the count becomes "entries" (`entry_count`, card "Entries").
 - 0.1 (25/10/2026): initial draft.

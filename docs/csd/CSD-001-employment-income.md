@@ -3,21 +3,22 @@ id: CSD-001
 title: Employment income tracking
 status: approved
 owner: Thijs Bardoel
-version: 0.8
-last_updated: 25/10/2026
+version: 0.9
+last_updated: 26/10/2026
 related: [CSD-000, CSD-002, CSD-003]
 ---
 
 # CSD-001: Employment income tracking
 
 ## 1. Intent
-The app tracks wealth but has no view of what comes in. This capability lets the user record employment income over time: any number of jobs, each with one monthly paycheck made up of gross salary, holiday pay and bonus. It is for a single person keeping a private, local history of their employment earnings. Scope is employment only. The result is a month-by-month record per job and yearly totals, which later features (net-worth linkage, income charts) can build on.
+The app tracks wealth but has no view of what comes in. This capability lets the user record employment income over time: any number of jobs, each recorded either monthly, with one paycheck per month, or yearly, with one annual statement per year. Both are made up of gross salary, holiday pay and bonus. It is for a single person keeping a private, local history of their employment earnings. Scope is employment only. The result is a record per job, by month or by year, and yearly totals, which later features (net-worth linkage, income charts) can build on.
 
 ## 2. Scope
 ### 2.1 In scope
 - Create, edit, end and delete jobs.
-- Create, edit and delete one paycheck per job per calendar month.
-- One employment view with the jobs, the yearly totals over all jobs and the paychecks of all jobs.
+- Create, edit and delete one paycheck per monthly job per calendar month.
+- Create, edit and delete one annual statement per yearly job per calendar year.
+- One employment view with the jobs, the yearly totals over all jobs and the paychecks and annual statements of all jobs.
 - Income data is part of the project file. Saving and loading is specified in CSD-002.
 
 ### 2.2 Non-goals
@@ -34,9 +35,12 @@ The app tracks wealth but has no view of what comes in. This capability lets the
 | Term | Meaning |
 |---|---|
 | **Job** | One employment relationship, identified by an employer name and start date. |
-| **Paycheck** | The record of one job for one calendar month (`YYYY-MM`). |
+| **Pay period** | How a job is recorded: **Monthly** (one paycheck per month) or **Yearly** (one annual statement per calendar year). A job is Monthly unless Yearly is chosen. |
+| **Paycheck** | The record of one monthly job for one calendar month (`YYYY-MM`). |
+| **Annual statement** | The record of one yearly job for one calendar year (`YYYY`): the gross salary, holiday pay and bonus of that year. |
+| **Entry** | A paycheck or an annual statement. |
 | **Date format** | Dates are shown and typed as dd/mm/yyyy (for example 01/03/2024). Months stay `YYYY-MM`. |
-| **Total gross** | Gross salary + holiday pay + bonus of one paycheck. |
+| **Total gross** | Gross salary + holiday pay + bonus of one entry. |
 | **Project file** | The single user-chosen file holding all app data. Income is its first section. See CSD-002. |
 
 ## 4. Requirements
@@ -59,7 +63,7 @@ sequenceDiagram
 ### 4.1 Jobs
 
 **REQ-1: Add a job** *(event-driven)*
-When the user submits a new job with an employer name and a start date, the app shall create the job.
+When the user submits a new job with an employer name, a start date and a pay period, the app shall create the job, with pay period Monthly unless Yearly is chosen.
 
 ```gherkin
 @AC-1.1
@@ -67,6 +71,7 @@ Scenario: Job created with defaults
   Given no jobs exist
   When the user adds a job with employer "Example Employer" and start date 01/03/2024
   Then one job exists with employer "Example Employer" and start date 01/03/2024
+  And the job has pay period "Monthly"
   And the job has no title and no end date
 
 @AC-1.2
@@ -82,12 +87,37 @@ Scenario Outline: Invalid job is rejected
     | Example Employer |            |            | JOB_START_REQUIRED    |
     | Example Employer | 01/03/2024 | 29/02/2024 | JOB_END_BEFORE_START  |
 
+
+@AC-1.5
+Scenario: Yearly pay period
+  Given no jobs exist
+  When the user adds a job with employer "Example Employer", start date 01/03/2024 and pay period "Yearly"
+  Then the job has pay period "Yearly"
+
+@AC-1.6
+Scenario Outline: Unsupported pay period is rejected
+  Given no jobs exist
+  When the user adds a job with employer "Example Employer", start date 01/03/2024 and pay period "<period>"
+  Then the job is rejected with error code "JOB_PERIOD_UNSUPPORTED"
+  And no job exists
+
+  Examples:
+    | period   |
+    | Weekly   |
+    | monthly! |
+    |          |
+
+@AC-1.7
+Scenario: The job form offers the pay period
+  When the user opens the add job form
+  Then it has a "Pay period" choice with "Monthly" and "Yearly"
+  And "Monthly" is chosen
 ```
 
 AC-1.3 and AC-1.4 (removed in v0.8): a job no longer has a currency. The project has one (CSD-003).
 
 **REQ-2: Edit a job** *(event-driven)*
-When the user edits a job's employer, title, start date or end date, the app shall apply the change regardless of existing paychecks.
+When the user edits a job's employer, title, start date or end date, the app shall apply the change regardless of existing entries.
 
 ```gherkin
 @AC-2.1
@@ -108,24 +138,24 @@ Scenario: End date before start date is rejected on edit
 **REQ-3: (removed in v0.8)** Jobs no longer have a currency, so there is nothing to lock. The project has one currency (CSD-003). AC-3.1 and AC-3.2 are removed.
 
 **REQ-4: Delete a job** *(event-driven)*
-When the user confirms deletion of a job, the app shall remove the job and all of its paychecks.
+When the user confirms deletion of a job, the app shall remove the job and all of its entries.
 
 ```gherkin
 @AC-4.1
 Scenario: Deletion cascades
-  Given a job "Example Employer" with 3 paychecks
+  Given a job "Example Employer" with 3 entries
   When the user deletes the job and confirms
   Then the job no longer exists
-  And none of its 3 paychecks exist
+  And none of its 3 entries exist
 
 @AC-4.2
 Scenario: Cancelled deletion changes nothing
-  Given a job "Example Employer" with 3 paychecks
+  Given a job "Example Employer" with 3 entries
   When the user starts deleting the job and cancels
-  Then the job and its 3 paychecks still exist
+  Then the job and its 3 entries still exist
 ```
 
-### 4.2 Paychecks
+### 4.2 Paychecks and annual statements
 
 **REQ-5: Add a paycheck** *(event-driven)*
 When the user submits a paycheck for the job chosen in the add form and a calendar month with a gross salary, the app shall store it, with holiday pay and bonus defaulting to 0.00, and shall accept any month that is not later than the current month, including months outside the job's start and end dates.
@@ -189,7 +219,7 @@ Scenario: Same month on a different job is allowed
 ```
 
 **REQ-7: Amount validation** *(unwanted behaviour)*
-If a paycheck amount is negative, has more than two decimal places or exceeds 1,000,000.00, or if gross salary is not greater than 0.00, then the app shall reject the paycheck without rounding or storing it.
+If an amount of a paycheck or annual statement is negative, has more than two decimal places or exceeds 1,000,000.00, or if gross salary is not greater than 0.00, then the app shall reject the entry without rounding or storing it.
 
 ```gherkin
 @AC-7.1
@@ -215,8 +245,8 @@ Scenario: Boundary amount accepted
   Then the paycheck for 2026-09 exists
 ```
 
-**REQ-8: Edit and delete a paycheck** *(event-driven)*
-When the user edits the amounts of an existing paycheck or deletes it, the app shall apply the change without asking for confirmation, validating edited amounts under REQ-7. The month of an existing paycheck shall not be editable.
+**REQ-8: Edit and delete an entry** *(event-driven)*
+When the user edits the amounts of an existing paycheck or annual statement or deletes it, the app shall apply the change without asking for confirmation, validating edited amounts under REQ-7. The month of an existing paycheck and the year of an existing annual statement shall not be editable.
 
 ```gherkin
 @AC-8.1
@@ -245,10 +275,33 @@ Scenario: Month stays fixed on edit
   When the user edits its amounts
   Then the edit offers no month field
   And the paycheck is still for 2026-05
+
+@AC-8.5
+Scenario: Edit and delete an annual statement
+  Given a yearly job with an annual statement for 2025 with gross 40000.00
+  When the user sets bonus to 3000.00
+  Then the statement has bonus 3000.00 and total gross 43000.00
+  When the user deletes the statement
+  Then the job has no annual statements
+  And no confirmation was asked
+
+@AC-8.6
+Scenario: Year stays fixed on edit
+  Given an annual statement for 2025 with gross 40000.00
+  When the user edits its amounts
+  Then the edit offers no year field
+  And the statement is still for 2025
+
+@AC-8.7
+Scenario: Invalid statement edit rejected
+  Given an annual statement for 2025 with gross 40000.00
+  When the user sets gross salary to -1.00
+  Then the edit is rejected with error code "PAYCHECK_AMOUNT_NEGATIVE"
+  And the statement still has gross 40000.00
 ```
 
-**REQ-9: Copy previous month** *(event-driven)*
-When the user chooses "copy previous month" in the add paycheck form, the app shall pre-fill the gross salary with that of the most recent paycheck of the job chosen in the form and holiday pay and bonus with 0.00, and shall not store anything until the user confirms.
+**REQ-9: Copy previous month or year** *(event-driven)*
+When the user chooses "copy previous month" (for a monthly job) or "copy previous year" (for a yearly job) in the add form, the app shall pre-fill the gross salary with that of the most recent entry of the job chosen in the form and holiday pay and bonus with 0.00, and shall not store anything until the user confirms.
 
 ```gherkin
 @AC-9.1
@@ -270,22 +323,167 @@ Scenario: The copy follows the chosen job
   And job "Older Example Employer" with a latest paycheck of gross 1000.00
   When the user chooses "Older Example Employer" in the add form and then "copy previous month"
   Then the form shows gross 1000.00
+
+@AC-9.4
+Scenario: Copy previous year for a yearly job
+  Given a yearly job with annual statements for 2024 (gross 40000.00) and 2025 (gross 42000.00, bonus 3000.00)
+  When the user chooses "copy previous year" in the add form for that job
+  Then the form shows gross 42000.00, holiday pay 0.00 and bonus 0.00
+  And no new statement exists
+
+@AC-9.5
+Scenario: No annual statement to copy
+  Given a yearly job with no annual statements
+  When the user chooses "copy previous year" in the add form for that job
+  Then the form shows gross empty, holiday pay 0.00 and bonus 0.00
 ```
 
 **REQ-10: Total gross is derived** *(ubiquitous)*
-The app shall compute a paycheck's total gross as gross salary plus holiday pay plus bonus, and shall not store or accept it as input.
+The app shall compute the total gross of a paycheck or annual statement as gross salary plus holiday pay plus bonus, and shall not store or accept it as input.
 
 ```gherkin
 @AC-10.1
 Scenario: Total is the sum
   Given a paycheck with gross 3000.00, holiday pay 240.00 and bonus 500.00
   Then its total gross is 3740.00
+
+@AC-10.2
+Scenario: Total of an annual statement
+  Given an annual statement with gross 40000.00, holiday pay 2000.00 and bonus 3000.00
+  Then its total gross is 45000.00
+```
+
+**REQ-24: Pay period is locked once entries exist** *(unwanted behaviour)*
+If the user changes the pay period of a job that has at least one entry, then the app shall reject the change with the error code `JOB_PERIOD_LOCKED`.
+
+```gherkin
+@AC-24.1
+Scenario: Change rejected with entries
+  Given a "Monthly" job with one paycheck
+  When the user changes its pay period to "Yearly"
+  Then the change is rejected with error code "JOB_PERIOD_LOCKED"
+  And the job has pay period "Monthly"
+
+@AC-24.2
+Scenario: Change allowed without entries
+  Given a "Monthly" job with no entries
+  When the user changes its pay period to "Yearly"
+  Then the job has pay period "Yearly"
+
+@AC-24.3
+Scenario: Keeping the pay period is allowed with entries
+  Given a "Yearly" job with one annual statement
+  When the user renames the job and keeps pay period "Yearly"
+  Then the job is renamed and keeps pay period "Yearly"
+```
+
+**REQ-25: Add an annual statement** *(event-driven)*
+When the user submits an annual statement for the yearly job chosen in the add form and a calendar year with a gross salary, the app shall store it, with holiday pay and bonus defaulting to 0.00, and shall accept any year that is not later than the current year, including years outside the job's start and end dates.
+
+```gherkin
+@AC-25.1
+Scenario: Annual statement with defaults
+  Given the current date is 26/10/2026
+  And a yearly job "Example Employer" starting 01/03/2024
+  When the user adds an annual statement for 2025 with gross salary 40000.00
+  Then the statement has gross salary 40000.00, holiday pay 0.00, bonus 0.00 and total gross 40000.00
+
+@AC-25.2
+Scenario: Year before the job start date is accepted
+  Given a yearly job "Example Employer" starting 01/03/2024
+  When the user adds an annual statement for 2022 with gross salary 38000.00
+  Then the annual statement for 2022 exists
+
+@AC-25.3
+Scenario: Year later than the current year is rejected
+  Given the current date is 26/10/2026
+  When the user adds an annual statement for 2027 with gross salary 40000.00
+  Then the statement is rejected with error code "STATEMENT_YEAR_IN_FUTURE"
+
+@AC-25.4
+Scenario: Current year is accepted
+  Given the current date is 26/10/2026
+  When the user adds an annual statement for 2026 with gross salary 40000.00
+  Then the annual statement for 2026 exists
+
+@AC-25.5
+Scenario Outline: Invalid year is rejected
+  Given a yearly job "Example Employer"
+  When the user adds an annual statement for "<year>" with gross salary 40000.00
+  Then the statement is rejected with error code "STATEMENT_YEAR_INVALID"
+
+  Examples:
+    | year    |
+    | 26      |
+    | 2026-05 |
+    | abcd    |
+    | 1899    |
+```
+
+**REQ-26: One annual statement per job per year** *(unwanted behaviour)*
+If the user adds an annual statement for a job and year that already has one, then the app shall reject it with the error code `STATEMENT_DUPLICATE_YEAR` and leave the existing statement unchanged.
+
+```gherkin
+@AC-26.1
+Scenario: Duplicate year rejected
+  Given a yearly job with an annual statement for 2025 with gross salary 40000.00
+  When the user adds another annual statement for 2025 with gross salary 41000.00
+  Then it is rejected with error code "STATEMENT_DUPLICATE_YEAR"
+  And the statement for 2025 still has gross salary 40000.00
+
+@AC-26.2
+Scenario: Same year on a different job is allowed
+  Given two yearly jobs, and the first has an annual statement for 2025
+  When the user adds an annual statement for 2025 to the second job
+  Then both jobs have an annual statement for 2025
+```
+
+**REQ-27: Entries match the pay period** *(unwanted behaviour)*
+If the user adds a paycheck to a yearly job or an annual statement to a monthly job, then the app shall reject it with the error code `JOB_PERIOD_MISMATCH`.
+
+```gherkin
+@AC-27.1
+Scenario: Paycheck for a yearly job rejected
+  Given a "Yearly" job
+  When a paycheck for 2026-09 with gross salary 3000.00 is added to it
+  Then it is rejected with error code "JOB_PERIOD_MISMATCH"
+
+@AC-27.2
+Scenario: Annual statement for a monthly job rejected
+  Given a "Monthly" job
+  When an annual statement for 2025 with gross salary 40000.00 is added to it
+  Then it is rejected with error code "JOB_PERIOD_MISMATCH"
+```
+
+**REQ-28: The add form follows the pay period** *(event-driven)*
+When the user chooses a job in the add form, the app shall ask for a month if the job is monthly and for a year if it is yearly, and shall title the form "Add paycheck" or "Add annual statement" accordingly.
+
+```gherkin
+@AC-28.1
+Scenario: Monthly job
+  Given a "Monthly" job
+  When the user chooses it in the add form
+  Then the form is titled "Add paycheck" and asks for "Month (YYYY-MM)"
+  And the copy button reads "Copy previous month"
+
+@AC-28.2
+Scenario: Yearly job
+  Given a "Yearly" job
+  When the user chooses it in the add form
+  Then the form is titled "Add annual statement" and asks for "Year (YYYY)"
+  And the copy button reads "Copy previous year"
+
+@AC-28.3
+Scenario: Switching job switches the form
+  Given a "Monthly" job and a "Yearly" job
+  When the user chooses the yearly job and then the monthly job in the add form
+  Then the form asks for a year and then for a month again
 ```
 
 ### 4.3 Views
 
 **REQ-11: Yearly totals** *(event-driven)*
-When the user views the employment overview, the app shall show, for each calendar year with at least one paycheck of any job, the sums over all jobs of gross salary, holiday pay, bonus and total gross and the number of paychecks, without extrapolating partial years.
+When the user views the employment overview, the app shall show, for each calendar year with at least one entry of any job, the sums over all jobs of gross salary, holiday pay, bonus and total gross and the number of entries, without extrapolating partial years. An annual statement counts in its own year only.
 
 ```gherkin
 @AC-11.1
@@ -309,12 +507,25 @@ Scenario: Totals add up all jobs
   When the user views the yearly totals
   Then there is one row for 2026 with gross 7000.00, holiday pay 0.00, bonus 500.00, total 7500.00, count 3
 
+
+@AC-11.5
+Scenario: Annual statements count in their year
+  Given a yearly job with an annual statement for 2025 (gross 40000.00, bonus 3000.00)
+  And a monthly job with a paycheck 2025-12 (gross 3000.00)
+  When the user views the yearly totals
+  Then 2025 shows gross 43000.00, holiday pay 0.00, bonus 3000.00, total 46000.00, count 2
+
+@AC-11.6
+Scenario: A statement does not count in other years
+  Given a yearly job with an annual statement for 2025 (gross 40000.00)
+  When the user views the yearly totals
+  Then there is a row for 2025 only
 ```
 
 AC-11.4 (removed in v0.8): the project has one currency, so there is nothing to convert (CSD-003).
 
 **REQ-12: Ordering** *(ubiquitous)*
-The app shall list jobs by start date, newest first, the paychecks of all jobs by month, newest first and, within a month, by job in job order, and the yearly totals by year, newest first.
+The app shall list jobs by start date, newest first, the entries of all jobs by period, newest first, with an annual statement counting as December of its year and, within a period, by job in job order, and the yearly totals by year, newest first.
 
 ```gherkin
 @AC-12.1
@@ -333,10 +544,21 @@ Scenario: Same month is ordered by job
 Scenario: Yearly totals newest year first
   Given paychecks in 2024, 2026 and 2025
   Then the yearly totals are listed 2026, 2025, 2024
+
+@AC-12.4
+Scenario: A statement sorts as December
+  Given a yearly job with an annual statement for 2026 and a monthly job with paychecks for 2026-10 and 2025-12
+  Then the entries are listed 2026, 2026-10, 2025-12
+
+@AC-12.5
+Scenario: Same period is ordered by job
+  Given job "Example Employer" starting 01/03/2024 and yearly job "Older Example Employer" starting 01/01/2020
+  And "Example Employer" has a paycheck for 2026-12 and "Older Example Employer" an annual statement for 2026
+  Then the paycheck of "Example Employer" is listed before the statement of "Older Example Employer"
 ```
 
 **REQ-13: Empty states** *(state-driven)*
-While no jobs exist, the app shall show an "add your first job" prompt, and while jobs exist but have no paychecks, the app shall show a short note in the yearly totals and paychecks sections, with no totals rows and no error.
+While no jobs exist, the app shall show an "add your first job" prompt, and while jobs exist but have no entries, the app shall show a short note in the yearly totals and entries sections, with no totals rows and no error.
 
 ```gherkin
 @AC-13.1
@@ -345,9 +567,9 @@ Scenario: No jobs
   Then the income view shows an "add your first job" prompt
 
 @AC-13.2
-Scenario: Jobs without paychecks
-  Given a job with no paychecks
-  Then the yearly totals and the paychecks show a short note
+Scenario: Jobs without entries
+  Given a job with no entries
+  Then the yearly totals and the entries show a short note
   And no error is shown
 ```
 
@@ -383,32 +605,34 @@ Scenario: Month stays YYYY-MM
 ```
 
 **REQ-23: Employment view layout** *(ubiquitous)*
-The app shall show the employment view as the sections Jobs, Yearly totals and Paychecks in that order, with Edit job and Delete job on each job in the Jobs section, a Job column in the paychecks, and no job selection that changes what the sections show.
+The app shall show the employment view as the sections Jobs, Yearly totals and Paychecks and statements in that order, with Edit job and Delete job and the pay period on each job in the Jobs section, a Period column and a Job column in the entries, and no job selection that changes what the sections show.
 
 ```gherkin
 @AC-23.1
 Scenario: Sections in order
-  Given a job with a paycheck
-  Then the sections appear in the order Jobs, Yearly totals, Paychecks
+  Given a job with an entry
+  Then the sections appear in the order Jobs, Yearly totals, Paychecks and statements
   And there is no section that only describes one selected job
 
 @AC-23.2
-Scenario: Job rows carry their actions and paycheck count
-  Given job "Example Employer" with 2 paychecks
-  Then its row in the Jobs section shows the employer, dates and "2 paychecks"
-  And the row has the buttons "Edit job" and "Delete job"
+Scenario: Job rows carry their pay period, actions and entry count
+  Given monthly job "Example Employer" with 2 paychecks and yearly job "Older Example Employer" with 1 annual statement
+  Then the row of "Example Employer" shows the employer, dates, "Monthly" and "2 paychecks"
+  And the row of "Older Example Employer" shows the employer, dates, "Yearly" and "1 statement"
+  And each row has the buttons "Edit job" and "Delete job"
 
 @AC-23.3
-Scenario: Paychecks of all jobs with their job
-  Given job "Example Employer" with a paycheck for 2026-09 and job "Older Example Employer" with a paycheck for 2026-08
-  Then the Paychecks section lists both paychecks
+Scenario: Entries of all jobs with their period and job
+  Given monthly job "Example Employer" with a paycheck for 2026-09 and yearly job "Older Example Employer" with an annual statement for 2025
+  Then the Paychecks and statements section lists both entries
+  And the Period column shows "2026-09" and "2025"
   And the Job column shows "Example Employer" and "Older Example Employer"
 
 @AC-23.4
 Scenario: Clicking a job changes nothing
-  Given two jobs with paychecks
+  Given two jobs with entries
   When the user clicks a job row
-  Then the yearly totals and the paychecks are unchanged
+  Then the yearly totals and the entries are unchanged
 ```
 
 ### 4.4 Saving and loading
@@ -420,13 +644,15 @@ Dates: the job start and end dates are shown and typed as dd/mm/yyyy (REQ-22). R
 
 ```mermaid
 erDiagram
-    JOB ||--o{ PAYCHECK : has
+    JOB ||--o{ PAYCHECK : "has (monthly job)"
+    JOB ||--o{ STATEMENT : "has (yearly job)"
     JOB {
         JobId id
         string employer
         string title "optional"
         date start_date
         date end_date "optional"
+        PayPeriod pay_period "Monthly or Yearly; default Monthly"
     }
     PAYCHECK {
         JobId job_id
@@ -435,12 +661,21 @@ erDiagram
         Decimal holiday_pay "default 0.00"
         Decimal bonus "default 0.00"
     }
+    STATEMENT {
+        JobId job_id
+        Year year "unique per job"
+        Decimal gross_salary "> 0"
+        Decimal holiday_pay "default 0.00"
+        Decimal bonus "default 0.00"
+    }
 ```
 
-Commands (all inputs validated in Rust; amounts cross IPC as decimal strings):
-`list_jobs`, `create_job`, `update_job`, `delete_job`, `list_paychecks()` (all jobs, each with its employer), `add_paycheck`, `update_paycheck`, `delete_paycheck`, `copy_previous_paycheck(job_id)`, `yearly_totals()` (over all jobs). Project commands (save, open, new) are in CSD-002. The income data is stored as one section of the project file defined there.
+The project file keeps annual statements in their own list `statements` next to `paychecks`. A job without a pay period is Monthly: `format_version` stays 1 and nothing is migrated, as the app is not released yet. Years are `YYYY` everywhere. Statements follow the same amount rules as paychecks and use the same amount error codes.
 
-Error codes (returned as code plus safe message): `JOB_EMPLOYER_REQUIRED`, `JOB_START_REQUIRED`, `JOB_END_BEFORE_START`, `PAYCHECK_MONTH_IN_FUTURE`, `PAYCHECK_DUPLICATE_MONTH`, `PAYCHECK_GROSS_INVALID`, `PAYCHECK_AMOUNT_NEGATIVE`, `PAYCHECK_AMOUNT_PRECISION`, `PAYCHECK_AMOUNT_TOO_LARGE`, `JOB_DATE_INVALID`. Project error codes are in CSD-002.
+Commands (all inputs validated in Rust; amounts cross IPC as decimal strings):
+`list_jobs`, `create_job`, `update_job`, `delete_job`, `list_entries()` (paychecks and annual statements of all jobs, each with its employer and period; replaces `list_paychecks()`), `add_paycheck`, `add_statement`, `update_paycheck`, `update_statement`, `delete_paycheck`, `delete_statement`, `copy_previous_entry(job_id)` (replaces `copy_previous_paycheck`), `yearly_totals()` (over all jobs). Project commands (save, open, new) are in CSD-002. The income data is stored as one section of the project file defined there.
+
+Error codes (returned as code plus safe message): `JOB_EMPLOYER_REQUIRED`, `JOB_START_REQUIRED`, `JOB_END_BEFORE_START`, `PAYCHECK_MONTH_IN_FUTURE`, `PAYCHECK_DUPLICATE_MONTH`, `PAYCHECK_GROSS_INVALID`, `PAYCHECK_AMOUNT_NEGATIVE`, `PAYCHECK_AMOUNT_PRECISION`, `PAYCHECK_AMOUNT_TOO_LARGE`, `JOB_DATE_INVALID`, `JOB_PERIOD_UNSUPPORTED`, `JOB_PERIOD_LOCKED`, `JOB_PERIOD_MISMATCH`, `STATEMENT_DUPLICATE_YEAR`, `STATEMENT_YEAR_IN_FUTURE`, `STATEMENT_YEAR_INVALID`. Project error codes are in CSD-002.
 
 ## 6. Constraints
 - CON-1: Amounts use `rust_decimal::Decimal` and are in the project currency (CSD-003), so adding amounts across jobs never mixes currencies. Rationale: `CLAUDE.md` money rules. (The v0.7 exception for mixed currencies is gone.)
@@ -458,9 +693,9 @@ All ACs are proven by `cargo test`, with domain logic tested in `domain/`. Tests
 
 | Requirement | Command |
 |---|---|
-| All of REQ-1 to REQ-13, and AC-22.2 and AC-22.3 | `cargo test test_csd001_` |
-| AC-5.6, AC-22.1, REQ-23 (AC-23.1, AC-23.2, AC-23.4) and the display parts of AC-9.3, AC-11.2, AC-13.2 | Manual checklist: section order and contents, job buttons and paycheck counts, no selection, dd/mm/yyyy dates, default job in the add form. There is no frontend test setup |
-| AC-23.3 (data) | `cargo test test_csd001_ac_23_` covers the data of the paychecks table (all jobs and their employer) |
+| All of REQ-1 to REQ-13 and REQ-24 to REQ-27, and AC-22.2 and AC-22.3 | `cargo test test_csd001_` |
+| AC-1.7, AC-5.6, AC-22.1, REQ-28, REQ-23 (AC-23.1, AC-23.2, AC-23.4) and the display parts of AC-9.3 to AC-9.5, AC-11.2, AC-13.2 | Manual checklist: section order and contents, job buttons and paycheck counts, no selection, dd/mm/yyyy dates, default job in the add form. There is no frontend test setup |
+| AC-23.3 (data) | `cargo test test_csd001_ac_23_` covers the data of the entries table (all jobs, their employer and period) |
 | One requirement, e.g. REQ-5 | `cargo test test_csd001_ac_5_` |
 
 Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
@@ -476,6 +711,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 - OQ-8: (resolved in v0.8) The project is single-currency: per-job currency, `JOB_CURRENCY_*`, the Currency column and the CON-1 exception are removed (CSD-003).
 
 ## 9. Changelog
+- 0.9 (26/10/2026): Jobs get a pay period, Monthly or Yearly. Yearly jobs hold one annual statement per calendar year instead of monthly paychecks. New REQ-24 to REQ-28 (pay period lock, add statement, one per year, entries match the pay period, add form), REQ-1, REQ-7 to REQ-13 and REQ-23 extended to entries, error codes and data model updated. The Paychecks section becomes Paychecks and statements with a Period column. `format_version` stays 1.
 - 0.8 (25/10/2026): Currency moves from the job to the project (CSD-003). REQ-1 no longer sets a currency, REQ-3 removed, AC-1.3, AC-1.4 and AC-11.4 removed, the Currency column and job currency removed from REQ-23, the CON-1 exception removed, OQ-8 resolved, `JOB_CURRENCY_*` codes removed.
 - 0.7 (25/10/2026): The employment view no longer has a selected job. Yearly totals are summed over all jobs (REQ-11, AC-11.3, AC-11.4), the paychecks of all jobs are listed together with Job and Currency columns (REQ-12, REQ-23), the job is chosen in the add form and "copy previous month" moves into it (REQ-5, AC-5.6, REQ-9, AC-9.3). NG-6 narrowed to charts. CON-1 gets a temporary exception for summing mixed currencies (OQ-8). Commands `list_paychecks()` and `yearly_totals()` no longer take a job.
 - 0.6 (25/10/2026): Dates are written dd/mm/yyyy (CSD-000 2.2, CON-7). New REQ-22 (date format, AC-22.1 to AC-22.3), error code `JOB_DATE_INVALID` listed, existing examples converted. Months stay YYYY-MM; the file and commands keep ISO 8601 internally.
