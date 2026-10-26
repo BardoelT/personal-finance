@@ -3,9 +3,9 @@ id: CSD-001
 title: Employment income tracking
 status: approved
 owner: Thijs Bardoel
-version: 0.10
+version: 0.11
 last_updated: 26/10/2026
-related: [CSD-000, CSD-002, CSD-003]
+related: [CSD-000, CSD-002, CSD-003, CSD-006]
 ---
 
 # CSD-001: Employment income tracking
@@ -27,7 +27,7 @@ The app tracks wealth but has no view of what comes in. This capability lets the
 - NG-3: Automatic payslip import (PDF, bank) and bulk import of paychecks.
 - NG-4: Forecasting future income.
 - NG-5: Integration with net worth.
-- NG-6: A chart or other income-over-time visualisation (candidate for a later CSD). Yearly totals over all jobs are in scope (REQ-11).
+- NG-6: A chart or other income-over-time visualisation, except the yearly insights view of CSD-006. Yearly totals over all jobs are in scope (REQ-11).
 - NG-7: Automatic calculation of holiday pay or any other amount. All amounts are entered manually.
 - NG-8: (moved to CSD-002 NG-1 in v0.4)
 
@@ -722,6 +722,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 - OQ-8: (resolved in v0.8) The project is single-currency: per-job currency, `JOB_CURRENCY_*`, the Currency column and the CON-1 exception are removed (CSD-003).
 
 ## 9. Changelog
+- 0.11 (26/10/2026): NG-6 no longer excludes the yearly insights chart of CSD-006. No other change to income behaviour.
 - 0.10 (26/10/2026): Consistent action layout. REQ-23: "Add job" moves to the Jobs section header, the job actions become the icon buttons Edit (pencil) and Delete (trash), and all row actions are flush right (AC-23.2 amended, AC-23.5 and AC-23.6 added).
 - 0.9 (26/10/2026): Jobs get a pay period, Monthly or Yearly. Yearly jobs hold one annual statement per calendar year instead of monthly paychecks. New REQ-24 to REQ-28 (pay period lock, add statement, one per year, entries match the pay period, add form), REQ-1, REQ-7 to REQ-13 and REQ-23 extended to entries, error codes and data model updated. The Paychecks section becomes Paychecks and statements with a Period column. `format_version` stays 1.
 - 0.8 (25/10/2026): Currency moves from the job to the project (CSD-003). REQ-1 no longer sets a currency, REQ-3 removed, AC-1.3, AC-1.4 and AC-11.4 removed, the Currency column and job currency removed from REQ-23, the CON-1 exception removed, OQ-8 resolved, `JOB_CURRENCY_*` codes removed.
