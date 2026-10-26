@@ -1,11 +1,15 @@
 [package]
-name = "personal-finance"
+name = "varde"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
 name = "personal_finance_lib"
 crate-type = ["lib", "cdylib", "staticlib"]
+
+[[bin]]
+name = "Varde"
+path = "src/main.rs"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

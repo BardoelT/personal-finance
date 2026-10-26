@@ -1,4 +1,4 @@
-# Personal Finance
+# Varde
 
 A private, local-only desktop app for tracking personal wealth. It covers **employment income** and **investments**, and more areas will follow as their specs are approved.
 
