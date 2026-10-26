@@ -9,8 +9,8 @@ pub mod settings;
 
 pub use error::DomainError;
 pub use income::{
-    Entry, Income, IncomeOverview, Job, JobId, JobInput, PaycheckPrefill, Year, YearMonth,
-    YearlyTotal,
+    Entry, Income, IncomeOverview, InsightsYear, Job, JobId, JobInput, PaycheckPrefill, Year,
+    YearMonth, YearlyTotal,
 };
 pub use investments::{
     AccountInput, Balance, CalculationInput, InvestmentAccount, InvestmentAccountId, Investments,

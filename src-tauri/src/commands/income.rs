@@ -9,7 +9,8 @@ use tauri::State;
 
 use super::AppState;
 use crate::domain::{
-    Amounts, Entry, Income, Job, JobId, JobInput, PaycheckPrefill, Year, YearMonth, YearlyTotal,
+    Amounts, Entry, Income, InsightsYear, Job, JobId, JobInput, PaycheckPrefill, Year, YearMonth,
+    YearlyTotal,
 };
 use crate::error::AppError;
 
@@ -255,4 +256,21 @@ pub fn copy_previous_entry(
 pub fn yearly_totals(state: State<'_, AppState>) -> Result<Vec<YearlyTotal>, AppError> {
     let project = state.project()?;
     Ok(project.income().yearly_totals())
+}
+
+/// The yearly chart of the Income page, over all jobs, from the project as it
+/// is now, saved or not (CSD-006 REQ-11).
+#[tauri::command]
+pub fn get_income_insights(state: State<'_, AppState>) -> Result<IncomeInsights, AppError> {
+    let today = state.today();
+    let project = state.project()?;
+    Ok(IncomeInsights {
+        years: project.income().insights(today),
+    })
+}
+
+/// Payload of `get_income_insights` (CSD-006 section 5).
+#[derive(Serialize)]
+pub struct IncomeInsights {
+    years: Vec<InsightsYear>,
 }
