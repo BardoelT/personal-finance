@@ -1,4 +1,4 @@
-// Employment income: jobs, yearly totals over all jobs, and the paychecks of all jobs (CSD-001).
+// Employment income: jobs, yearly totals over all jobs, and the paychecks and annual statements of all jobs (CSD-001).
 import { invoke, errorText, h, formatAmount, formatDate, confirmAction, showToast } from './api.js';
 
 const $ = (id) => document.getElementById(id);
@@ -11,7 +11,17 @@ function jobDates(job) {
 }
 
 function jobMeta(job) {
-  return [job.title, jobDates(job)].filter(Boolean).join(' · ');
+  return [job.title, jobDates(job), job.pay_period].filter(Boolean).join(' · ');
+}
+
+/** "3 paychecks" for a monthly job, "1 statement" for a yearly job. */
+function entryCount(job) {
+  const noun = job.pay_period === 'Yearly' ? 'statement' : 'paycheck';
+  return `${job.entry_count} ${noun}${job.entry_count === 1 ? '' : 's'}`;
+}
+
+function currentYear() {
+  return String(new Date().getFullYear());
 }
 
 function currentMonth() {
@@ -37,7 +47,7 @@ function renderJobs() {
         { class: 'job-row' },
         h('span', { class: 'job-name' }, job.employer),
         h('span', { class: 'job-meta' }, jobMeta(job)),
-        h('span', { class: 'job-count' }, `${job.paycheck_count} paycheck${job.paycheck_count === 1 ? '' : 's'}`),
+        h('span', { class: 'job-count' }, entryCount(job)),
         h(
           'span',
           { class: 'job-actions' },
@@ -62,31 +72,31 @@ function renderTotals(totals) {
         amountCell(t.holiday_pay),
         amountCell(t.bonus),
         amountCell(t.total_gross),
-        h('td', { class: 'num' }, String(t.paycheck_count)),
+        h('td', { class: 'num' }, String(t.entry_count)),
       ),
     ),
   );
 }
 
-function renderPaychecks(paychecks) {
-  $('paycheck-empty').hidden = paychecks.length > 0;
-  $('paycheck-table').hidden = paychecks.length === 0;
+function renderEntries(entries) {
+  $('paycheck-empty').hidden = entries.length > 0;
+  $('paycheck-table').hidden = entries.length === 0;
   $('paycheck-rows').replaceChildren(
-    ...paychecks.map((p) =>
+    ...entries.map((e) =>
       h(
         'tr',
         {},
-        h('th', { scope: 'row' }, p.month),
-        h('td', { class: 'wrap' }, p.employer),
-        amountCell(p.gross_salary),
-        amountCell(p.holiday_pay),
-        amountCell(p.bonus),
-        amountCell(p.total_gross),
+        h('th', { scope: 'row' }, e.period),
+        h('td', { class: 'wrap' }, e.employer),
+        amountCell(e.gross_salary),
+        amountCell(e.holiday_pay),
+        amountCell(e.bonus),
+        amountCell(e.total_gross),
         h(
           'td',
           { class: 'row-actions' },
-          h('button', { type: 'button', class: 'link-btn', onClick: () => openPaycheckDialog(p) }, 'Edit'),
-          h('button', { type: 'button', class: 'link-btn danger', onClick: () => deletePaycheck(p) }, 'Delete'),
+          h('button', { type: 'button', class: 'link-btn', onClick: () => openEntryDialog(e) }, 'Edit'),
+          h('button', { type: 'button', class: 'link-btn danger', onClick: () => deleteEntry(e) }, 'Delete'),
         ),
       ),
     ),
@@ -98,12 +108,12 @@ export async function reloadIncome() {
   jobs = await invoke('list_jobs');
   const { currency } = await invoke('get_settings');
   $('totals-title').textContent = `Yearly totals · ${currency}`;
-  $('paycheck-title').textContent = `Paychecks · ${currency}`;
+  $('paycheck-title').textContent = `Paychecks and statements · ${currency}`;
   renderJobs();
   if (jobs.length === 0) return;
-  const [totals, paychecks] = await Promise.all([invoke('yearly_totals'), invoke('list_paychecks')]);
+  const [totals, entries] = await Promise.all([invoke('yearly_totals'), invoke('list_entries')]);
   renderTotals(totals);
-  renderPaychecks(paychecks);
+  renderEntries(entries);
 }
 
 async function changed() {
@@ -127,7 +137,12 @@ function openJobDialog(job) {
   form.reset();
   $('job-error').hidden = true;
   $('job-dialog-title').textContent = job ? 'Edit job' : 'Add job';
+  // The pay period is locked once the job has entries (CSD-001 REQ-24).
+  const locked = Boolean(job && job.entry_count > 0);
+  form.elements.pay_period.disabled = locked;
+  $('job-period-hint').hidden = !locked;
   if (job) {
+    form.elements.pay_period.value = job.pay_period;
     form.elements.employer.value = job.employer;
     form.elements.title.value = job.title ?? '';
     form.elements.start_date.value = formatDate(job.start_date);
@@ -146,6 +161,7 @@ async function submitJob(event) {
     start_date: form.elements.start_date.value,
     end_date: form.elements.end_date.value,
   };
+  if (!form.elements.pay_period.disabled) input.pay_period = form.elements.pay_period.value;
   try {
     if (editingJob) {
       await invoke('update_job', { jobId: editingJob.id, input });
@@ -160,13 +176,13 @@ async function submitJob(event) {
 }
 
 async function deleteJob(job) {
-  const n = job.paycheck_count;
+  const n = job.entry_count;
   const confirmed = await confirmAction({
     title: `Delete ${job.employer}?`,
     message:
       n === 0
         ? 'This job will be deleted.'
-        : `This job and its ${n} paycheck${n === 1 ? '' : 's'} will be deleted.`,
+        : `This job and its ${entryCount(job)} will be deleted.`,
     confirmLabel: 'Delete job',
     danger: true,
   });
@@ -179,9 +195,11 @@ async function deleteJob(job) {
   }
 }
 
-// ---- Paycheck dialog ----
+// ---- Entry dialog: a paycheck for a monthly job, an annual statement for a yearly job ----
 
-let editingPaycheck = null;
+let editingEntry = null;
+/** Whether the form currently asks for a year, so the period resets only when it changes. */
+let formIsYearly = false;
 
 function fillJobChoices(selectedId) {
   // The list is in job order, so the first option is the newest job (CSD-001 AC-5.6).
@@ -192,30 +210,56 @@ function fillJobChoices(selectedId) {
   select.value = selectedId ?? jobs[0]?.id ?? '';
 }
 
-/** Opens the form to add a paycheck, or to edit `paycheck` when given. */
-function openPaycheckDialog(paycheck = null) {
-  editingPaycheck = paycheck;
+function chosenJob() {
+  return jobs.find((job) => job.id === $('paycheck-form').elements.job_id.value);
+}
+
+/** Titles and asks for a month or a year, following the chosen job (CSD-001 REQ-28). */
+function applyPayPeriod({ resetPeriod }) {
+  const form = $('paycheck-form');
+  const yearly = chosenJob()?.pay_period === 'Yearly';
+  $('paycheck-dialog-title').textContent = yearly ? 'Add annual statement' : 'Add paycheck';
+  $('paycheck-period-label').textContent = yearly ? 'Year (YYYY)' : 'Month (YYYY-MM)';
+  form.elements.period.placeholder = yearly ? String(new Date().getFullYear() - 1) : '2026-09';
+  form.elements.period.maxLength = yearly ? 4 : 7;
+  $('paycheck-copy').textContent = yearly ? 'Copy previous year' : 'Copy previous month';
+  if (resetPeriod && yearly !== formIsYearly) {
+    form.elements.period.value = yearly ? currentYear() : currentMonth();
+  }
+  formIsYearly = yearly;
+}
+
+/** Opens the form to add an entry, or to edit `entry` when given. */
+function openEntryDialog(entry = null) {
+  editingEntry = entry;
   const form = $('paycheck-form');
   form.reset();
   $('paycheck-error').hidden = true;
-  $('paycheck-dialog-title').textContent = paycheck ? `Edit paycheck ${paycheck.month}` : 'Add paycheck';
-  fillJobChoices(paycheck?.job_id);
-  form.elements.job_id.disabled = Boolean(paycheck);
-  $('paycheck-copy').hidden = Boolean(paycheck);
-  form.elements.month.readOnly = Boolean(paycheck);
-  if (paycheck) {
-    form.elements.month.value = paycheck.month;
-    form.elements.gross_salary.value = paycheck.gross_salary;
-    form.elements.holiday_pay.value = paycheck.holiday_pay;
-    form.elements.bonus.value = paycheck.bonus;
+  fillJobChoices(entry?.job_id);
+  form.elements.job_id.disabled = Boolean(entry);
+  $('paycheck-copy').hidden = Boolean(entry);
+  form.elements.period.readOnly = Boolean(entry);
+  if (entry) {
+    const statement = entry.kind === 'statement';
+    $('paycheck-dialog-title').textContent = statement
+      ? `Edit annual statement ${entry.period}`
+      : `Edit paycheck ${entry.period}`;
+    $('paycheck-period-label').textContent = statement ? 'Year (YYYY)' : 'Month (YYYY-MM)';
+    form.elements.period.maxLength = statement ? 4 : 7;
+    form.elements.period.value = entry.period;
+    form.elements.gross_salary.value = entry.gross_salary;
+    form.elements.holiday_pay.value = entry.holiday_pay;
+    form.elements.bonus.value = entry.bonus;
   } else {
-    form.elements.month.value = currentMonth();
+    formIsYearly = null; // force the period to its default for the first job
+    form.elements.period.value = '';
+    applyPayPeriod({ resetPeriod: true });
   }
   $('paycheck-dialog').showModal();
-  (paycheck ? form.elements.gross_salary : form.elements.month).focus();
+  (entry ? form.elements.gross_salary : form.elements.period).focus();
 }
 
-async function submitPaycheck(event) {
+async function submitEntry(event) {
   event.preventDefault();
   const form = $('paycheck-form');
   const amounts = {
@@ -224,18 +268,21 @@ async function submitPaycheck(event) {
     bonus: form.elements.bonus.value,
   };
   try {
-    if (editingPaycheck) {
-      await invoke('update_paycheck', {
-        jobId: editingPaycheck.job_id,
-        month: editingPaycheck.month,
-        amounts,
-      });
+    if (editingEntry) {
+      const { job_id: jobId, period } = editingEntry;
+      if (editingEntry.kind === 'statement') {
+        await invoke('update_statement', { jobId, year: period, amounts });
+      } else {
+        await invoke('update_paycheck', { jobId, month: period, amounts });
+      }
     } else {
-      await invoke('add_paycheck', {
-        jobId: form.elements.job_id.value,
-        month: form.elements.month.value,
-        amounts,
-      });
+      const jobId = form.elements.job_id.value;
+      const period = form.elements.period.value;
+      if (chosenJob()?.pay_period === 'Yearly') {
+        await invoke('add_statement', { jobId, year: period, amounts });
+      } else {
+        await invoke('add_paycheck', { jobId, month: period, amounts });
+      }
     }
     $('paycheck-dialog').close();
     await changed();
@@ -244,11 +291,11 @@ async function submitPaycheck(event) {
   }
 }
 
-/** Fills the form from the latest paycheck of the job chosen in it (CSD-001 REQ-9). */
+/** Fills the form from the latest entry of the job chosen in it (CSD-001 REQ-9). */
 async function copyPrevious() {
   const form = $('paycheck-form');
   try {
-    const prefill = await invoke('copy_previous_paycheck', { jobId: form.elements.job_id.value });
+    const prefill = await invoke('copy_previous_entry', { jobId: form.elements.job_id.value });
     form.elements.gross_salary.value = prefill.gross_salary ?? '';
     form.elements.holiday_pay.value = prefill.holiday_pay;
     form.elements.bonus.value = prefill.bonus;
@@ -257,9 +304,13 @@ async function copyPrevious() {
   }
 }
 
-async function deletePaycheck(paycheck) {
+async function deleteEntry(entry) {
   try {
-    await invoke('delete_paycheck', { jobId: paycheck.job_id, month: paycheck.month });
+    if (entry.kind === 'statement') {
+      await invoke('delete_statement', { jobId: entry.job_id, year: entry.period });
+    } else {
+      await invoke('delete_paycheck', { jobId: entry.job_id, month: entry.period });
+    }
     await changed();
   } catch (error) {
     showToast(errorText(error));
@@ -271,7 +322,8 @@ export function initIncome({ onChanged: callback }) {
   $('job-add').addEventListener('click', () => openJobDialog(null));
   $('job-add-first').addEventListener('click', () => openJobDialog(null));
   $('job-form').addEventListener('submit', submitJob);
-  $('paycheck-add').addEventListener('click', () => openPaycheckDialog());
+  $('paycheck-add').addEventListener('click', () => openEntryDialog());
   $('paycheck-copy').addEventListener('click', copyPrevious);
-  $('paycheck-form').addEventListener('submit', submitPaycheck);
+  $('paycheck-form').addEventListener('submit', submitEntry);
+  $('paycheck-form').elements.job_id.addEventListener('change', () => applyPayPeriod({ resetPeriod: true }));
 }

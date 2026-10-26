@@ -122,7 +122,7 @@
 
           <div class="panel">
             <div class="panel-header"><span class="panel-title" id="totals-title">Yearly totals</span></div>
-            <p class="empty-note" id="totals-empty" hidden>No totals yet. Totals appear once there is a paycheck.</p>
+            <p class="empty-note" id="totals-empty" hidden>No totals yet. Totals appear once there is a paycheck or an annual statement.</p>
             <div class="table-wrap">
               <table class="data-table" id="totals-table" hidden>
                 <thead>
@@ -132,7 +132,7 @@
                     <th scope="col" class="num">Holiday pay</th>
                     <th scope="col" class="num">Bonus</th>
                     <th scope="col" class="num">Total gross</th>
-                    <th scope="col" class="num">Paychecks</th>
+                    <th scope="col" class="num">Entries</th>
                   </tr>
                 </thead>
                 <tbody id="totals-rows"></tbody>
@@ -142,15 +142,15 @@
 
           <div class="panel">
             <div class="panel-header">
-              <span class="panel-title" id="paycheck-title">Paychecks</span>
-              <button type="button" class="btn primary" id="paycheck-add">Add paycheck</button>
+              <span class="panel-title" id="paycheck-title">Paychecks and statements</span>
+              <button type="button" class="btn primary" id="paycheck-add">Add entry</button>
             </div>
-            <p class="empty-note" id="paycheck-empty" hidden>No paychecks yet.</p>
+            <p class="empty-note" id="paycheck-empty" hidden>No paychecks or annual statements yet.</p>
             <div class="table-wrap">
               <table class="data-table" id="paycheck-table" hidden>
                 <thead>
                   <tr>
-                    <th scope="col">Month</th>
+                    <th scope="col">Period</th>
                     <th scope="col">Job</th>
                     <th scope="col" class="num">Gross salary</th>
                     <th scope="col" class="num">Holiday pay</th>
@@ -217,6 +217,13 @@
           <input type="text" name="end_date" inputmode="numeric" placeholder="dd/mm/yyyy" maxlength="10" autocomplete="off">
         </label>
       </div>
+      <label class="field">Pay period
+        <select name="pay_period">
+          <option value="Monthly">Monthly</option>
+          <option value="Yearly">Yearly</option>
+        </select>
+        <span class="field-hint" id="job-period-hint" hidden>The pay period cannot change once the job has paychecks or annual statements.</span>
+      </label>
       <p class="form-error" id="job-error" role="alert" hidden></p>
       <div class="dialog-actions">
         <button type="button" class="btn" data-cancel>Cancel</button>
@@ -234,8 +241,8 @@
       <div class="field-action">
         <button type="button" class="btn" id="paycheck-copy">Copy previous month</button>
       </div>
-      <label class="field">Month (YYYY-MM)
-        <input type="text" name="month" inputmode="numeric" placeholder="2026-09" maxlength="7" autocomplete="off" required>
+      <label class="field"><span id="paycheck-period-label">Month (YYYY-MM)</span>
+        <input type="text" name="period" inputmode="numeric" placeholder="2026-09" maxlength="7" autocomplete="off" required>
       </label>
       <label class="field">Gross salary
         <input type="text" name="gross_salary" inputmode="decimal" placeholder="0.00" autocomplete="off" required>
