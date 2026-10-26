@@ -10,8 +10,8 @@ use tauri::State;
 use super::AppState;
 use crate::domain::{
     AccountInput, Balance, CalculationInput, InvestmentAccount, InvestmentAccountId,
-    InvestmentStatement, Investments, InvestmentsOverview, NetDeposits, Note, Period,
-    StatementCalculation, StatementPrefill,
+    InvestmentStatement, InvestmentYearlyTotal, Investments, InvestmentsOverview, NetDeposits,
+    Note, Period, StatementCalculation, StatementPrefill,
 };
 use crate::error::AppError;
 
@@ -182,6 +182,15 @@ pub fn copy_previous_investment_statement(
     Ok(project
         .investments()
         .prefill_from_latest(InvestmentAccountId::parse(&account_id)?)?)
+}
+
+/// Yearly totals over all accounts, newest year first (REQ-26).
+#[tauri::command]
+pub fn yearly_investment_totals(
+    state: State<'_, AppState>,
+) -> Result<Vec<InvestmentYearlyTotal>, AppError> {
+    let project = state.project()?;
+    Ok(project.investments().yearly_totals())
 }
 
 /// Calculates the balance or the capital growth for the statement form

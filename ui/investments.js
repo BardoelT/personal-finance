@@ -67,6 +67,25 @@ function renderAccounts(overview) {
   $('account-total-value').textContent = overview.total === null ? '—' : formatAmount(overview.total);
 }
 
+/** Yearly totals over all accounts, as returned by Rust (CSD-005 REQ-26). */
+function renderTotals(totals) {
+  $('investment-totals-empty').hidden = totals.length > 0;
+  $('investment-totals-table').hidden = totals.length === 0;
+  $('investment-totals-rows').replaceChildren(
+    ...totals.map((t) =>
+      h(
+        'tr',
+        {},
+        h('th', { scope: 'row' }, String(t.year)),
+        h('td', { class: 'num' }, formatAmount(t.closing_balance)),
+        h('td', { class: 'num' }, formatAmount(t.net_deposits)),
+        h('td', { class: 'num' }, formatAmount(t.capital_growth)),
+        h('td', { class: 'num' }, String(t.statement_count)),
+      ),
+    ),
+  );
+}
+
 function renderStatements(statements) {
   statementRows = statements;
   $('statements-empty').hidden = statements.length > 0;
@@ -101,7 +120,12 @@ export async function reloadInvestments() {
     statementRows = [];
     return;
   }
-  renderStatements(await invoke('list_investment_statements'));
+  const [totals, statements] = await Promise.all([
+    invoke('yearly_investment_totals'),
+    invoke('list_investment_statements'),
+  ]);
+  renderTotals(totals);
+  renderStatements(statements);
 }
 
 async function changed() {

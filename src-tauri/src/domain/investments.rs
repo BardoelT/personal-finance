@@ -1,6 +1,6 @@
 //! Investment accounts and their monthly or yearly statements (CSD-005).
 
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;
 
 use rust_decimal::Decimal;
@@ -74,6 +74,11 @@ impl Period {
             Self::Month(_) => PayPeriod::Monthly,
             Self::Year(_) => PayPeriod::Yearly,
         }
+    }
+
+    /// The calendar year of the period; a statement counts in this year only.
+    fn year(self) -> i32 {
+        self.sort_key().0
     }
 
     /// Newest-first ordering key: a year counts as December (CSD-005 REQ-16).
@@ -342,6 +347,18 @@ pub struct StatementPrefill {
     pub net_deposits: Decimal,
 }
 
+/// The totals of one calendar year over all accounts (CSD-005 REQ-26).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct InvestmentYearlyTotal {
+    pub year: i32,
+    /// The sum, over the accounts with a statement this year, of the balance
+    /// of their latest statement this year.
+    pub closing_balance: Decimal,
+    pub net_deposits: Decimal,
+    pub capital_growth: Decimal,
+    pub statement_count: usize,
+}
+
 /// Which of balance and capital growth the user typed in the statement form
 /// (CSD-005 REQ-24).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
@@ -605,6 +622,49 @@ impl Investments {
         Some(with_two_decimals(
             statement.balance.value() - previous - statement.net_deposits.value(),
         ))
+    }
+
+    /// Totals per calendar year over all accounts, newest year first, without
+    /// extrapolating partial years or carrying balances forward (REQ-26). A
+    /// statement counts in the year of its own period only.
+    #[must_use]
+    pub fn yearly_totals(&self) -> Vec<InvestmentYearlyTotal> {
+        let mut by_year: BTreeMap<i32, Vec<&Statement>> = BTreeMap::new();
+        for statement in &self.statements {
+            by_year
+                .entry(statement.period.year())
+                .or_default()
+                .push(statement);
+        }
+        by_year
+            .into_iter()
+            .rev()
+            .map(|(year, statements)| self.year_total(year, &statements))
+            .collect()
+    }
+
+    fn year_total(&self, year: i32, statements: &[&Statement]) -> InvestmentYearlyTotal {
+        let mut latest: HashMap<InvestmentAccountId, &Statement> = HashMap::new();
+        let mut net_deposits = zero();
+        let mut capital_growth = zero();
+        for statement in statements {
+            net_deposits += statement.net_deposits.value();
+            capital_growth += self.capital_growth(statement).unwrap_or_else(zero);
+            let newest = latest.entry(statement.account_id).or_insert(statement);
+            if statement.period.sort_key() > newest.period.sort_key() {
+                *newest = statement;
+            }
+        }
+        let closing_balance = latest
+            .values()
+            .fold(zero(), |sum, statement| sum + statement.balance.value());
+        InvestmentYearlyTotal {
+            year,
+            closing_balance,
+            net_deposits,
+            capital_growth,
+            statement_count: statements.len(),
+        }
     }
 
     /// Calculates the other one of balance and capital growth for the
@@ -2095,6 +2155,165 @@ mod tests {
                 .code(),
             "INVESTMENT_PERIOD_MISMATCH"
         );
+    }
+
+    // ---- REQ-26: yearly totals ----
+
+    /// One row per year as `(year, closing balance, net deposits, growth, statements)`.
+    fn yearly(investments: &Investments) -> Vec<(i32, String, String, String, usize)> {
+        investments
+            .yearly_totals()
+            .into_iter()
+            .map(|total| {
+                (
+                    total.year,
+                    total.closing_balance.to_string(),
+                    total.net_deposits.to_string(),
+                    total.capital_growth.to_string(),
+                    total.statement_count,
+                )
+            })
+            .collect()
+    }
+
+    fn row(
+        year: i32,
+        closing: &str,
+        net_deposits: &str,
+        growth: &str,
+        count: usize,
+    ) -> (i32, String, String, String, usize) {
+        (
+            year,
+            closing.to_owned(),
+            net_deposits.to_owned(),
+            growth.to_owned(),
+            count,
+        )
+    }
+
+    #[test]
+    fn test_csd005_ac_26_1_totals_per_calendar_year() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add(&mut investments, id, "2025-11", "11000.00");
+        add_with_deposits(&mut investments, id, "2025-12", "11500.00", "200.00");
+        add_with_deposits(&mut investments, id, "2026-05", "12500.00", "300.00");
+        assert_eq!(
+            yearly(&investments),
+            [
+                row(2026, "12500.00", "300.00", "700.00", 1),
+                row(2025, "11500.00", "200.00", "300.00", 2),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_csd005_ac_26_2_no_statements_give_no_totals() {
+        let mut investments = Investments::default();
+        assert_eq!(yearly(&investments), Vec::new());
+        add_account(&mut investments, "Example Brokerage", "Monthly");
+        assert_eq!(yearly(&investments), Vec::new());
+    }
+
+    #[test]
+    fn test_csd005_ac_26_3_totals_add_up_all_accounts() {
+        let mut investments = Investments::default();
+        let brokerage = add_account(&mut investments, "Example Brokerage", "Monthly");
+        let crypto = add_account(&mut investments, "Example Crypto", "Monthly");
+        add(&mut investments, brokerage, "2026-08", "12000.00");
+        add_with_deposits(&mut investments, brokerage, "2026-09", "12500.00", "300.00");
+        add(&mut investments, crypto, "2026-09", "500.00");
+        assert_eq!(
+            yearly(&investments),
+            [row(2026, "13000.00", "300.00", "200.00", 3)]
+        );
+    }
+
+    #[test]
+    fn test_csd005_ac_26_4_the_closing_balance_is_the_latest_balance_of_the_year() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add(&mut investments, id, "2026-03", "10000.00");
+        add(&mut investments, id, "2026-09", "12000.00");
+        assert_eq!(yearly(&investments)[0].1, "12000.00");
+    }
+
+    #[test]
+    fn test_csd005_ac_26_5_monthly_and_yearly_accounts_add_up_together() {
+        let mut investments = Investments::default();
+        let brokerage = add_account(&mut investments, "Example Brokerage", "Monthly");
+        let pension = add_account(&mut investments, "Example Pension", "Yearly");
+        add(&mut investments, brokerage, "2025-12", "12000.00");
+        add(&mut investments, pension, "2024", "70000.00");
+        add_with_deposits(&mut investments, pension, "2025", "80000.00", "6000.00");
+        assert_eq!(
+            yearly(&investments),
+            [
+                row(2025, "92000.00", "6000.00", "4000.00", 2),
+                row(2024, "70000.00", "0.00", "0.00", 1),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_csd005_ac_26_6_an_account_without_a_statement_in_a_year_does_not_count_in_it() {
+        let mut investments = Investments::default();
+        let brokerage = add_account(&mut investments, "Example Brokerage", "Monthly");
+        let pension = add_account(&mut investments, "Example Pension", "Yearly");
+        add(&mut investments, brokerage, "2025-12", "12000.00");
+        add(&mut investments, brokerage, "2026-03", "12500.00");
+        add(&mut investments, pension, "2025", "80000.00");
+        let totals = yearly(&investments);
+        assert_eq!((totals[0].1.as_str(), totals[0].4), ("12500.00", 1));
+        assert_eq!(totals[1].1, "92000.00");
+    }
+
+    #[test]
+    fn test_csd005_ac_26_7_growth_after_a_gap_counts_in_the_later_year() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add(&mut investments, id, "2025-12", "12000.00");
+        add_with_deposits(&mut investments, id, "2026-03", "12500.00", "100.00");
+        let totals = yearly(&investments);
+        assert_eq!(totals[0].3, "400.00");
+        assert_eq!(totals[1].3, "0.00");
+    }
+
+    #[test]
+    fn test_csd005_ac_26_8_a_net_withdrawal_and_a_loss_are_negative() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add(&mut investments, id, "2025-12", "12000.00");
+        add_with_deposits(&mut investments, id, "2026-03", "11000.00", "-500.00");
+        let totals = yearly(&investments);
+        assert_eq!(
+            (totals[0].2.as_str(), totals[0].3.as_str()),
+            ("-500.00", "-500.00")
+        );
+    }
+
+    #[test]
+    fn test_csd005_ac_26_9_a_new_statement_updates_the_totals() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add(&mut investments, id, "2026-09", "12500.00");
+        add_with_deposits(&mut investments, id, "2026-10", "13000.00", "100.00");
+        assert_eq!(
+            yearly(&investments),
+            [row(2026, "13000.00", "100.00", "400.00", 2)]
+        );
+    }
+
+    #[test]
+    fn test_csd005_ac_26_10_the_newest_year_is_first() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Pension", "Yearly");
+        for year in ["2025", "2024", "2026"] {
+            add(&mut investments, id, year, "1000.00");
+        }
+        let years: Vec<i32> = yearly(&investments).iter().map(|row| row.0).collect();
+        assert_eq!(years, [2026, 2025, 2024]);
     }
 
     #[test]

@@ -228,6 +228,25 @@
           </div>
 
           <div class="panel">
+            <div class="panel-header"><span class="panel-title">Yearly totals</span></div>
+            <p class="empty-note" id="investment-totals-empty" hidden>No totals yet. Totals appear once there is a statement.</p>
+            <div class="table-wrap">
+              <table class="data-table" id="investment-totals-table" hidden>
+                <thead>
+                  <tr>
+                    <th scope="col">Year</th>
+                    <th scope="col" class="num">Closing balance</th>
+                    <th scope="col" class="num">Net deposits</th>
+                    <th scope="col" class="num">Capital growth</th>
+                    <th scope="col" class="num">Statements</th>
+                  </tr>
+                </thead>
+                <tbody id="investment-totals-rows"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel">
             <div class="panel-header">
               <span class="panel-title">Statements</span>
               <button type="button" class="btn primary" id="statement-add">Add statement</button>
