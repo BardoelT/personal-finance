@@ -368,6 +368,8 @@ dialog p { font-size: 13.5px; line-height: 1.5; color: var(--muted); }
 }
 .field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .field input:read-only { opacity: .65; }
+.calc-tag { font-weight: 400; font-style: italic; margin-left: 4px; }
+.field input:disabled { opacity: .5; }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .field-hint { display: block; margin-top: 5px; font-size: 12px; font-weight: 400; color: var(--muted); }
 .form-error {

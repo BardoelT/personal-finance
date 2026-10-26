@@ -9,8 +9,9 @@ use tauri::State;
 
 use super::AppState;
 use crate::domain::{
-    AccountInput, Balance, InvestmentAccount, InvestmentAccountId, InvestmentStatement,
-    InvestmentsOverview, Note, Period, StatementPrefill,
+    AccountInput, Balance, CalculationInput, InvestmentAccount, InvestmentAccountId,
+    InvestmentStatement, Investments, InvestmentsOverview, NetDeposits, Note, Period,
+    StatementCalculation, StatementPrefill,
 };
 use crate::error::AppError;
 
@@ -23,16 +24,26 @@ pub struct StatementView {
     /// `YYYY-MM` for a monthly account, `YYYY` for a yearly one.
     period: String,
     balance: Decimal,
+    net_deposits: Decimal,
+    /// Derived from the previous statement; `None` for the first statement
+    /// of an account (REQ-23).
+    capital_growth: Option<Decimal>,
     note: String,
 }
 
 impl StatementView {
-    fn new(account: &InvestmentAccount, statement: &InvestmentStatement) -> Self {
+    fn new(
+        investments: &Investments,
+        account: &InvestmentAccount,
+        statement: &InvestmentStatement,
+    ) -> Self {
         Self {
             account_id: account.id,
             account_name: account.name.clone(),
             period: statement.period.to_string(),
             balance: statement.balance.value(),
+            net_deposits: statement.net_deposits.value(),
+            capital_growth: investments.capital_growth(statement),
             note: statement.note.as_str().to_owned(),
         }
     }
@@ -86,11 +97,11 @@ pub fn list_investment_statements(
     state: State<'_, AppState>,
 ) -> Result<Vec<StatementView>, AppError> {
     let project = state.project()?;
-    Ok(project
-        .investments()
+    let investments = project.investments();
+    Ok(investments
         .all_statements()
         .into_iter()
-        .map(|(account, statement)| StatementView::new(account, statement))
+        .map(|(account, statement)| StatementView::new(investments, account, statement))
         .collect())
 }
 
@@ -100,17 +111,24 @@ pub fn add_investment_statement(
     account_id: String,
     period: String,
     balance: String,
+    net_deposits: Option<String>,
     note: Option<String>,
 ) -> Result<StatementView, AppError> {
     let today = state.today();
     let account_id = InvestmentAccountId::parse(&account_id)?;
     let period = Period::parse(&period)?;
     let balance = Balance::parse(&balance)?;
+    let net_deposits = NetDeposits::parse(net_deposits.as_deref().unwrap_or_default())?;
     let note = Note::new(note.as_deref().unwrap_or_default())?;
     let mut project = state.project()?;
-    let statement = project
-        .investments_mut()
-        .add_statement(account_id, period, balance, note, today)?;
+    let statement = project.investments_mut().add_statement(
+        account_id,
+        period,
+        balance,
+        net_deposits,
+        note,
+        today,
+    )?;
     statement_view(&project, &statement)
 }
 
@@ -120,16 +138,22 @@ pub fn update_investment_statement(
     account_id: String,
     period: String,
     balance: String,
+    net_deposits: Option<String>,
     note: Option<String>,
 ) -> Result<StatementView, AppError> {
     let account_id = InvestmentAccountId::parse(&account_id)?;
     let period = Period::parse(&period)?;
     let balance = Balance::parse(&balance)?;
+    let net_deposits = NetDeposits::parse(net_deposits.as_deref().unwrap_or_default())?;
     let note = Note::new(note.as_deref().unwrap_or_default())?;
     let mut project = state.project()?;
-    let statement = project
-        .investments_mut()
-        .update_statement(account_id, period, balance, note)?;
+    let statement = project.investments_mut().update_statement(
+        account_id,
+        period,
+        balance,
+        net_deposits,
+        note,
+    )?;
     statement_view(&project, &statement)
 }
 
@@ -160,6 +184,29 @@ pub fn copy_previous_investment_statement(
         .prefill_from_latest(InvestmentAccountId::parse(&account_id)?)?)
 }
 
+/// Calculates the balance or the capital growth for the statement form
+/// (REQ-24, REQ-25). Stores nothing.
+#[tauri::command]
+pub fn calculate_investment_statement(
+    state: State<'_, AppState>,
+    account_id: String,
+    period: String,
+    net_deposits: Option<String>,
+    input: CalculationInput,
+    value: String,
+) -> Result<StatementCalculation, AppError> {
+    let account_id = InvestmentAccountId::parse(&account_id)?;
+    let period = Period::parse(&period)?;
+    let project = state.project()?;
+    Ok(project.investments().calculate(
+        account_id,
+        period,
+        net_deposits.as_deref().unwrap_or_default(),
+        input,
+        &value,
+    )?)
+}
+
 fn statement_view(
     project: &crate::storage::Project,
     statement: &InvestmentStatement,
@@ -170,5 +217,9 @@ fn statement_view(
         .into_iter()
         .find(|account| account.id == statement.account_id)
         .ok_or(AppError::Internal)?;
-    Ok(StatementView::new(account, statement))
+    Ok(StatementView::new(
+        project.investments(),
+        account,
+        statement,
+    ))
 }

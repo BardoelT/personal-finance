@@ -1,9 +1,10 @@
-// Investments: accounts with a monthly or yearly statement, each a balance and a note (CSD-005).
+// Investments: accounts with a monthly or yearly statement, each a balance, net deposits and a note (CSD-005).
 import { invoke, errorText, h, iconButton, formatAmount, confirmAction, showToast } from './api.js';
 
 const $ = (id) => document.getElementById(id);
 
 let accounts = [];
+let statementRows = [];
 let onChanged = async () => {};
 
 /** "No statements yet", "1 statement" or "3 statements". */
@@ -67,6 +68,7 @@ function renderAccounts(overview) {
 }
 
 function renderStatements(statements) {
+  statementRows = statements;
   $('statements-empty').hidden = statements.length > 0;
   $('statements-table').hidden = statements.length === 0;
   $('statements-rows').replaceChildren(
@@ -77,6 +79,8 @@ function renderStatements(statements) {
         h('th', { scope: 'row' }, s.period),
         h('td', { class: 'wrap' }, s.account_name),
         h('td', { class: 'num' }, formatAmount(s.balance)),
+        h('td', { class: 'num' }, formatAmount(s.net_deposits)),
+        h('td', { class: 'num' }, s.capital_growth === null ? '—' : formatAmount(s.capital_growth)),
         h('td', { class: 'note-cell' }, noteSummary(s.note)),
         h(
           'td',
@@ -93,7 +97,10 @@ function renderStatements(statements) {
 export async function reloadInvestments() {
   const overview = await invoke('list_investment_accounts');
   renderAccounts(overview);
-  if (overview.accounts.length === 0) return;
+  if (overview.accounts.length === 0) {
+    statementRows = [];
+    return;
+  }
   renderStatements(await invoke('list_investment_statements'));
 }
 
@@ -200,6 +207,86 @@ function applyStatementPeriod({ resetPeriod }) {
   formIsYearly = yearly;
 }
 
+// ---- Balance, net deposits and capital growth (CSD-005 REQ-24, REQ-25) ----
+
+/** Which of balance and growth the user typed in last; the other one is calculated. */
+let typedField = 'balance';
+let calculationRun = 0;
+
+function periodLooksComplete(period) {
+  return (formIsYearly ? /^\d{4}$/ : /^\d{4}-\d{2}$/).test(period);
+}
+
+/**
+ * The growth field is disabled while there is no earlier statement (REQ-24).
+ * This only switches the field off; Rust calculates every figure.
+ */
+function applyGrowthAvailability() {
+  const form = $('statement-form');
+  const period = form.elements.period.value.trim();
+  const accountId = form.elements.account_id.value;
+  const others = statementRows.filter((s) => s.account_id === accountId && s.period !== period);
+  const hasEarlier = periodLooksComplete(period)
+    ? others.some((s) => s.period < period)
+    : others.length > 0;
+  form.elements.growth.disabled = !hasEarlier;
+  $('statement-growth-hint').hidden = hasEarlier;
+  if (!hasEarlier) {
+    form.elements.growth.value = '';
+    $('growth-calculated').hidden = true;
+  }
+  return hasEarlier;
+}
+
+function markCalculated(field) {
+  $('balance-calculated').hidden = field !== 'balance';
+  $('growth-calculated').hidden = field !== 'growth';
+}
+
+/** Asks Rust for the balance or growth that follows from the other one and the net deposits. */
+async function recalculate() {
+  const form = $('statement-form');
+  const run = ++calculationRun;
+  const hasEarlier = applyGrowthAvailability();
+  const source = hasEarlier ? typedField : 'balance';
+  const target = source === 'balance' ? 'growth' : 'balance';
+  const value = form.elements[source].value;
+  $('statement-error').hidden = true;
+  if (!hasEarlier && source === 'balance') markCalculated(null);
+  if (!periodLooksComplete(form.elements.period.value.trim()) || value.trim() === '') {
+    if (hasEarlier || target === 'balance') form.elements[target].value = '';
+    markCalculated(null);
+    return;
+  }
+  try {
+    const result = await invoke('calculate_investment_statement', {
+      accountId: form.elements.account_id.value,
+      period: form.elements.period.value.trim(),
+      netDeposits: form.elements.net_deposits.value,
+      input: source,
+      value,
+    });
+    if (run !== calculationRun) return; // a newer calculation is under way
+    if (target === 'growth') {
+      form.elements.growth.value = result.capital_growth ?? '';
+    } else {
+      form.elements.balance.value = result.balance;
+    }
+    markCalculated(target === 'growth' && !hasEarlier ? null : target);
+  } catch (error) {
+    if (run !== calculationRun) return;
+    form.elements[target].value = '';
+    markCalculated(null);
+    showError('statement-error', error);
+  }
+}
+
+/** The balance or the growth was typed in: it becomes the input and the other is calculated. */
+function typedIn(field) {
+  typedField = field;
+  recalculate();
+}
+
 /** Opens the form to add a statement, or to edit `statement` when given. */
 function openStatementDialog(statement = null) {
   editingStatement = statement;
@@ -210,18 +297,25 @@ function openStatementDialog(statement = null) {
   form.elements.account_id.disabled = Boolean(statement);
   $('statement-copy').hidden = Boolean(statement);
   form.elements.period.readOnly = Boolean(statement);
+  typedField = 'balance';
+  calculationRun += 1; // drop any calculation still under way
+  markCalculated(null);
   if (statement) {
     $('statement-dialog-title').textContent = `Edit statement ${statement.period}`;
     $('statement-period-label').textContent = statement.period.length === 4 ? 'Year (YYYY)' : 'Month (YYYY-MM)';
     form.elements.period.maxLength = statement.period.length;
     form.elements.period.value = statement.period;
+    formIsYearly = statement.period.length === 4;
     form.elements.balance.value = statement.balance;
+    form.elements.net_deposits.value = statement.net_deposits;
     form.elements.note.value = statement.note;
+    recalculate();
   } else {
     $('statement-dialog-title').textContent = 'Add statement';
     formIsYearly = null; // force the period to its default for the first account
     form.elements.period.value = '';
     applyStatementPeriod({ resetPeriod: true });
+    recalculate();
   }
   $('statement-dialog').showModal();
   (statement ? form.elements.balance : form.elements.period).focus();
@@ -234,6 +328,7 @@ async function submitStatement(event) {
     accountId: form.elements.account_id.value,
     period: form.elements.period.value,
     balance: form.elements.balance.value,
+    netDeposits: form.elements.net_deposits.value,
     note: form.elements.note.value,
   };
   try {
@@ -257,7 +352,9 @@ async function copyPrevious() {
       accountId: form.elements.account_id.value,
     });
     form.elements.balance.value = prefill.balance ?? '';
+    form.elements.net_deposits.value = prefill.net_deposits;
     form.elements.note.value = '';
+    typedIn('balance');
   } catch (error) {
     showError('statement-error', error);
   }
@@ -290,7 +387,13 @@ export function initInvestments({ onChanged: callback }) {
   $('statement-add').addEventListener('click', () => openStatementDialog());
   $('statement-copy').addEventListener('click', copyPrevious);
   $('statement-form').addEventListener('submit', submitStatement);
-  $('statement-form').elements.account_id.addEventListener('change', () =>
-    applyStatementPeriod({ resetPeriod: true }),
-  );
+  const form = $('statement-form');
+  form.elements.account_id.addEventListener('change', () => {
+    applyStatementPeriod({ resetPeriod: true });
+    recalculate();
+  });
+  form.elements.period.addEventListener('input', recalculate);
+  form.elements.balance.addEventListener('input', () => typedIn('balance'));
+  form.elements.growth.addEventListener('input', () => typedIn('growth'));
+  form.elements.net_deposits.addEventListener('input', recalculate);
 }
