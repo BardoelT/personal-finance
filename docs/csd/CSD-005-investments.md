@@ -1,7 +1,7 @@
 ---
 id: CSD-005
 title: Investments
-status: draft
+status: approved
 owner: Thijs Bardoel
 version: 0.6
 last_updated: 26/10/2026
@@ -1035,7 +1035,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 - OQ-3: (resolved in v0.2) Deleting a statement asks for a confirmation, unlike CSD-001 REQ-8, on purpose: the note of a statement cannot be recreated by copying the previous period (REQ-13). CSD-001 is unchanged.
 
 ## 9. Changelog
-- 0.6 (26/10/2026): Yearly totals. NG-3 narrowed: per-year totals of closing balance, net deposits and capital growth are in scope, an all-time total is not. New section 4.6 with REQ-26 (AC-26.1 to AC-26.10), CON-11 and the command `yearly_investment_totals`. REQ-17 (section order, AC-17.1, AC-17.9), REQ-18 (AC-18.3) and REQ-20 (AC-20.1, AC-20.2) amended. Status back to draft until approved (CSD-000 REQ-2).
+- 0.6 (26/10/2026): Yearly totals. NG-3 narrowed: per-year totals of closing balance, net deposits and capital growth are in scope, an all-time total is not. New section 4.6 with REQ-26 (AC-26.1 to AC-26.10), CON-11 and the command `yearly_investment_totals`. REQ-17 (section order, AC-17.1, AC-17.9), REQ-18 (AC-18.3) and REQ-20 (AC-20.1, AC-20.2) amended. Approved by the owner.
 - 0.5 (26/10/2026): Net deposits and capital growth. NG-3 narrowed: the optional net deposits per statement and the derived capital growth are in scope, totals and returns percentages are not. New section 4.5 with REQ-21 to REQ-25 (AC-21.1 to AC-25.4), CON-9 and CON-10, the command `calculate_investment_statement` and seven error codes. REQ-11, REQ-13 (AC-13.3), REQ-17 (AC-17.8) and REQ-19 (AC-19.3, AC-19.4) amended. Approved by the owner.
 - 0.4 (26/10/2026): Consistent action layout and no currency outside Settings. REQ-17: "Add account" moves to the Accounts section header, the row actions become the icon buttons Edit (pencil) and Delete (trash), flush right (AC-17.2 amended, AC-17.7 added). REQ-20 now says the sections show no currency (AC-20.1, AC-20.2 rewritten).
 - 0.3 (26/10/2026): Found while implementing (CSD-000 REQ-14): the error codes `INVESTMENT_BALANCE_INVALID` (text that is not a plain number, REQ-9, AC-9.4), `INVESTMENT_ACCOUNT_NOT_FOUND` and `INVESTMENT_STATEMENT_NOT_FOUND` were missing from section 5. No other behaviour changes.
