@@ -1,14 +1,21 @@
 # Personal Finance
 
-A private, local-only desktop app for tracking personal wealth: accounts, assets, transactions and net worth over time.
+A private, local-only desktop app for tracking personal wealth. It starts with **employment income**, and more areas will follow as their specs are approved.
 
-Right now the app covers **employment income**: any number of jobs, each with one monthly paycheck (gross salary, holiday pay and bonus), plus yearly totals over all jobs. More areas will follow as their specs are approved.
+## What it does today
+
+- **Dashboard:** your income this year to date and last month (total gross, gross salary, holiday pay, bonus and number of paychecks), summed over all jobs.
+- **Income:** any number of jobs, each with one monthly paycheck (gross salary, holiday pay and bonus). Yearly totals over all jobs and a list of all paychecks sit next to the jobs.
+- **Settings:** project settings. The first one is the currency (EUR, USD or GBP) of the whole project. Changing it does not convert any amount.
+- **Project file:** everything is saved in one file you choose, and the app reopens the last one you used.
+
+The Reports page is a placeholder for a later feature.
 
 ## Principles
 
 - **Local only.** All data lives in one project file you choose. There is no cloud sync, no backend server, no telemetry and no network access.
 - **macOS only** (Apple Silicon and Intel).
-- **Exact money math.** Amounts use `rust_decimal`, never floats, and always carry a currency.
+- **Exact money math.** Amounts use `rust_decimal`, never floats, and are in the one currency of the project.
 - **Safe saving.** Files are written to a temporary file and renamed over the target, so a failed save never damages an existing project.
 
 ## Tech stack
@@ -42,9 +49,9 @@ There is no npm or frontend build step. `ui/` is served as-is.
 
 ## Using the app
 
-Project actions live in the native macOS **File** menu: New, Open, Save and Save As. The window title and an indicator show unsaved changes, and the app asks before you close or replace a project with unsaved edits. On start, the app reopens the last project you used.
-
-Dates are shown and typed as `dd/mm/yyyy`, and months as `YYYY-MM`.
+- **Project actions** live in the native macOS **File** menu: New (⌘N), Open… (⌘O), Save (⌘S) and Save As… (⇧⌘S). An indicator at the bottom of the left pane shows unsaved changes, and the app asks before you quit or replace a project with unsaved edits. On start, the app reopens the last project you used.
+- **Settings** open from the Settings item at the bottom of the left pane, or from the app menu with ⌘,.
+- **Dates** are shown and typed as `dd/mm/yyyy`, and months as `YYYY-MM`.
 
 > **Project files hold real financial data** and are plain, unencrypted JSON. `*.wealth` is git-ignored. Never commit one.
 
@@ -65,8 +72,9 @@ Format, clippy and tests must pass before a change is done. CI runs the same che
 ui/                 frontend (HTML, CSS, JS)
 src-tauri/
   src/lib.rs        app setup, command registration
+  src/menu.rs       native macOS menu bar (File menu, Settings…)
   src/commands/     thin #[tauri::command] handlers
-  src/domain/       pure business logic (money, income), unit-tested
+  src/domain/       pure business logic (money, income, settings), unit-tested
   src/storage/      project file persistence (JSON, atomic write)
   src/error.rs      app error type
   capabilities/     Tauri permission files
@@ -80,9 +88,11 @@ Behaviour is defined in Capability Specification Documents in [`docs/csd/`](docs
 | CSD | Capability |
 |---|---|
 | [CSD-001](docs/csd/CSD-001-employment-income.md) | Employment income tracking |
-| [CSD-002](docs/csd/CSD-002-project-file.md) | Project file (save, open, new) |
+| [CSD-002](docs/csd/CSD-002-project-file.md) | Project file (save, open, new, reopen last project) |
+| [CSD-003](docs/csd/CSD-003-project-settings.md) | Project settings (currency) |
+| [CSD-004](docs/csd/CSD-004-income-dashboard.md) | Income dashboard |
 
-Only specs with `status: approved` are implemented. Tests reference acceptance criteria in their names, for example `test_csd002_ac_1_1_...`.
+Only specs with `status: approved` are implemented; check a spec's status before relying on it. Tests reference acceptance criteria in their names, for example `test_csd002_ac_1_1_...`.
 
 ### Contributing
 
