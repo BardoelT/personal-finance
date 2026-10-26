@@ -3,7 +3,7 @@ id: CSD-004
 title: Income dashboard
 status: draft
 owner: Thijs Bardoel
-version: 0.2
+version: 0.3
 last_updated: 26/10/2026
 related: [CSD-001, CSD-003]
 ---
@@ -179,15 +179,15 @@ Scenario: Empty project
   And neither "This year" nor "Last month" is shown
 ```
 
-**REQ-6: Currency** *(ubiquitous)*
-The dashboard shall show every amount in the project currency (CSD-003) and name that currency in the title of each block.
+**REQ-6: No currency** *(ubiquitous)*
+The dashboard shall show every amount in the project currency (CSD-003) and shall not name that currency, in the title of each block or elsewhere.
 
 ```gherkin
 @AC-6.1
-Scenario: Currency in the titles
+Scenario: No currency in the titles
   Given a project in "USD" with a job and a paycheck
   When the user views the dashboard
-  Then the blocks are titled "This year · 2026 · USD" and "Last month · 2026-09 · USD"
+  Then the blocks are titled "This year · 2026" and "Last month · 2026-09"
 ```
 
 **REQ-7: Current figures** *(ubiquitous)*
@@ -209,11 +209,10 @@ Scenario: Opening another project refreshes the dashboard
 
 ## 5. Interfaces and contracts
 
-Command: `get_dashboard()` returns the project currency, whether jobs exist, and the two blocks:
+Command: `get_dashboard()` returns whether jobs exist, and the two blocks:
 
 ```json
 {
-  "currency": "EUR",
   "has_jobs": true,
   "year": 2026,
   "year_to_date": { "gross_salary": "10000.00", "holiday_pay": "0.00", "bonus": "500.00", "total_gross": "10500.00", "entry_count": 4 },
@@ -244,5 +243,6 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.3 (26/10/2026): REQ-6 reversed: the dashboard names no currency (AC-6.1 rewritten). `get_dashboard()` no longer returns `currency`.
 - 0.2 (26/10/2026): Annual statements (CSD-001 0.9). "This year" counts the statement of the current year in full (AC-2.4, AC-2.5), "Last month" counts monthly paychecks only (AC-3.4), the count becomes "entries" (`entry_count`, card "Entries").
 - 0.1 (25/10/2026): initial draft.

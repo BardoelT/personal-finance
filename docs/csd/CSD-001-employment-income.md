@@ -3,7 +3,7 @@ id: CSD-001
 title: Employment income tracking
 status: approved
 owner: Thijs Bardoel
-version: 0.9
+version: 0.10
 last_updated: 26/10/2026
 related: [CSD-000, CSD-002, CSD-003]
 ---
@@ -605,7 +605,7 @@ Scenario: Month stays YYYY-MM
 ```
 
 **REQ-23: Employment view layout** *(ubiquitous)*
-The app shall show the employment view as the sections Jobs, Yearly totals and Paychecks and statements in that order, with Edit job and Delete job and the pay period on each job in the Jobs section, a Period column and a Job column in the entries, and no job selection that changes what the sections show.
+The app shall show the employment view as the sections Jobs, Yearly totals and Paychecks and statements in that order, with the button "Add job" in the header of the Jobs section, the pay period and the icon buttons Edit (pencil) and Delete (trash) on each job in the Jobs section (the buttons flush right), the icon buttons Edit (pencil) and Delete (trash) flush right on each entry, a Period column and a Job column in the entries, and no job selection that changes what the sections show.
 
 ```gherkin
 @AC-23.1
@@ -619,7 +619,18 @@ Scenario: Job rows carry their pay period, actions and entry count
   Given monthly job "Example Employer" with 2 paychecks and yearly job "Older Example Employer" with 1 annual statement
   Then the row of "Example Employer" shows the employer, dates, "Monthly" and "2 paychecks"
   And the row of "Older Example Employer" shows the employer, dates, "Yearly" and "1 statement"
-  And each row has the buttons "Edit job" and "Delete job"
+  And each row has the icon buttons Edit (pencil) and Delete (trash) at its right edge, each named for screen readers and in a tooltip, such as "Edit Example Employer"
+
+@AC-23.5
+Scenario: Add job sits in the Jobs section header
+  Given a job
+  Then the header of the Jobs section holds the button "Add job" at its right edge
+  And the page title row holds no button
+
+@AC-23.6
+Scenario: Entry actions sit at the right
+  Given a job with a paycheck
+  Then the row of the paycheck has the icon buttons Edit (pencil) and Delete (trash) in its last column, aligned right
 
 @AC-23.3
 Scenario: Entries of all jobs with their period and job
@@ -711,6 +722,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 - OQ-8: (resolved in v0.8) The project is single-currency: per-job currency, `JOB_CURRENCY_*`, the Currency column and the CON-1 exception are removed (CSD-003).
 
 ## 9. Changelog
+- 0.10 (26/10/2026): Consistent action layout. REQ-23: "Add job" moves to the Jobs section header, the job actions become the icon buttons Edit (pencil) and Delete (trash), and all row actions are flush right (AC-23.2 amended, AC-23.5 and AC-23.6 added).
 - 0.9 (26/10/2026): Jobs get a pay period, Monthly or Yearly. Yearly jobs hold one annual statement per calendar year instead of monthly paychecks. New REQ-24 to REQ-28 (pay period lock, add statement, one per year, entries match the pay period, add form), REQ-1, REQ-7 to REQ-13 and REQ-23 extended to entries, error codes and data model updated. The Paychecks section becomes Paychecks and statements with a Period column. `format_version` stays 1.
 - 0.8 (25/10/2026): Currency moves from the job to the project (CSD-003). REQ-1 no longer sets a currency, REQ-3 removed, AC-1.3, AC-1.4 and AC-11.4 removed, the Currency column and job currency removed from REQ-23, the CON-1 exception removed, OQ-8 resolved, `JOB_CURRENCY_*` codes removed.
 - 0.7 (25/10/2026): The employment view no longer has a selected job. Yearly totals are summed over all jobs (REQ-11, AC-11.3, AC-11.4), the paychecks of all jobs are listed together with Job and Currency columns (REQ-12, REQ-23), the job is chosen in the add form and "copy previous month" moves into it (REQ-5, AC-5.6, REQ-9, AC-9.3). NG-6 narrowed to charts. CON-1 gets a temporary exception for summing mixed currencies (OQ-8). Commands `list_paychecks()` and `yearly_totals()` no longer take a job.

@@ -39,14 +39,14 @@ export async function reloadDashboard() {
 
   renderBlock(
     'year',
-    `This year · ${d.year} · ${d.currency}`,
+    `This year · ${d.year}`,
     d.year_to_date,
     `No entries yet in ${d.year}.`,
   );
   const month = d.last_month ?? '';
   renderBlock(
     'month',
-    `Last month · ${month} · ${d.currency}`,
+    `Last month · ${month}`,
     d.last_month_totals,
     `No paycheck for ${month}.`,
   );

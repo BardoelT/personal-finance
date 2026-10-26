@@ -1,5 +1,5 @@
 // Investments: accounts with a monthly or yearly statement, each a balance and a note (CSD-005).
-import { invoke, errorText, h, formatAmount, confirmAction, showToast } from './api.js';
+import { invoke, errorText, h, iconButton, formatAmount, confirmAction, showToast } from './api.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -56,8 +56,8 @@ function renderAccounts(overview) {
         h(
           'span',
           { class: 'job-actions' },
-          h('button', { type: 'button', class: 'btn', onClick: () => openAccountDialog(account) }, 'Edit account'),
-          h('button', { type: 'button', class: 'btn danger', onClick: () => deleteAccount(account) }, 'Delete account'),
+          iconButton('edit', `Edit ${account.name}`, () => openAccountDialog(account)),
+          iconButton('delete', `Delete ${account.name}`, () => deleteAccount(account)),
         ),
       ),
     ),
@@ -81,8 +81,8 @@ function renderStatements(statements) {
         h(
           'td',
           { class: 'row-actions' },
-          h('button', { type: 'button', class: 'link-btn', onClick: () => openStatementDialog(s) }, 'Edit'),
-          h('button', { type: 'button', class: 'link-btn danger', onClick: () => deleteStatement(s) }, 'Delete'),
+          iconButton('edit', `Edit ${s.account_name} ${s.period}`, () => openStatementDialog(s)),
+          iconButton('delete', `Delete ${s.account_name} ${s.period}`, () => deleteStatement(s)),
         ),
       ),
     ),
@@ -92,9 +92,6 @@ function renderStatements(statements) {
 /** Reloads everything from Rust. */
 export async function reloadInvestments() {
   const overview = await invoke('list_investment_accounts');
-  const { currency } = await invoke('get_settings');
-  $('accounts-title').textContent = `Accounts · ${currency}`;
-  $('statements-title').textContent = `Statements · ${currency}`;
   renderAccounts(overview);
   if (overview.accounts.length === 0) return;
   renderStatements(await invoke('list_investment_statements'));
