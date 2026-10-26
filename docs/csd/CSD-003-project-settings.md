@@ -3,9 +3,9 @@ id: CSD-003
 title: Project settings
 status: draft
 owner: Thijs Bardoel
-version: 0.2
+version: 0.3
 last_updated: 26/10/2026
-related: [CSD-001, CSD-002]
+related: [CSD-001, CSD-002, CSD-005]
 ---
 
 # CSD-003: Project settings
@@ -135,7 +135,7 @@ Scenario: Choosing the current currency changes nothing
 ```
 
 **REQ-5: Confirm when amounts exist** *(event-driven)*
-While the project has entries (paychecks or annual statements), when the user chooses another currency, the app shall ask for confirmation, explaining that amounts are not converted, before changing the currency.
+While the project has entries (paychecks, annual statements or investment statements), when the user chooses another currency, the app shall ask for confirmation, explaining that amounts are not converted, before changing the currency.
 
 ```gherkin
 @AC-5.1
@@ -163,6 +163,20 @@ Scenario: Confirmation with only an annual statement
   Given a project in "EUR" with a yearly job and 1 annual statement
   When the user chooses "USD"
   Then a confirmation says the amounts are not converted
+
+@AC-5.5
+Scenario: Confirmation with only an investment statement
+  Given a project in "EUR" with no jobs and an investment account with 1 statement for 2026-09 with balance 12500.00
+  When the user chooses "USD"
+  Then a confirmation says the amounts are not converted
+  And choosing "Cancel" keeps "EUR" and the balance 12500.00
+
+@AC-5.6
+Scenario: An investment account without statements needs no confirmation
+  Given a project in "EUR" with an investment account and no statements
+  When the user chooses "USD"
+  Then no confirmation is asked
+  And the project currency is "USD"
 ```
 
 **REQ-6: Unsupported currency** *(unwanted behaviour)*
@@ -206,7 +220,7 @@ Scenario: The settings are in their own section
 ```
 
 **REQ-8: The currency is shown** *(ubiquitous)*
-The app shall show the project currency in the titles of the Yearly totals and the Paychecks sections, and shall show no currency on the jobs.
+The app shall show the project currency in the titles of the Yearly totals and the Paychecks sections (and of the Investments sections, CSD-005 REQ-20), and shall show no currency on the jobs.
 
 ```gherkin
 @AC-8.1
@@ -218,7 +232,7 @@ Scenario: Titles show the currency
 
 ## 5. Interfaces and contracts
 
-Commands: `get_settings()` returns `{ currency, entry_count }`, and `set_currency(currency)` returns the same. `entry_count` (paychecks and annual statements) lets the frontend decide whether REQ-5 applies.
+Commands: `get_settings()` returns `{ currency, entry_count }`, and `set_currency(currency)` returns the same. `entry_count` (paychecks, annual statements and investment statements) lets the frontend decide whether REQ-5 applies.
 
 Menu: the item `open-settings` is added to the app menu, below About, with the accelerator ⌘,. Choosing it emits the event `menu-action` with that id, as the File menu items do (CSD-002 REQ-9).
 
@@ -240,7 +254,7 @@ All behaviour except the screens is proven by `cargo test`. Tests are named `tes
 |---|---|
 | REQ-3, REQ-4, REQ-6, REQ-7, and the data of REQ-5 and REQ-8 | `cargo test test_csd003_` |
 | AC-2.1 | `cargo test test_csd003_ac_2_1` checks the table the menu item is built from. Native menus can only be created on the main thread, so the built menu is on the manual checklist |
-| AC-1.1, AC-1.2, AC-2.2, AC-3.2 (display), AC-4.2 (indicator), AC-5.1 to AC-5.4 (dialogs), AC-8.1 | Manual checklist: the left pane order, the Settings page, ⌘, and the app menu item, the confirmation, and the titles. There is no frontend test setup |
+| AC-1.1, AC-1.2, AC-2.2, AC-3.2 (display), AC-4.2 (indicator), AC-5.1 to AC-5.6 (dialogs), AC-8.1 | Manual checklist: the left pane order, the Settings page, ⌘, and the app menu item, the confirmation, and the titles. There is no frontend test setup |
 
 Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 
@@ -248,5 +262,6 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.3 (26/10/2026): Investment statements (CSD-005) also count as entries for the currency confirmation: REQ-5 reworded, AC-5.5 and AC-5.6 added, `entry_count` counts them. REQ-8 points to the currency in the Investments section titles (CSD-005 REQ-20).
 - 0.2 (26/10/2026): The currency confirmation also applies to annual statements (CSD-001 0.9): REQ-5 says entries, AC-5.4 added, `paycheck_count` becomes `entry_count`.
 - 0.1 (25/10/2026): initial draft.
