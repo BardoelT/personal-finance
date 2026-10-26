@@ -8,7 +8,8 @@ pub mod settings;
 
 pub use error::DomainError;
 pub use income::{
-    Income, IncomeOverview, Job, JobId, JobInput, Paycheck, PaycheckPrefill, YearMonth, YearlyTotal,
+    Entry, Income, IncomeOverview, Job, JobId, JobInput, PaycheckPrefill, Year, YearMonth,
+    YearlyTotal,
 };
 pub use money::{Amounts, Currency};
 pub use project_data::ProjectData;
