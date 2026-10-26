@@ -124,6 +124,12 @@
         </div>
 
         <div id="income-content" hidden>
+          <div class="tabs" role="tablist" aria-label="Income views">
+            <button type="button" class="tab" role="tab" id="income-tab-overview" aria-controls="income-overview" aria-selected="true">Overview</button>
+            <button type="button" class="tab" role="tab" id="income-tab-insights" aria-controls="income-insights" aria-selected="false" tabindex="-1">Insights</button>
+          </div>
+
+          <div id="income-overview" role="tabpanel" aria-labelledby="income-tab-overview">
           <div class="panel">
             <div class="panel-header">
               <span class="panel-title">Jobs</span>
@@ -173,6 +179,24 @@
                 </thead>
                 <tbody id="paycheck-rows"></tbody>
               </table>
+            </div>
+          </div>
+          </div>
+
+          <div id="income-insights" role="tabpanel" aria-labelledby="income-tab-insights" hidden>
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title">Income per year</span>
+                <ul class="legend" id="insights-legend" aria-label="Legend">
+                  <li><span class="swatch salary"></span>Gross salary</li>
+                  <li><span class="swatch holiday"></span>Holiday pay</li>
+                  <li><span class="swatch bonus"></span>Bonus</li>
+                </ul>
+              </div>
+              <p class="empty-note" id="insights-empty" hidden>No income yet. The chart appears once there is a paycheck or an annual statement.</p>
+              <div class="chart-scroll" id="insights-scroll" hidden>
+                <div class="chart-inner" id="insights-chart"></div>
+              </div>
             </div>
           </div>
         </div>

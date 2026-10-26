@@ -47,6 +47,7 @@ fn configure<R: Runtime>(builder: tauri::Builder<R>, utc_offset: UtcOffset) -> t
             income::delete_statement,
             income::copy_previous_entry,
             income::yearly_totals,
+            income::get_income_insights,
             investments::list_investment_accounts,
             investments::create_investment_account,
             investments::update_investment_account,

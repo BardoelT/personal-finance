@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::str::FromStr;
 
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, RoundingStrategy};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use time::macros::format_description;
 use time::Date;
@@ -386,6 +386,21 @@ fn totals_of<'a>(amounts: impl Iterator<Item = &'a Amounts>) -> Option<PeriodTot
     (totals.entry_count > 0).then_some(totals)
 }
 
+/// Growth in percent from `previous` to `current`, to one decimal with
+/// banker's rounding (CSD-006 REQ-5). `None` when `previous` is zero.
+fn growth(previous: Decimal, current: Decimal) -> Option<Decimal> {
+    let percent = (current - previous)
+        .checked_mul(Decimal::ONE_HUNDRED)?
+        .checked_div(previous)?;
+    let mut rounded = percent.round_dp_with_strategy(1, RoundingStrategy::MidpointNearestEven);
+    if rounded.is_zero() {
+        // A decrease that rounds to zero shows no sign.
+        rounded = Decimal::ZERO;
+    }
+    rounded.rescale(1);
+    Some(rounded)
+}
+
 fn non_blank(text: Option<&str>) -> Option<&str> {
     text.map(str::trim).filter(|text| !text.is_empty())
 }
@@ -399,6 +414,21 @@ pub struct YearlyTotal {
     pub bonus: Decimal,
     pub total_gross: Decimal,
     pub entry_count: usize,
+}
+
+/// One year of the insights chart: sums over all jobs, whether the year is
+/// still running, and its growth against the year before (CSD-006).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct InsightsYear {
+    pub year: i32,
+    pub gross_salary: Decimal,
+    pub holiday_pay: Decimal,
+    pub bonus: Decimal,
+    pub total_gross: Decimal,
+    pub entry_count: usize,
+    pub is_partial: bool,
+    /// Percent with one decimal, `None` when there is nothing to compare.
+    pub growth_percent: Option<Decimal>,
 }
 
 /// Sums of a set of entries over all jobs (CSD-004).
@@ -790,6 +820,57 @@ impl Income {
             total.entry_count += 1;
         }
         by_year.into_values().rev().collect()
+    }
+
+    /// One figure set per calendar year from the first entry up to and
+    /// including the current year, oldest first (CSD-006). Years without
+    /// entries are zero. The current year is partial and, like a year without
+    /// entries or after one, has no growth. Entries after the current year,
+    /// which only a project file can contain, are not shown.
+    #[must_use]
+    pub fn insights(&self, today: YearMonth) -> Vec<InsightsYear> {
+        let totals: BTreeMap<i32, YearlyTotal> = self
+            .yearly_totals()
+            .into_iter()
+            .map(|total| (total.year, total))
+            .collect();
+        let Some(&first) = totals.keys().next() else {
+            return Vec::new();
+        };
+        let mut series: Vec<InsightsYear> = Vec::new();
+        for year in first..=today.year() {
+            let (gross_salary, holiday_pay, bonus, total_gross, entry_count) =
+                totals.get(&year).map_or_else(
+                    || (zero(), zero(), zero(), zero(), 0),
+                    |t| {
+                        (
+                            t.gross_salary,
+                            t.holiday_pay,
+                            t.bonus,
+                            t.total_gross,
+                            t.entry_count,
+                        )
+                    },
+                );
+            let is_partial = year == today.year();
+            let growth_percent = match series.last() {
+                Some(previous) if !is_partial && entry_count > 0 => {
+                    growth(previous.total_gross, total_gross)
+                }
+                _ => None,
+            };
+            series.push(InsightsYear {
+                year,
+                gross_salary,
+                holiday_pay,
+                bonus,
+                total_gross,
+                entry_count,
+                is_partial,
+                growth_percent,
+            });
+        }
+        series
     }
 
     /// Checks the invariants of data that came from outside, such as a file.
@@ -2283,5 +2364,161 @@ mod tests {
         let mut blank = income.clone();
         blank.jobs[0].employer = "  ".into();
         assert_eq!(blank.validate().unwrap_err(), DomainError::DataInvalid);
+    }
+
+    // ---- CSD-006: income insights ----
+
+    fn yearly_job_named(income: &mut Income, employer: &str) -> JobId {
+        income
+            .create_job(&JobInput {
+                pay_period: Some("Yearly".to_owned()),
+                ..input(employer, "01/01/2020", "")
+            })
+            .unwrap()
+            .id
+    }
+
+    fn add_statement_of(income: &mut Income, job: JobId, y: &str, parts: [&str; 3]) {
+        income
+            .add_statement(job, year(y), amounts(parts[0], parts[1], parts[2]), today())
+            .unwrap();
+    }
+
+    fn years_of(series: &[InsightsYear]) -> Vec<i32> {
+        series.iter().map(|y| y.year).collect()
+    }
+
+    fn growth_of(series: &[InsightsYear], y: i32) -> Option<String> {
+        series
+            .iter()
+            .find(|row| row.year == y)
+            .unwrap()
+            .growth_percent
+            .map(|growth| growth.to_string())
+    }
+
+    #[test]
+    fn test_csd006_ac_2_1_series_runs_from_first_entry_to_current_year() {
+        let mut income = Income::default();
+        let id = job_with(&mut income, "01/01/2024", "");
+        add(&mut income, id, "2024-03", "3000.00");
+        add(&mut income, id, "2025-05", "3000.00");
+        add(&mut income, id, "2026-09", "3000.00");
+        assert_eq!(years_of(&income.insights(today())), [2024, 2025, 2026]);
+    }
+
+    #[test]
+    fn test_csd006_ac_2_2_two_jobs_are_summed() {
+        let mut income = Income::default();
+        let employer = yearly_job_named(&mut income, "Example Employer");
+        let agency = yearly_job_named(&mut income, "Example Agency");
+        add_statement_of(
+            &mut income,
+            employer,
+            "2025",
+            ["30000.00", "2400.00", "0.00"],
+        );
+        add_statement_of(&mut income, agency, "2025", ["5000.00", "0.00", "1000.00"]);
+        let series = income.insights(today());
+        let row = series.iter().find(|row| row.year == 2025).unwrap();
+        assert_eq!(row.gross_salary.to_string(), "35000.00");
+        assert_eq!(row.holiday_pay.to_string(), "2400.00");
+        assert_eq!(row.bonus.to_string(), "1000.00");
+        assert_eq!(row.total_gross.to_string(), "38400.00");
+        assert_eq!(row.entry_count, 2);
+    }
+
+    #[test]
+    fn test_csd006_ac_2_3_a_single_year() {
+        let mut income = Income::default();
+        let id = job_with(&mut income, "01/03/2024", "");
+        add(&mut income, id, "2026-09", "3000.00");
+        assert_eq!(years_of(&income.insights(today())), [2026]);
+    }
+
+    #[test]
+    fn test_csd006_ac_3_1_gap_year_is_zero() {
+        let mut income = Income::default();
+        let id = yearly_job_named(&mut income, "Example Employer");
+        add_statement_of(&mut income, id, "2022", ["30000.00", "", ""]);
+        add_statement_of(&mut income, id, "2024", ["31000.00", "", ""]);
+        let series = income.insights(today());
+        assert_eq!(years_of(&series), [2022, 2023, 2024, 2025, 2026]);
+        let gap = &series[1];
+        assert_eq!(gap.total_gross.to_string(), "0.00");
+        assert_eq!(gap.gross_salary.to_string(), "0.00");
+        assert_eq!(gap.entry_count, 0);
+    }
+
+    #[test]
+    fn test_csd006_ac_4_1_only_the_current_year_is_partial() {
+        let mut income = Income::default();
+        let id = job_with(&mut income, "01/01/2024", "");
+        add(&mut income, id, "2025-05", "3000.00");
+        add(&mut income, id, "2026-09", "3000.00");
+        let series = income.insights(today());
+        assert!(!series[0].is_partial);
+        assert!(series[1].is_partial);
+    }
+
+    #[test]
+    fn test_csd006_ac_5_1_growth_per_year() {
+        for (previous, current, growth) in [
+            ("32400.00", "34480.00", "6.4"),
+            ("40000.00", "39000.00", "-2.5"),
+            // Banker's rounding: 0.45 goes to the even 0.4, 0.55 to 0.6.
+            ("20000.00", "20090.00", "0.4"),
+            ("20000.00", "20110.00", "0.6"),
+            ("20000.00", "20000.00", "0.0"),
+            // A decrease that rounds to zero shows no sign.
+            ("100000.00", "99960.00", "0.0"),
+        ] {
+            let mut income = Income::default();
+            let id = yearly_job_named(&mut income, "Example Employer");
+            add_statement_of(&mut income, id, "2023", [previous, "", ""]);
+            add_statement_of(&mut income, id, "2024", [current, "", ""]);
+            let series = income.insights(today());
+            assert_eq!(
+                growth_of(&series, 2024).as_deref(),
+                Some(growth),
+                "{previous} -> {current}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_csd006_ac_6_1_first_year_has_no_growth() {
+        let mut income = Income::default();
+        let id = yearly_job_named(&mut income, "Example Employer");
+        add_statement_of(&mut income, id, "2024", ["31000.00", "", ""]);
+        assert_eq!(growth_of(&income.insights(today()), 2024), None);
+    }
+
+    #[test]
+    fn test_csd006_ac_6_2_current_year_has_no_growth() {
+        let mut income = Income::default();
+        let id = job_with(&mut income, "01/01/2025", "");
+        add(&mut income, id, "2025-05", "34480.00");
+        add(&mut income, id, "2026-05", "28000.00");
+        assert_eq!(growth_of(&income.insights(today()), 2026), None);
+    }
+
+    #[test]
+    fn test_csd006_ac_6_3_year_after_a_gap_has_no_growth() {
+        let mut income = Income::default();
+        let id = yearly_job_named(&mut income, "Example Employer");
+        add_statement_of(&mut income, id, "2022", ["30000.00", "", ""]);
+        add_statement_of(&mut income, id, "2024", ["31000.00", "", ""]);
+        let series = income.insights(today());
+        assert_eq!(growth_of(&series, 2023), None);
+        assert_eq!(growth_of(&series, 2024), None);
+    }
+
+    #[test]
+    fn test_csd006_ac_10_1_no_entries_gives_an_empty_series() {
+        let mut income = Income::default();
+        assert_eq!(income.insights(today()).len(), 0);
+        job_with(&mut income, "01/03/2024", "");
+        assert_eq!(income.insights(today()).len(), 0);
     }
 }

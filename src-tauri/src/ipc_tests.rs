@@ -960,3 +960,38 @@ fn test_csd005_ac_24_the_form_calculation_over_ipc() {
     );
     assert_eq!(error["code"], "INVESTMENT_GROWTH_INVALID");
 }
+
+#[test]
+fn test_csd006_income_insights_over_ipc() {
+    let app = harness();
+
+    // An empty project has an empty series (AC-10.1).
+    assert_eq!(
+        app.ok("get_income_insights", json!({})),
+        json!({ "years": [] })
+    );
+
+    let job = app.ok("create_job", json!({ "input": job_input() }));
+    let job_id = job["id"].as_str().unwrap().to_owned();
+    assert_eq!(
+        app.ok("get_income_insights", json!({})),
+        json!({ "years": [] }),
+        "a job without entries has no years"
+    );
+
+    app.ok(
+        "add_paycheck",
+        json!({ "jobId": job_id, "month": "2025-12", "amounts": amounts("3000.00", "", "1000.00") }),
+    );
+    let insights = app.ok("get_income_insights", json!({}));
+    let years = insights["years"].as_array().unwrap();
+    assert_eq!(years[0]["year"], 2025);
+    assert_eq!(years[0]["gross_salary"], "3000.00");
+    assert_eq!(years[0]["holiday_pay"], "0.00");
+    assert_eq!(years[0]["bonus"], "1000.00");
+    assert_eq!(years[0]["total_gross"], "4000.00");
+    assert_eq!(years[0]["entry_count"], 1);
+    assert_eq!(years[0]["is_partial"], false);
+    assert_eq!(years[0]["growth_percent"], Value::Null);
+    assert_eq!(years.last().unwrap()["is_partial"], true);
+}

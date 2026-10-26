@@ -16,6 +16,7 @@
   --border: #e2e8f0;
   --negative: #dc2626;
   --accent: #4361ee;
+  --series-salary: #4361ee; --series-holiday: #0d9488; --series-bonus: #d97706;
   --tag-expense-bg: #fee2e2; --tag-expense-fg: #b91c1c;
 }
 
@@ -25,6 +26,7 @@
     --card-shadow: 0 1px 4px rgba(0,0,0,.4);
     --text: #e2e8f0; --muted: #8892b0; --border: rgba(255,255,255,.08);
       --tag-expense-bg: rgba(220,38,38,.2); --tag-expense-fg: #f87171;
+    --series-salary: #7b93ff; --series-holiday: #2dd4bf; --series-bonus: #fbbf24;
     color-scheme: dark;
   }
 }
@@ -34,6 +36,7 @@
   --card-shadow: 0 1px 4px rgba(0,0,0,.4);
   --text: #e2e8f0; --muted: #8892b0; --border: rgba(255,255,255,.08);
   --tag-expense-bg: rgba(220,38,38,.2); --tag-expense-fg: #f87171;
+  --series-salary: #7b93ff; --series-holiday: #2dd4bf; --series-bonus: #fbbf24;
   color-scheme: dark;
 }
 
@@ -437,3 +440,48 @@ dialog p { font-size: 13.5px; line-height: 1.5; color: var(--muted); }
 }
 #dashboard-content .cards { margin-bottom: 26px; }
 .card.primary .card-value { color: var(--accent); }
+
+/* ── Income insights (CSD-006) ── */
+
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
+.tab {
+  background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  padding: 8px 14px; font: inherit; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer;
+}
+.tab:hover { color: var(--text); }
+.tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+.tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 4px; }
+
+.legend { list-style: none; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; color: var(--muted); }
+.legend li { display: flex; align-items: center; gap: 6px; }
+.swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.swatch.salary, .bar-salary { background: var(--series-salary); fill: var(--series-salary); }
+.swatch.holiday, .bar-holiday { background: var(--series-holiday); fill: var(--series-holiday); }
+.swatch.bonus, .bar-bonus { background: var(--series-bonus); fill: var(--series-bonus); }
+
+.chart-scroll { overflow-x: auto; padding: 16px 12px 12px; }
+.chart-inner { position: relative; }
+.chart-inner svg { display: block; width: 100%; height: auto; }
+.chart-inner .bar-salary, .chart-inner .bar-holiday, .chart-inner .bar-bonus { background: none; stroke: var(--card-bg); stroke-width: 1; }
+.chart-inner .partial .bar-salary, .chart-inner .partial .bar-holiday, .chart-inner .partial .bar-bonus { opacity: .55; }
+.chart-grid { stroke: var(--border); stroke-width: 1; }
+.chart-axis-label, .chart-year, .chart-growth { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart-axis-label { text-anchor: end; }
+.chart-year, .chart-growth { text-anchor: middle; }
+.chart-growth { font-weight: 600; fill: var(--text); }
+.chart-growth.negative { fill: var(--negative); }
+.chart-hit { fill: transparent; stroke: none; }
+.chart-year-group { outline: none; cursor: default; }
+.chart-year-group:hover .chart-hit { fill: rgba(67,97,238,.06); }
+.chart-year-group:focus-visible .chart-hit { stroke: var(--accent); stroke-width: 2; fill: rgba(67,97,238,.06); }
+
+.chart-tooltip {
+  position: absolute; z-index: 2; pointer-events: none; min-width: 190px;
+  background: var(--card-bg); color: var(--text); border: 1px solid var(--border);
+  border-radius: 8px; box-shadow: var(--card-shadow); padding: 10px 12px; font-size: 12px;
+}
+.chart-tooltip .tip-title { font-weight: 700; margin-bottom: 6px; }
+.chart-tooltip dl { display: grid; grid-template-columns: 1fr auto; gap: 3px 16px; }
+.chart-tooltip dt { color: var(--muted); }
+.chart-tooltip dd { text-align: right; font-variant-numeric: tabular-nums; }
+.chart-tooltip dd.negative { color: var(--negative); }
