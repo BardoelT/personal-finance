@@ -2,6 +2,7 @@
 
 pub mod dashboard;
 pub mod income;
+pub mod investments;
 pub mod project;
 pub mod settings;
 

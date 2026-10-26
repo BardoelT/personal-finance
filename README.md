@@ -1,11 +1,12 @@
 # Personal Finance
 
-A private, local-only desktop app for tracking personal wealth. It starts with **employment income**, and more areas will follow as their specs are approved.
+A private, local-only desktop app for tracking personal wealth. It covers **employment income** and **investments**, and more areas will follow as their specs are approved.
 
 ## What it does today
 
 - **Dashboard:** your income this year to date and last month (total gross, gross salary, holiday pay, bonus and number of entries), summed over all jobs. An annual statement counts in full in this year and not in last month.
 - **Income:** any number of jobs. A monthly job has one paycheck per month, a yearly job has one annual statement per year, both with gross salary, holiday pay and bonus. Yearly totals over all jobs and a list of all paychecks and annual statements sit next to the jobs.
+- **Investments:** any number of investment accounts, each recorded monthly or yearly. A statement is the closing balance of one period with an optional note. Each account shows its latest balance, and the total of the latest balances is shown over all accounts. Individual stocks, prices and returns are not tracked.
 - **Settings:** project settings. The first one is the currency (EUR, USD or GBP) of the whole project. Changing it does not convert any amount.
 - **Project file:** everything is saved in one file you choose, and the app reopens the last one you used.
 
@@ -74,7 +75,7 @@ src-tauri/
   src/lib.rs        app setup, command registration
   src/menu.rs       native macOS menu bar (File menu, Settings…)
   src/commands/     thin #[tauri::command] handlers
-  src/domain/       pure business logic (money, income, settings), unit-tested
+  src/domain/       pure business logic (money, income, investments, settings), unit-tested
   src/storage/      project file persistence (JSON, atomic write)
   src/error.rs      app error type
   capabilities/     Tauri permission files
@@ -91,6 +92,7 @@ Behaviour is defined in Capability Specification Documents in [`docs/csd/`](docs
 | [CSD-002](docs/csd/CSD-002-project-file.md) | Project file (save, open, new, reopen last project) |
 | [CSD-003](docs/csd/CSD-003-project-settings.md) | Project settings (currency) |
 | [CSD-004](docs/csd/CSD-004-income-dashboard.md) | Income dashboard |
+| [CSD-005](docs/csd/CSD-005-investments.md) | Investments (accounts, balances and notes) |
 
 Only specs with `status: approved` are implemented; check a spec's status before relying on it. Tests reference acceptance criteria in their names, for example `test_csd002_ac_1_1_...`.
 

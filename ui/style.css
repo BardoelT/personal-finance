@@ -285,6 +285,11 @@ body {
 .job-meta { flex: 1; font-size: 12px; color: var(--muted); min-width: 0; }
 .job-count { font-size: 12px; color: var(--muted); white-space: nowrap; }
 .job-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.field textarea { resize: vertical; min-height: 72px; }
+.account-balance { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.account-balance small { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 6px; }
+.account-total { border-top: 1px solid var(--border); background: var(--bg); }
+.note-cell { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
 .field-action { margin: -2px 0 12px; }
 .field-action .btn { font-size: 12px; padding: 5px 10px; }
 
@@ -344,7 +349,7 @@ dialog::backdrop { background: rgba(10,12,24,.5); }
 dialog h2 { font-size: 16px; font-weight: 700; margin-bottom: 14px; }
 dialog p { font-size: 13.5px; line-height: 1.5; color: var(--muted); }
 .field { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 12px; }
-.field input, .field select {
+.field input, .field select, .field textarea {
   display: block;
   width: 100%;
   margin-top: 5px;
@@ -357,7 +362,7 @@ dialog p { font-size: 13.5px; line-height: 1.5; color: var(--muted); }
   border: 1px solid var(--border);
   border-radius: 8px;
 }
-.field input:focus-visible, .field select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .field input:read-only { opacity: .65; }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .field-hint { display: block; margin-top: 5px; font-size: 12px; font-weight: 400; color: var(--muted); }

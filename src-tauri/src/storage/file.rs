@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::StorageError;
-use crate::domain::{Income, ProjectData, Settings};
+use crate::domain::{Income, Investments, ProjectData, Settings};
 
 /// Version of the project file format this app writes and understands.
 pub const FORMAT_VERSION: u32 = 1;
@@ -18,13 +18,18 @@ pub const MAX_FILE_BYTES: u64 = 50 * 1024 * 1024;
 struct FileRef<'a> {
     format_version: u32,
     income: &'a Income,
+    investments: &'a Investments,
     settings: &'a Settings,
 }
 
-/// A file without a `settings` section gets the default settings (CSD-003 NG-5).
+/// A file without a `settings` section gets the default settings (CSD-003 NG-5),
+/// and one without an `investments` section has no investment accounts
+/// (CSD-005 REQ-19).
 #[derive(Deserialize)]
 struct FileOwned {
     income: Income,
+    #[serde(default)]
+    investments: Investments,
     #[serde(default)]
     settings: Settings,
 }
@@ -34,6 +39,7 @@ pub(super) fn to_json(data: &ProjectData) -> Result<String, StorageError> {
     serde_json::to_string_pretty(&FileRef {
         format_version: FORMAT_VERSION,
         income: &data.income,
+        investments: &data.investments,
         settings: &data.settings,
     })
     .map_err(|error| StorageError::SaveFailed(io::Error::other(error)))
@@ -56,8 +62,12 @@ pub(super) fn from_json(text: &str) -> Result<ProjectData, StorageError> {
     file.income
         .validate()
         .map_err(|_| StorageError::InvalidFile)?;
+    file.investments
+        .validate()
+        .map_err(|_| StorageError::InvalidFile)?;
     Ok(ProjectData {
         income: file.income,
+        investments: file.investments,
         settings: file.settings,
     })
 }

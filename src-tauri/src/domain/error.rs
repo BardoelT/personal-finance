@@ -1,6 +1,7 @@
 use thiserror::Error;
 
-/// Validation and lookup failures of the income domain (CSD-001).
+/// Validation and lookup failures of the income (CSD-001) and investments
+/// (CSD-005) domains.
 ///
 /// Messages are safe to show to the user: they never contain user data.
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
@@ -53,6 +54,42 @@ pub enum DomainError {
     PaycheckAmountTooLarge,
     #[error("The income data is not consistent.")]
     DataInvalid,
+    #[error("Enter an account name.")]
+    InvestmentAccountNameRequired,
+    #[error("The account name can be at most 100 characters.")]
+    InvestmentAccountNameTooLong,
+    #[error("An account with this name already exists.")]
+    InvestmentAccountNameDuplicate,
+    #[error("This investment account does not exist.")]
+    InvestmentAccountNotFound,
+    #[error("Choose Monthly or Yearly.")]
+    InvestmentPeriodUnsupported,
+    #[error("The statement period cannot change once the account has statements.")]
+    InvestmentPeriodLocked,
+    #[error(
+        "A monthly account has monthly statements and a yearly account has yearly statements."
+    )]
+    InvestmentPeriodMismatch,
+    #[error("A statement cannot be for a period that has not started yet.")]
+    InvestmentStatementInFuture,
+    #[error("Enter the month as YYYY-MM or the year as YYYY.")]
+    InvestmentStatementPeriodInvalid,
+    #[error("This account already has a statement for that period.")]
+    InvestmentStatementDuplicate,
+    #[error("There is no statement for that period.")]
+    InvestmentStatementNotFound,
+    #[error("Enter the balance as a number such as 12500.00.")]
+    InvestmentBalanceInvalid,
+    #[error("The balance cannot be negative.")]
+    InvestmentBalanceNegative,
+    #[error("The balance can have at most 2 decimal places.")]
+    InvestmentBalancePrecision,
+    #[error("The balance can be at most 1000000000.00.")]
+    InvestmentBalanceTooLarge,
+    #[error("A note can be at most 2000 characters.")]
+    InvestmentNoteTooLong,
+    #[error("The investment data is not consistent.")]
+    InvestmentDataInvalid,
 }
 
 impl DomainError {
@@ -84,6 +121,23 @@ impl DomainError {
             Self::PaycheckAmountPrecision => "PAYCHECK_AMOUNT_PRECISION",
             Self::PaycheckAmountTooLarge => "PAYCHECK_AMOUNT_TOO_LARGE",
             Self::DataInvalid => "INCOME_DATA_INVALID",
+            Self::InvestmentAccountNameRequired => "INVESTMENT_ACCOUNT_NAME_REQUIRED",
+            Self::InvestmentAccountNameTooLong => "INVESTMENT_ACCOUNT_NAME_TOO_LONG",
+            Self::InvestmentAccountNameDuplicate => "INVESTMENT_ACCOUNT_NAME_DUPLICATE",
+            Self::InvestmentAccountNotFound => "INVESTMENT_ACCOUNT_NOT_FOUND",
+            Self::InvestmentPeriodUnsupported => "INVESTMENT_PERIOD_UNSUPPORTED",
+            Self::InvestmentPeriodLocked => "INVESTMENT_PERIOD_LOCKED",
+            Self::InvestmentPeriodMismatch => "INVESTMENT_PERIOD_MISMATCH",
+            Self::InvestmentStatementInFuture => "INVESTMENT_STATEMENT_IN_FUTURE",
+            Self::InvestmentStatementPeriodInvalid => "INVESTMENT_STATEMENT_PERIOD_INVALID",
+            Self::InvestmentStatementDuplicate => "INVESTMENT_STATEMENT_DUPLICATE",
+            Self::InvestmentStatementNotFound => "INVESTMENT_STATEMENT_NOT_FOUND",
+            Self::InvestmentBalanceInvalid => "INVESTMENT_BALANCE_INVALID",
+            Self::InvestmentBalanceNegative => "INVESTMENT_BALANCE_NEGATIVE",
+            Self::InvestmentBalancePrecision => "INVESTMENT_BALANCE_PRECISION",
+            Self::InvestmentBalanceTooLarge => "INVESTMENT_BALANCE_TOO_LARGE",
+            Self::InvestmentNoteTooLong => "INVESTMENT_NOTE_TOO_LONG",
+            Self::InvestmentDataInvalid => "INVESTMENT_DATA_INVALID",
         }
     }
 }
