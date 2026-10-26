@@ -630,3 +630,232 @@ fn test_csd001_annual_statements_can_be_copied_edited_and_deleted_over_ipc() {
         Value::Null
     );
 }
+
+fn account_input(name: &str, period: &str) -> Value {
+    json!({ "name": name, "statement_period": period })
+}
+
+#[test]
+fn test_csd005_ac_17_2_investment_accounts_and_the_total_over_ipc() {
+    let app = harness();
+    let empty = app.ok("list_investment_accounts", json!({}));
+    assert_eq!(empty, json!({ "accounts": [], "total": null }));
+
+    let brokerage = app.ok(
+        "create_investment_account",
+        json!({ "input": account_input("Example Brokerage", "Monthly") }),
+    );
+    let pension = app.ok(
+        "create_investment_account",
+        json!({ "input": account_input("Example Pension", "Yearly") }),
+    );
+    let brokerage_id = brokerage["id"].as_str().unwrap();
+    let pension_id = pension["id"].as_str().unwrap();
+    assert_eq!(brokerage["statement_period"], "Monthly");
+    assert_eq!(app.ok("project_status", json!({}))["unsaved_changes"], true);
+
+    app.ok(
+        "add_investment_statement",
+        json!({ "accountId": brokerage_id, "period": "2026-08", "balance": "12000.00", "note": null }),
+    );
+    app.ok(
+        "add_investment_statement",
+        json!({ "accountId": brokerage_id, "period": "2026-09", "balance": "12500.50", "note": "Bought example fund" }),
+    );
+    app.ok(
+        "add_investment_statement",
+        json!({ "accountId": pension_id, "period": "2025", "balance": "80000.00", "note": "" }),
+    );
+
+    let overview = app.ok("list_investment_accounts", json!({}));
+    assert_eq!(overview["total"], "92500.50");
+    let accounts = overview["accounts"].as_array().unwrap();
+    assert_eq!(accounts[0]["name"], "Example Brokerage");
+    assert_eq!(accounts[0]["statement_period"], "Monthly");
+    assert_eq!(accounts[0]["statement_count"], 2);
+    assert_eq!(accounts[0]["latest_period"], "2026-09");
+    assert_eq!(accounts[0]["latest_balance"], "12500.50");
+    assert_eq!(accounts[1]["name"], "Example Pension");
+    assert_eq!(accounts[1]["statement_count"], 1);
+    assert_eq!(accounts[1]["latest_period"], "2025");
+    assert_eq!(accounts[1]["latest_balance"], "80000.00");
+}
+
+#[test]
+fn test_csd005_ac_17_3_investment_statements_span_all_accounts_over_ipc() {
+    let app = harness();
+    let brokerage = app.ok(
+        "create_investment_account",
+        json!({ "input": account_input("Example Brokerage", "Monthly") }),
+    );
+    let pension = app.ok(
+        "create_investment_account",
+        json!({ "input": account_input("Example Pension", "Yearly") }),
+    );
+    app.ok(
+        "add_investment_statement",
+        json!({ "accountId": brokerage["id"], "period": "2026-09", "balance": "12500.00", "note": "Bought\nexample fund" }),
+    );
+    app.ok(
+        "add_investment_statement",
+        json!({ "accountId": pension["id"], "period": "2025", "balance": "80000.00" }),
+    );
+
+    let rows = app.ok("list_investment_statements", json!({}));
+    let rows = rows.as_array().unwrap();
+    assert_eq!(rows.len(), 2);
+    assert_eq!(rows[0]["period"], "2026-09");
+    assert_eq!(rows[0]["account_name"], "Example Brokerage");
+    assert_eq!(rows[0]["account_id"], brokerage["id"]);
+    assert_eq!(rows[0]["balance"], "12500.00");
+    assert_eq!(rows[0]["note"], "Bought\nexample fund");
+    assert_eq!(rows[1]["period"], "2025");
+    assert_eq!(rows[1]["account_name"], "Example Pension");
+    assert_eq!(rows[1]["note"], "");
+}
+
+#[test]
+fn test_csd005_investment_errors_reach_the_frontend_as_codes() {
+    let app = harness();
+    let account = app.ok(
+        "create_investment_account",
+        json!({ "input": account_input("Example Brokerage", "Monthly") }),
+    );
+    let id = account["id"].as_str().unwrap();
+    let add = |period: &str, balance: &str, note: &str| {
+        app.call(
+            "add_investment_statement",
+            json!({ "accountId": id, "period": period, "balance": balance, "note": note }),
+        )
+        .unwrap_err()
+    };
+    assert_eq!(
+        add("2026-09", "-1.00", "")["code"],
+        "INVESTMENT_BALANCE_NEGATIVE"
+    );
+    assert_eq!(
+        add("2026-09", "abc", "")["code"],
+        "INVESTMENT_BALANCE_INVALID"
+    );
+    assert_eq!(
+        add("2026-13", "1.00", "")["code"],
+        "INVESTMENT_STATEMENT_PERIOD_INVALID"
+    );
+    assert_eq!(
+        add("2025", "1.00", "")["code"],
+        "INVESTMENT_PERIOD_MISMATCH"
+    );
+    assert_eq!(
+        add("2999-01", "1.00", "")["code"],
+        "INVESTMENT_STATEMENT_IN_FUTURE"
+    );
+    assert_eq!(
+        add("2026-09", "1.00", &"x".repeat(2001))["code"],
+        "INVESTMENT_NOTE_TOO_LONG"
+    );
+    app.ok(
+        "add_investment_statement",
+        json!({ "accountId": id, "period": "2026-09", "balance": "1.00" }),
+    );
+    let duplicate = add("2026-09", "2.00", "");
+    assert_eq!(duplicate["code"], "INVESTMENT_STATEMENT_DUPLICATE");
+    assert!(!duplicate["message"].as_str().unwrap().contains(id));
+
+    let error = app.err(
+        "create_investment_account",
+        json!({ "input": account_input("example brokerage", "Monthly") }),
+    );
+    assert_eq!(error["code"], "INVESTMENT_ACCOUNT_NAME_DUPLICATE");
+    let error = app.err(
+        "update_investment_account",
+        json!({ "accountId": id, "input": account_input("Example Brokerage", "Yearly") }),
+    );
+    assert_eq!(error["code"], "INVESTMENT_PERIOD_LOCKED");
+    let error = app.err(
+        "delete_investment_account",
+        json!({ "accountId": "not-an-id" }),
+    );
+    assert_eq!(error["code"], "INVESTMENT_ACCOUNT_NOT_FOUND");
+}
+
+#[test]
+fn test_csd005_investment_statements_can_be_copied_edited_and_deleted_over_ipc() {
+    let app = harness();
+    let account = app.ok(
+        "create_investment_account",
+        json!({ "input": account_input("Example Brokerage", "Monthly") }),
+    );
+    let id = account["id"].as_str().unwrap();
+    // AC-13.2: nothing to copy yet.
+    assert_eq!(
+        app.ok(
+            "copy_previous_investment_statement",
+            json!({ "accountId": id })
+        ),
+        json!({ "balance": null })
+    );
+    app.ok(
+        "add_investment_statement",
+        json!({ "accountId": id, "period": "2026-08", "balance": "12500.00", "note": "First" }),
+    );
+    // AC-13.1: the balance is copied and the note is not part of the prefill.
+    assert_eq!(
+        app.ok(
+            "copy_previous_investment_statement",
+            json!({ "accountId": id })
+        ),
+        json!({ "balance": "12500.00" })
+    );
+    // AC-11.1: edit the balance and the note.
+    let edited = app.ok(
+        "update_investment_statement",
+        json!({ "accountId": id, "period": "2026-08", "balance": "12750.00", "note": "Corrected" }),
+    );
+    assert_eq!(edited["balance"], "12750.00");
+    assert_eq!(edited["note"], "Corrected");
+    // AC-12.1: delete.
+    app.ok(
+        "delete_investment_statement",
+        json!({ "accountId": id, "period": "2026-08" }),
+    );
+    assert_eq!(app.ok("list_investment_statements", json!({})), json!([]));
+    let error = app.err(
+        "delete_investment_statement",
+        json!({ "accountId": id, "period": "2026-08" }),
+    );
+    assert_eq!(error["code"], "INVESTMENT_STATEMENT_NOT_FOUND");
+}
+
+#[test]
+fn test_csd003_ac_5_5_an_investment_statement_counts_for_the_currency_confirmation() {
+    let app = harness();
+    let account = app.ok(
+        "create_investment_account",
+        json!({ "input": account_input("Example Brokerage", "Monthly") }),
+    );
+    // AC-5.6: an account without statements needs no confirmation.
+    assert_eq!(app.ok("get_settings", json!({}))["entry_count"], 0);
+    app.ok(
+        "add_investment_statement",
+        json!({ "accountId": account["id"], "period": "2026-09", "balance": "12500.00" }),
+    );
+    assert_eq!(app.ok("get_settings", json!({}))["entry_count"], 1);
+    // The balance is kept as it is when the currency changes (CSD-003 CON-1).
+    app.ok("set_currency", json!({ "currency": "USD" }));
+    let rows = app.ok("list_investment_statements", json!({}));
+    assert_eq!(rows[0]["balance"], "12500.00");
+}
+
+#[test]
+fn test_csd005_new_project_clears_the_investments() {
+    let app = harness();
+    app.ok(
+        "create_investment_account",
+        json!({ "input": account_input("Example Brokerage", "Monthly") }),
+    );
+    app.ok("new_project", json!({}));
+    assert_eq!(
+        app.ok("list_investment_accounts", json!({})),
+        json!({ "accounts": [], "total": null })
+    );
+}

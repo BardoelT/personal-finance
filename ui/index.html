@@ -45,6 +45,14 @@
           Income
         </button>
 
+        <button class="nav-item" data-section="investments">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 17l6-6 4 4 8-8"/>
+            <path d="M15 7h6v6"/>
+          </svg>
+          Investments
+        </button>
+
         <div class="nav-section-label">Insights</div>
 
         <button class="nav-item" data-section="reports">
@@ -166,6 +174,53 @@
         </div>
       </section>
 
+      <!-- Investments -->
+      <section class="section" id="investments" aria-labelledby="investments-title">
+        <div class="section-header">
+          <h1 class="section-title" id="investments-title">Investments</h1>
+          <button type="button" class="btn primary push-right" id="account-add">Add account</button>
+        </div>
+
+        <div class="placeholder" id="investments-empty" hidden>
+          <p>No investment accounts yet. Add your first investment account to start tracking its balance.</p>
+          <button type="button" class="btn primary" id="account-add-first">Add your first investment account</button>
+        </div>
+
+        <div id="investments-content" hidden>
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title" id="accounts-title">Accounts</span></div>
+            <ul class="job-list" id="account-list"></ul>
+            <div class="job-row account-total" id="account-total" hidden>
+              <span class="job-name">Total of latest balances</span>
+              <span class="job-meta"></span>
+              <span class="account-balance" id="account-total-value"></span>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title" id="statements-title">Statements</span>
+              <button type="button" class="btn primary" id="statement-add">Add statement</button>
+            </div>
+            <p class="empty-note" id="statements-empty" hidden>No statements yet.</p>
+            <div class="table-wrap">
+              <table class="data-table" id="statements-table" hidden>
+                <thead>
+                  <tr>
+                    <th scope="col">Period</th>
+                    <th scope="col">Account</th>
+                    <th scope="col" class="num">Balance</th>
+                    <th scope="col">Note</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody id="statements-rows"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Settings -->
       <section class="section" id="settings" aria-labelledby="settings-title">
         <div class="section-header">
@@ -258,6 +313,54 @@
       <div class="dialog-actions">
         <button type="button" class="btn" data-cancel>Cancel</button>
         <button type="submit" class="btn primary">Save paycheck</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="account-dialog" aria-labelledby="account-dialog-title">
+    <form method="dialog" id="account-form" novalidate>
+      <h2 id="account-dialog-title">Add account</h2>
+      <label class="field">Account name
+        <input type="text" name="name" maxlength="100" autocomplete="off" required>
+      </label>
+      <label class="field">Statement period
+        <select name="statement_period">
+          <option value="Monthly">Monthly</option>
+          <option value="Yearly">Yearly</option>
+        </select>
+        <span class="field-hint" id="account-period-hint" hidden>The statement period cannot change once the account has statements.</span>
+      </label>
+      <p class="form-error" id="account-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn" data-cancel>Cancel</button>
+        <button type="submit" class="btn primary">Save account</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="statement-dialog" aria-labelledby="statement-dialog-title">
+    <form method="dialog" id="statement-form" novalidate>
+      <h2 id="statement-dialog-title">Add statement</h2>
+      <label class="field">Account
+        <select name="account_id"></select>
+      </label>
+      <div class="field-action">
+        <button type="button" class="btn" id="statement-copy">Copy previous month</button>
+      </div>
+      <label class="field"><span id="statement-period-label">Month (YYYY-MM)</span>
+        <input type="text" name="period" inputmode="numeric" placeholder="2026-09" maxlength="7" autocomplete="off" required>
+      </label>
+      <label class="field">Balance
+        <input type="text" name="balance" inputmode="decimal" placeholder="0.00" autocomplete="off" required>
+      </label>
+      <label class="field">Note (optional)
+        <textarea name="note" rows="4" autocomplete="off"></textarea>
+      </label>
+      <p class="field-hint">Use a dot for decimals, for example 12500.00. A note can be up to 2000 characters.</p>
+      <p class="form-error" id="statement-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn" data-cancel>Cancel</button>
+        <button type="submit" class="btn primary">Save statement</button>
       </div>
     </form>
   </dialog>

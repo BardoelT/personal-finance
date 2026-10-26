@@ -121,7 +121,7 @@ pub fn zero() -> Decimal {
     with_two_decimals(Decimal::ZERO)
 }
 
-fn with_two_decimals(mut amount: Decimal) -> Decimal {
+pub(super) fn with_two_decimals(mut amount: Decimal) -> Decimal {
     if amount.is_zero() {
         // Drops the sign of a negative zero such as "-0.00".
         return Decimal::new(0, 2);
@@ -141,9 +141,15 @@ fn parse_optional_decimal(text: &str) -> Result<Decimal, DomainError> {
 /// Accepts only `[-]digits[.digits]`, so no separators, exponents or signs
 /// that `Decimal::from_str` would otherwise tolerate.
 fn parse_decimal(text: &str) -> Result<Decimal, DomainError> {
+    parse_plain_decimal(text).ok_or(DomainError::PaycheckAmountInvalid)
+}
+
+/// The plain-number rule of [`parse_decimal`] without an error type, for
+/// capabilities that report their own error code (CSD-005 REQ-9).
+pub(super) fn parse_plain_decimal(text: &str) -> Option<Decimal> {
     let text = text.trim();
     if text.len() > MAX_AMOUNT_TEXT_LEN {
-        return Err(DomainError::PaycheckAmountInvalid);
+        return None;
     }
     let unsigned = text.strip_prefix('-').unwrap_or(text);
     let (whole, fraction) = unsigned.split_once('.').unwrap_or((unsigned, ""));
@@ -153,9 +159,9 @@ fn parse_decimal(text: &str) -> Result<Decimal, DomainError> {
         && digits_only(fraction)
         && (fraction.is_empty() != unsigned.contains('.'));
     if !well_formed {
-        return Err(DomainError::PaycheckAmountInvalid);
+        return None;
     }
-    Decimal::from_str(text).map_err(|_| DomainError::PaycheckAmountInvalid)
+    Decimal::from_str(text).ok()
 }
 
 #[cfg(test)]
