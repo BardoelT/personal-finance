@@ -13,7 +13,6 @@ const MIN_SLOT_WIDTH = 64;
 const MAX_BAR_WIDTH = 56;
 const SEGMENTS = [
   ['opening_balance', 'Opening balance'],
-  ['new_accounts', 'New accounts'],
   ['net_deposits', 'Net deposits'],
   ['capital_growth', 'Capital growth'],
 ];
@@ -40,7 +39,7 @@ function describe(row) {
   if (row.statement_count === 0) return `${yearLabel(row)}: no statements`;
   const growth = isNegative(row.capital_growth) ? `${formatAmount(row.capital_growth)} (negative)` : formatAmount(row.capital_growth);
   return (
-    `${yearLabel(row)}: opening balance ${formatAmount(row.opening_balance)}, new accounts ${formatAmount(row.new_accounts)}, ` +
+    `${yearLabel(row)}: opening balance ${formatAmount(row.opening_balance)}, ` +
     `net deposits ${formatAmount(row.net_deposits)}, capital growth ${growth}, growth ${percentLabel(row.growth_percent)}, ` +
     `closing balance ${formatAmount(row.closing_balance)}, ${row.statement_count} statement${row.statement_count === 1 ? '' : 's'}`
   );
@@ -60,7 +59,6 @@ function tooltipFor(row) {
       ? [...line(null, 'Statements', '0')]
       : [
           ...line('opening', 'Opening balance', formatAmount(row.opening_balance)),
-          ...line('new-accounts', 'New accounts', formatAmount(row.new_accounts)),
           ...line('deposits', 'Net deposits', formatAmount(row.net_deposits)),
           ...line(growthKey, 'Capital growth', formatAmount(row.capital_growth), isNegative(row.capital_growth) ? 'negative' : ''),
           ...line(null, 'Growth', percentLabel(row.growth_percent), row.growth_percent !== null && isNegative(row.growth_percent) ? 'negative' : ''),
@@ -86,10 +84,10 @@ function piecesOf(row) {
     const value = Number(row[field]);
     if (value === 0) continue;
     const next = level + value;
-    let key = { opening_balance: 'opening', new_accounts: 'new-accounts' }[field];
+    let key = { opening_balance: 'opening' }[field];
     if (field === 'net_deposits') key = 'deposits';
     if (field === 'capital_growth') key = value < 0 ? 'growth-down' : 'growth-up';
-    const cssClass = { opening: 'bar-opening', 'new-accounts': 'bar-new', deposits: value < 0 ? 'bar-deposits withdrawal' : 'bar-deposits', 'growth-up': 'bar-growth-up', 'growth-down': 'bar-growth-down' }[key];
+    const cssClass = { opening: 'bar-opening', deposits: value < 0 ? 'bar-deposits withdrawal' : 'bar-deposits', 'growth-up': 'bar-growth-up', 'growth-down': 'bar-growth-down' }[key];
     pieces.push({ key, cssClass, low: Math.min(level, next), high: Math.max(level, next), hangs: value < 0 });
     level = next;
   }

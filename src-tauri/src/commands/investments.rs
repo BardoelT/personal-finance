@@ -25,9 +25,9 @@ pub struct StatementView {
     period: String,
     balance: Decimal,
     net_deposits: Decimal,
-    /// Derived from the previous statement; `None` for the first statement
-    /// of an account (REQ-23).
-    capital_growth: Option<Decimal>,
+    /// Derived from the previous statement, or from 0.00 for the first
+    /// statement of an account (REQ-23).
+    capital_growth: Decimal,
     note: String,
 }
 

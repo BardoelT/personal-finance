@@ -283,7 +283,6 @@
                 <span class="panel-title">Investments per year</span>
                 <ul class="legend" id="investment-insights-legend" aria-label="Legend">
                   <li data-legend="opening"><span class="swatch opening"></span>Opening balance</li>
-                  <li data-legend="new-accounts"><span class="swatch new-accounts"></span>New accounts</li>
                   <li data-legend="deposits"><span class="swatch deposits"></span>Net deposits</li>
                   <li data-legend="growth-up"><span class="swatch growth-up"></span>Capital growth (gain)</li>
                   <li data-legend="growth-down"><span class="swatch growth-down"></span>Capital growth (loss)</li>
@@ -439,7 +438,7 @@
           <input type="text" name="growth" inputmode="decimal" placeholder="0.00" autocomplete="off">
         </label>
       </div>
-      <p class="field-hint" id="statement-growth-hint" hidden>This is the first statement of the account, so there is no capital growth.</p>
+      <p class="field-hint" id="statement-growth-hint" hidden>No earlier statement, so the account is taken to start at 0.00. Enter money that was already in the account as net deposits.</p>
       <label class="field">Note (optional)
         <textarea name="note" rows="4" autocomplete="off"></textarea>
       </label>

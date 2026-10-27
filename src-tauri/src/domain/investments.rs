@@ -365,11 +365,10 @@ pub struct InvestmentYearlyTotal {
 pub struct InvestmentInsightsYear {
     pub year: i32,
     pub opening_balance: Decimal,
-    pub new_accounts: Decimal,
     pub net_deposits: Decimal,
     pub capital_growth: Decimal,
-    /// Capital growth in percent of the opening balance, one decimal; `None`
-    /// when the opening balance is zero.
+    /// Capital growth of the accounts with an opening balance, in percent of
+    /// the opening balance, one decimal; `None` when the opening balance is zero.
     pub growth_percent: Option<Decimal>,
     pub closing_balance: Decimal,
     pub statement_count: usize,
@@ -401,12 +400,11 @@ pub enum CalculationInput {
 }
 
 /// The balance and capital growth the statement form shows after a
-/// calculation. The capital growth is `None` when there is no earlier
-/// statement (CSD-005 REQ-24).
+/// calculation (CSD-005 REQ-24).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct StatementCalculation {
     pub balance: Decimal,
-    pub capital_growth: Option<Decimal>,
+    pub capital_growth: Decimal,
 }
 
 /// All investment accounts with their statements.
@@ -646,14 +644,15 @@ impl Investments {
     }
 
     /// The capital growth of a statement: its balance minus the balance of the
-    /// previous statement of the account minus its net deposits. `None` for
-    /// the first statement of an account (CSD-005 REQ-23).
+    /// previous statement of the account minus its net deposits. An account is
+    /// taken to start at 0.00, so its first statement has no previous balance to
+    /// subtract (CSD-005 REQ-23).
     #[must_use]
-    pub fn capital_growth(&self, statement: &Statement) -> Option<Decimal> {
-        let previous = self.previous_balance(statement.account_id, statement.period)?;
-        Some(with_two_decimals(
-            statement.balance.value() - previous - statement.net_deposits.value(),
-        ))
+    pub fn capital_growth(&self, statement: &Statement) -> Decimal {
+        let previous = self
+            .previous_balance(statement.account_id, statement.period)
+            .unwrap_or_else(zero);
+        with_two_decimals(statement.balance.value() - previous - statement.net_deposits.value())
     }
 
     /// Totals per calendar year over all accounts, newest year first, without
@@ -707,10 +706,9 @@ impl Investments {
                 InvestmentInsightsYear {
                     year,
                     opening_balance,
-                    new_accounts: self.new_accounts(year),
                     net_deposits,
                     capital_growth,
-                    growth_percent: growth_percent(capital_growth, opening_balance),
+                    growth_percent: growth_percent(self.growth_with_opening(year), opening_balance),
                     closing_balance,
                     statement_count,
                     is_partial: year == today.year(),
@@ -739,20 +737,23 @@ impl Investments {
             .fold(zero(), |sum, balance| sum + balance)
     }
 
-    /// The starting balances of accounts whose first statement falls in the
-    /// year: that statement's balance minus its net deposits (CSD-007).
-    fn new_accounts(&self, year: i32) -> Decimal {
+    /// The capital growth in a year of the accounts that have an opening
+    /// balance in it: a statement in the year and one before it (CSD-007 REQ-6).
+    fn growth_with_opening(&self, year: i32) -> Decimal {
         self.accounts
             .iter()
-            .filter_map(|account| {
+            .filter(|account| {
                 self.statements
                     .iter()
-                    .filter(|s| s.account_id == account.id)
-                    .min_by_key(|s| s.period.sort_key())
+                    .any(|s| s.account_id == account.id && s.period.year() < year)
             })
-            .filter(|first| first.period.year() == year)
-            .fold(zero(), |sum, first| {
-                sum + first.balance.value() - first.net_deposits.value()
+            .flat_map(|account| {
+                self.statements
+                    .iter()
+                    .filter(move |s| s.account_id == account.id && s.period.year() == year)
+            })
+            .fold(zero(), |sum, statement| {
+                sum + self.capital_growth(statement)
             })
     }
 
@@ -762,7 +763,7 @@ impl Investments {
         let mut capital_growth = zero();
         for statement in statements {
             net_deposits += statement.net_deposits.value();
-            capital_growth += self.capital_growth(statement).unwrap_or_else(zero);
+            capital_growth += self.capital_growth(statement);
             let newest = latest.entry(statement.account_id).or_insert(statement);
             if statement.period.sort_key() > newest.period.sort_key() {
                 *newest = statement;
@@ -785,10 +786,8 @@ impl Investments {
     /// Nothing is stored (CSD-005 REQ-24, REQ-25).
     ///
     /// # Errors
-    /// Returns `InvestmentAccountNotFound`, `InvestmentPeriodMismatch`, the
-    /// net deposits and balance or growth errors of REQ-22, REQ-9 and REQ-25,
-    /// or `InvestmentGrowthUnavailable` when a growth is typed in and there is
-    /// no earlier statement.
+    /// Returns `InvestmentAccountNotFound`, `InvestmentPeriodMismatch`, or the
+    /// net deposits and balance or growth errors of REQ-22, REQ-9 and REQ-25.
     pub fn calculate(
         &self,
         account_id: InvestmentAccountId,
@@ -801,23 +800,23 @@ impl Investments {
             return Err(DomainError::InvestmentPeriodMismatch);
         }
         let net_deposits = NetDeposits::parse(net_deposits)?.value();
-        let previous = self.previous_balance(account_id, period);
+        let previous = self
+            .previous_balance(account_id, period)
+            .unwrap_or_else(zero);
         match input {
             CalculationInput::Balance => {
                 let balance = Balance::parse(value)?.value();
                 Ok(StatementCalculation {
                     balance,
-                    capital_growth: previous
-                        .map(|previous| with_two_decimals(balance - previous - net_deposits)),
+                    capital_growth: with_two_decimals(balance - previous - net_deposits),
                 })
             }
             CalculationInput::Growth => {
-                let previous = previous.ok_or(DomainError::InvestmentGrowthUnavailable)?;
                 let growth = parse_growth(value)?;
                 let balance = Balance::new(previous + net_deposits + growth)?;
                 Ok(StatementCalculation {
                     balance: balance.value(),
-                    capital_growth: Some(growth),
+                    capital_growth: growth,
                 })
             }
         }
@@ -962,15 +961,13 @@ mod tests {
     }
 
     /// The capital growth of the statement of `period`, as text.
-    fn growth(investments: &Investments, id: InvestmentAccountId, period: &str) -> Option<String> {
+    fn growth(investments: &Investments, id: InvestmentAccountId, period: &str) -> String {
         let (_, statement) = investments
             .all_statements()
             .into_iter()
             .find(|(account, statement)| account.id == id && statement.period == month(period))
             .unwrap();
-        investments
-            .capital_growth(statement)
-            .map(|value| value.to_string())
+        investments.capital_growth(statement).to_string()
     }
 
     fn calculate(
@@ -1881,22 +1878,38 @@ mod tests {
     fn test_csd005_ac_23_1_growth_with_a_deposit() {
         let (mut investments, id) = account_with_august();
         add_with_deposits(&mut investments, id, "2026-09", "12500.00", "300.00");
-        assert_eq!(growth(&investments, id, "2026-09").unwrap(), "200.00");
+        assert_eq!(growth(&investments, id, "2026-09"), "200.00");
     }
 
     #[test]
     fn test_csd005_ac_23_2_a_loss_is_a_negative_growth() {
         let (mut investments, id) = account_with_august();
         add(&mut investments, id, "2026-09", "11000.00");
-        assert_eq!(growth(&investments, id, "2026-09").unwrap(), "-1000.00");
+        assert_eq!(growth(&investments, id, "2026-09"), "-1000.00");
     }
 
     #[test]
-    fn test_csd005_ac_23_3_the_first_statement_has_no_growth() {
+    fn test_csd005_ac_23_3_the_first_statement_of_an_account_has_a_growth() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add_with_deposits(&mut investments, id, "2026-09", "1020.00", "1000.00");
+        assert_eq!(growth(&investments, id, "2026-09"), "20.00");
+    }
+
+    #[test]
+    fn test_csd005_ac_23_9_a_first_statement_with_an_existing_balance_and_no_net_deposits() {
         let mut investments = Investments::default();
         let id = add_account(&mut investments, "Example Brokerage", "Monthly");
         add(&mut investments, id, "2026-09", "12500.00");
-        assert_eq!(growth(&investments, id, "2026-09"), None);
+        assert_eq!(growth(&investments, id, "2026-09"), "12500.00");
+    }
+
+    #[test]
+    fn test_csd005_ac_23_10_an_existing_balance_entered_as_net_deposits_gives_no_growth() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add_with_deposits(&mut investments, id, "2026-09", "12500.00", "12500.00");
+        assert_eq!(growth(&investments, id, "2026-09"), "0.00");
     }
 
     #[test]
@@ -1905,7 +1918,7 @@ mod tests {
         let id = add_account(&mut investments, "Example Brokerage", "Monthly");
         add(&mut investments, id, "2026-06", "10000.00");
         add_with_deposits(&mut investments, id, "2026-09", "10900.00", "600.00");
-        assert_eq!(growth(&investments, id, "2026-09").unwrap(), "300.00");
+        assert_eq!(growth(&investments, id, "2026-09"), "300.00");
     }
 
     #[test]
@@ -1914,7 +1927,7 @@ mod tests {
         let id = add_account(&mut investments, "Example Pension", "Yearly");
         add(&mut investments, id, "2024", "70000.00");
         add_with_deposits(&mut investments, id, "2025", "80000.00", "6000.00");
-        assert_eq!(growth(&investments, id, "2025").unwrap(), "4000.00");
+        assert_eq!(growth(&investments, id, "2025"), "4000.00");
     }
 
     #[test]
@@ -1924,7 +1937,8 @@ mod tests {
         let crypto = add_account(&mut investments, "Example Crypto", "Monthly");
         add(&mut investments, crypto, "2026-08", "50.00");
         add(&mut investments, brokerage, "2026-09", "12500.00");
-        assert_eq!(growth(&investments, brokerage, "2026-09"), None);
+        // The other account's statement is not the previous one: the account starts at 0.00.
+        assert_eq!(growth(&investments, brokerage, "2026-09"), "12500.00");
     }
 
     #[test]
@@ -1940,17 +1954,17 @@ mod tests {
                 no_note(),
             )
             .unwrap();
-        assert_eq!(growth(&investments, id, "2026-09").unwrap(), "100.00");
+        assert_eq!(growth(&investments, id, "2026-09"), "100.00");
     }
 
     #[test]
-    fn test_csd005_ac_23_7_a_statement_added_before_the_first_gives_it_a_growth() {
+    fn test_csd005_ac_23_7_a_statement_added_before_the_first_gives_it_a_previous_statement() {
         let mut investments = Investments::default();
         let id = add_account(&mut investments, "Example Brokerage", "Monthly");
         add(&mut investments, id, "2026-09", "12500.00");
-        add(&mut investments, id, "2026-07", "12000.00");
-        assert_eq!(growth(&investments, id, "2026-07"), None);
-        assert_eq!(growth(&investments, id, "2026-09").unwrap(), "500.00");
+        add_with_deposits(&mut investments, id, "2026-07", "12000.00", "12000.00");
+        assert_eq!(growth(&investments, id, "2026-07"), "0.00");
+        assert_eq!(growth(&investments, id, "2026-09"), "500.00");
     }
 
     #[test]
@@ -1961,11 +1975,11 @@ mod tests {
         add(&mut investments, id, "2026-08", "12200.00");
         add(&mut investments, id, "2026-09", "12500.00");
         investments.delete_statement(id, month("2026-08")).unwrap();
-        assert_eq!(growth(&investments, id, "2026-09").unwrap(), "500.00");
+        assert_eq!(growth(&investments, id, "2026-09"), "500.00");
     }
 
     #[test]
-    fn test_csd005_ac_23_9_growth_is_never_stored() {
+    fn test_csd005_ac_24_9_growth_is_never_stored_in_the_file() {
         let (mut investments, id) = account_with_august();
         add_with_deposits(&mut investments, id, "2026-09", "12500.00", "300.00");
         let json = serde_json::to_string(&investments).unwrap();
@@ -1987,7 +2001,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(result.balance.to_string(), "12500.00");
-        assert_eq!(result.capital_growth.unwrap().to_string(), "500.00");
+        assert_eq!(result.capital_growth.to_string(), "500.00");
     }
 
     #[test]
@@ -2003,7 +2017,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(result.balance.to_string(), "12500.00");
-        assert_eq!(result.capital_growth.unwrap().to_string(), "200.00");
+        assert_eq!(result.capital_growth.to_string(), "200.00");
     }
 
     #[test]
@@ -2019,7 +2033,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(result.balance.to_string(), "12500.00");
-        assert_eq!(result.capital_growth.unwrap().to_string(), "200.00");
+        assert_eq!(result.capital_growth.to_string(), "200.00");
     }
 
     #[test]
@@ -2035,7 +2049,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(result.balance.to_string(), "12500.00");
-        assert_eq!(result.capital_growth.unwrap().to_string(), "200.00");
+        assert_eq!(result.capital_growth.to_string(), "200.00");
     }
 
     #[test]
@@ -2054,39 +2068,40 @@ mod tests {
     }
 
     #[test]
-    fn test_csd005_ac_24_7_the_first_statement_has_no_growth_to_calculate() {
+    fn test_csd005_ac_24_7_the_first_statement_gets_a_calculated_growth() {
         let mut investments = Investments::default();
         let id = add_account(&mut investments, "Example Brokerage", "Monthly");
         let result = calculate(
             &investments,
             id,
             "2026-09",
-            "300.00",
+            "1000.00",
             CalculationInput::Balance,
-            "12500.00",
+            "1020.00",
         )
         .unwrap();
-        assert_eq!(result.capital_growth, None);
+        assert_eq!(result.capital_growth.to_string(), "20.00");
     }
 
     #[test]
-    fn test_csd005_ac_24_12_a_growth_without_an_earlier_statement_is_rejected() {
+    fn test_csd005_ac_24_12_a_growth_for_a_first_statement_gives_the_balance() {
         let mut investments = Investments::default();
         let id = add_account(&mut investments, "Example Brokerage", "Monthly");
-        let error = calculate(
+        let result = calculate(
             &investments,
             id,
             "2026-09",
-            "",
+            "1000.00",
             CalculationInput::Growth,
             "200.00",
         )
-        .unwrap_err();
-        assert_eq!(error.code(), "INVESTMENT_GROWTH_UNAVAILABLE");
+        .unwrap();
+        assert_eq!(result.balance.to_string(), "1200.00");
+        assert_eq!(result.capital_growth.to_string(), "200.00");
     }
 
     #[test]
-    fn test_csd005_ac_24_8_a_period_before_all_statements_has_no_growth_to_calculate() {
+    fn test_csd005_ac_24_8_a_period_before_all_statements_calculates_from_zero() {
         let mut investments = Investments::default();
         let id = add_account(&mut investments, "Example Brokerage", "Monthly");
         add(&mut investments, id, "2026-09", "12500.00");
@@ -2094,12 +2109,12 @@ mod tests {
             &investments,
             id,
             "2026-07",
-            "",
-            CalculationInput::Balance,
-            "12000.00",
+            "1000.00",
+            CalculationInput::Growth,
+            "20.00",
         )
         .unwrap();
-        assert_eq!(result.capital_growth, None);
+        assert_eq!(result.balance.to_string(), "1020.00");
     }
 
     #[test]
@@ -2133,7 +2148,7 @@ mod tests {
             "12500.00",
         )
         .unwrap();
-        assert_eq!(result.capital_growth.unwrap().to_string(), "200.00");
+        assert_eq!(result.capital_growth.to_string(), "200.00");
     }
 
     #[test]
@@ -2150,7 +2165,7 @@ mod tests {
                 "80000.00",
             )
             .unwrap();
-        assert_eq!(result.capital_growth.unwrap().to_string(), "4000.00");
+        assert_eq!(result.capital_growth.to_string(), "4000.00");
     }
 
     #[test]
@@ -2309,14 +2324,14 @@ mod tests {
     fn test_csd005_ac_26_1_totals_per_calendar_year() {
         let mut investments = Investments::default();
         let id = add_account(&mut investments, "Example Brokerage", "Monthly");
-        add(&mut investments, id, "2025-11", "11000.00");
+        add_with_deposits(&mut investments, id, "2025-11", "11000.00", "11000.00");
         add_with_deposits(&mut investments, id, "2025-12", "11500.00", "200.00");
         add_with_deposits(&mut investments, id, "2026-05", "12500.00", "300.00");
         assert_eq!(
             yearly(&investments),
             [
                 row(2026, "12500.00", "300.00", "700.00", 1),
-                row(2025, "11500.00", "200.00", "300.00", 2),
+                row(2025, "11500.00", "11200.00", "300.00", 2),
             ]
         );
     }
@@ -2334,12 +2349,18 @@ mod tests {
         let mut investments = Investments::default();
         let brokerage = add_account(&mut investments, "Example Brokerage", "Monthly");
         let crypto = add_account(&mut investments, "Example Crypto", "Monthly");
-        add(&mut investments, brokerage, "2026-08", "12000.00");
+        add_with_deposits(
+            &mut investments,
+            brokerage,
+            "2026-08",
+            "12000.00",
+            "12000.00",
+        );
         add_with_deposits(&mut investments, brokerage, "2026-09", "12500.00", "300.00");
-        add(&mut investments, crypto, "2026-09", "500.00");
+        add_with_deposits(&mut investments, crypto, "2026-09", "500.00", "500.00");
         assert_eq!(
             yearly(&investments),
-            [row(2026, "13000.00", "300.00", "200.00", 3)]
+            [row(2026, "13000.00", "12800.00", "200.00", 3)]
         );
     }
 
@@ -2357,14 +2378,20 @@ mod tests {
         let mut investments = Investments::default();
         let brokerage = add_account(&mut investments, "Example Brokerage", "Monthly");
         let pension = add_account(&mut investments, "Example Pension", "Yearly");
-        add(&mut investments, brokerage, "2025-12", "12000.00");
-        add(&mut investments, pension, "2024", "70000.00");
+        add_with_deposits(
+            &mut investments,
+            brokerage,
+            "2025-12",
+            "12000.00",
+            "12000.00",
+        );
+        add_with_deposits(&mut investments, pension, "2024", "70000.00", "70000.00");
         add_with_deposits(&mut investments, pension, "2025", "80000.00", "6000.00");
         assert_eq!(
             yearly(&investments),
             [
-                row(2025, "92000.00", "6000.00", "4000.00", 2),
-                row(2024, "70000.00", "0.00", "0.00", 1),
+                row(2025, "92000.00", "18000.00", "4000.00", 2),
+                row(2024, "70000.00", "70000.00", "0.00", 1),
             ]
         );
     }
@@ -2386,11 +2413,22 @@ mod tests {
     fn test_csd005_ac_26_7_growth_after_a_gap_counts_in_the_later_year() {
         let mut investments = Investments::default();
         let id = add_account(&mut investments, "Example Brokerage", "Monthly");
-        add(&mut investments, id, "2025-12", "12000.00");
+        add_with_deposits(&mut investments, id, "2025-12", "12000.00", "12000.00");
         add_with_deposits(&mut investments, id, "2026-03", "12500.00", "100.00");
         let totals = yearly(&investments);
         assert_eq!(totals[0].3, "400.00");
         assert_eq!(totals[1].3, "0.00");
+    }
+
+    #[test]
+    fn test_csd005_ac_26_11_a_first_statement_adds_its_growth() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add_with_deposits(&mut investments, id, "2026-03", "1020.00", "1000.00");
+        assert_eq!(
+            yearly(&investments),
+            [row(2026, "1020.00", "1000.00", "20.00", 1)]
+        );
     }
 
     #[test]
@@ -2410,11 +2448,11 @@ mod tests {
     fn test_csd005_ac_26_9_a_new_statement_updates_the_totals() {
         let mut investments = Investments::default();
         let id = add_account(&mut investments, "Example Brokerage", "Monthly");
-        add(&mut investments, id, "2026-09", "12500.00");
+        add_with_deposits(&mut investments, id, "2026-09", "12500.00", "12500.00");
         add_with_deposits(&mut investments, id, "2026-10", "13000.00", "100.00");
         assert_eq!(
             yearly(&investments),
-            [row(2026, "13000.00", "100.00", "400.00", 2)]
+            [row(2026, "13000.00", "12600.00", "400.00", 2)]
         );
     }
 
@@ -2447,34 +2485,31 @@ mod tests {
             .unwrap()
     }
 
-    /// `(opening, new accounts, net deposits, growth, closing)` as text, after
-    /// checking that the parts add up to the closing balance (REQ-5).
-    fn parts(row: &InvestmentInsightsYear) -> (String, String, String, String, String) {
+    /// `(opening, net deposits, growth, closing)` as text, after checking that
+    /// the parts add up to the closing balance (REQ-5).
+    fn parts(row: &InvestmentInsightsYear) -> (String, String, String, String) {
         assert_eq!(
-            row.opening_balance + row.new_accounts + row.net_deposits + row.capital_growth,
+            row.opening_balance + row.net_deposits + row.capital_growth,
             row.closing_balance,
             "the parts of {} do not add up",
             row.year
         );
         (
             row.opening_balance.to_string(),
-            row.new_accounts.to_string(),
             row.net_deposits.to_string(),
             row.capital_growth.to_string(),
             row.closing_balance.to_string(),
         )
     }
 
-    fn five(
+    fn four(
         opening: &str,
-        new_accounts: &str,
         net_deposits: &str,
         growth: &str,
         closing: &str,
-    ) -> (String, String, String, String, String) {
+    ) -> (String, String, String, String) {
         (
             opening.to_owned(),
-            new_accounts.to_owned(),
             net_deposits.to_owned(),
             growth.to_owned(),
             closing.to_owned(),
@@ -2521,7 +2556,7 @@ mod tests {
         add(&mut investments, id, "2024-06", "1200.00");
         assert_eq!(insight_years(&investments), [2022, 2023, 2024, 2025, 2026]);
         let gap = insight(&investments, 2023);
-        assert_eq!(parts(&gap), five("0.00", "0.00", "0.00", "0.00", "0.00"));
+        assert_eq!(parts(&gap), four("0.00", "0.00", "0.00", "0.00"));
         assert_eq!(gap.statement_count, 0);
     }
 
@@ -2534,7 +2569,7 @@ mod tests {
         assert_eq!(insight(&investments, 2025).statement_count, 0);
         assert_eq!(
             parts(&insight(&investments, 2026)),
-            five("10000.00", "0.00", "500.00", "500.00", "11000.00")
+            four("10000.00", "500.00", "500.00", "11000.00")
         );
     }
 
@@ -2563,16 +2598,16 @@ mod tests {
     fn test_csd007_ac_5_1_the_parts_of_a_year() {
         let mut investments = Investments::default();
         let id = add_account(&mut investments, "Example Brokerage", "Monthly");
-        add(&mut investments, id, "2025-11", "11000.00");
+        add_with_deposits(&mut investments, id, "2025-11", "11000.00", "11000.00");
         add_with_deposits(&mut investments, id, "2025-12", "11500.00", "200.00");
         add_with_deposits(&mut investments, id, "2026-05", "12500.00", "300.00");
         assert_eq!(
             parts(&insight(&investments, 2025)),
-            five("0.00", "11000.00", "200.00", "300.00", "11500.00")
+            four("0.00", "11200.00", "300.00", "11500.00")
         );
         assert_eq!(
             parts(&insight(&investments, 2026)),
-            five("11500.00", "0.00", "300.00", "700.00", "12500.00")
+            four("11500.00", "300.00", "700.00", "12500.00")
         );
     }
 
@@ -2581,12 +2616,18 @@ mod tests {
         let mut investments = Investments::default();
         let brokerage = add_account(&mut investments, "Example Brokerage", "Monthly");
         let crypto = add_account(&mut investments, "Example Crypto", "Monthly");
-        add(&mut investments, brokerage, "2025-12", "12000.00");
+        add_with_deposits(
+            &mut investments,
+            brokerage,
+            "2025-12",
+            "12000.00",
+            "12000.00",
+        );
         add_with_deposits(&mut investments, brokerage, "2026-03", "12600.00", "100.00");
         add_with_deposits(&mut investments, crypto, "2026-03", "500.00", "400.00");
         assert_eq!(
             parts(&insight(&investments, 2026)),
-            five("12000.00", "100.00", "500.00", "500.00", "13100.00")
+            four("12000.00", "500.00", "600.00", "13100.00")
         );
     }
 
@@ -2595,16 +2636,22 @@ mod tests {
         let mut investments = Investments::default();
         let brokerage = add_account(&mut investments, "Example Brokerage", "Monthly");
         let pension = add_account(&mut investments, "Example Pension", "Yearly");
-        add(&mut investments, brokerage, "2025-12", "12000.00");
+        add_with_deposits(
+            &mut investments,
+            brokerage,
+            "2025-12",
+            "12000.00",
+            "12000.00",
+        );
         add(&mut investments, brokerage, "2026-03", "12500.00");
-        add(&mut investments, pension, "2025", "80000.00");
+        add_with_deposits(&mut investments, pension, "2025", "80000.00", "80000.00");
         assert_eq!(
             parts(&insight(&investments, 2025)),
-            five("0.00", "92000.00", "0.00", "0.00", "92000.00")
+            four("0.00", "92000.00", "0.00", "92000.00")
         );
         assert_eq!(
             parts(&insight(&investments, 2026)),
-            five("12000.00", "0.00", "0.00", "500.00", "12500.00")
+            four("12000.00", "0.00", "500.00", "12500.00")
         );
     }
 
@@ -2612,25 +2659,31 @@ mod tests {
     fn test_csd007_ac_5_4_a_net_withdrawal_and_a_loss() {
         let mut investments = Investments::default();
         let id = add_account(&mut investments, "Example Brokerage", "Monthly");
-        add(&mut investments, id, "2025-12", "12000.00");
+        add_with_deposits(&mut investments, id, "2025-12", "12000.00", "12000.00");
         add_with_deposits(&mut investments, id, "2026-03", "11000.00", "-500.00");
         assert_eq!(
             parts(&insight(&investments, 2026)),
-            five("12000.00", "0.00", "-500.00", "-500.00", "11000.00")
+            four("12000.00", "-500.00", "-500.00", "11000.00")
         );
     }
 
     #[test]
-    fn test_csd007_ac_5_5_net_deposits_and_closing_balance_equal_the_yearly_totals() {
+    fn test_csd007_ac_5_5_closing_balance_net_deposits_and_growth_equal_the_yearly_totals() {
         let mut investments = Investments::default();
         let brokerage = add_account(&mut investments, "Example Brokerage", "Monthly");
         let crypto = add_account(&mut investments, "Example Crypto", "Monthly");
         let pension = add_account(&mut investments, "Example Pension", "Yearly");
-        add(&mut investments, brokerage, "2025-11", "11000.00");
+        add_with_deposits(
+            &mut investments,
+            brokerage,
+            "2025-11",
+            "11000.00",
+            "11000.00",
+        );
         add_with_deposits(&mut investments, brokerage, "2025-12", "11500.00", "200.00");
         add_with_deposits(&mut investments, brokerage, "2026-03", "12600.00", "100.00");
         add_with_deposits(&mut investments, crypto, "2026-03", "500.00", "400.00");
-        add(&mut investments, pension, "2024", "70000.00");
+        add_with_deposits(&mut investments, pension, "2024", "70000.00", "70000.00");
         add_with_deposits(&mut investments, pension, "2025", "80000.00", "6000.00");
         for total in investments.yearly_totals() {
             let row = insight(&investments, total.year);
@@ -2639,6 +2692,17 @@ mod tests {
             assert_eq!(row.capital_growth, total.capital_growth, "{}", total.year);
             parts(&row);
         }
+    }
+
+    #[test]
+    fn test_csd007_ac_5_6_a_first_statement_has_growth_and_net_deposits() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add_with_deposits(&mut investments, id, "2026-03", "1020.00", "1000.00");
+        assert_eq!(
+            parts(&insight(&investments, 2026)),
+            four("0.00", "1000.00", "20.00", "1020.00")
+        );
     }
 
     #[test]
@@ -2651,7 +2715,7 @@ mod tests {
         ] {
             let mut investments = Investments::default();
             let id = add_account(&mut investments, "Example Brokerage", "Monthly");
-            add(&mut investments, id, "2024-12", opening);
+            add_with_deposits(&mut investments, id, "2024-12", opening, opening);
             add(&mut investments, id, "2025-12", closing);
             assert_eq!(
                 percent_of(&investments, 2025).as_deref(),
@@ -2659,6 +2723,27 @@ mod tests {
                 "{opening} -> {closing}"
             );
         }
+    }
+
+    #[test]
+    fn test_csd007_ac_6_2_growth_of_an_account_without_an_opening_balance_is_left_out() {
+        let mut investments = Investments::default();
+        let brokerage = add_account(&mut investments, "Example Brokerage", "Monthly");
+        let crypto = add_account(&mut investments, "Example Crypto", "Monthly");
+        add_with_deposits(
+            &mut investments,
+            brokerage,
+            "2025-12",
+            "12000.00",
+            "12000.00",
+        );
+        add_with_deposits(&mut investments, brokerage, "2026-03", "12600.00", "100.00");
+        add_with_deposits(&mut investments, crypto, "2026-03", "500.00", "400.00");
+        assert_eq!(
+            insight(&investments, 2026).capital_growth.to_string(),
+            "600.00"
+        );
+        assert_eq!(percent_of(&investments, 2026).as_deref(), Some("4.2"));
     }
 
     #[test]
@@ -2683,7 +2768,7 @@ mod tests {
     fn test_csd007_ac_7_3_the_current_year_has_a_percentage() {
         let mut investments = Investments::default();
         let id = add_account(&mut investments, "Example Brokerage", "Monthly");
-        add(&mut investments, id, "2025-12", "12500.00");
+        add_with_deposits(&mut investments, id, "2025-12", "12500.00", "12500.00");
         add(&mut investments, id, "2026-05", "12750.00");
         assert_eq!(percent_of(&investments, 2026).as_deref(), Some("2.0"));
         assert!(insight(&investments, 2026).is_partial);

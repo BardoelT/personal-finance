@@ -100,8 +100,6 @@ pub enum DomainError {
     InvestmentGrowthPrecision,
     #[error("Capital growth can be at most 1000000000.00, or -1000000000.00.")]
     InvestmentGrowthTooLarge,
-    #[error("There is no earlier statement, so there is no capital growth to enter.")]
-    InvestmentGrowthUnavailable,
     #[error("The investment data is not consistent.")]
     InvestmentDataInvalid,
 }
@@ -157,7 +155,6 @@ impl DomainError {
             Self::InvestmentGrowthInvalid => "INVESTMENT_GROWTH_INVALID",
             Self::InvestmentGrowthPrecision => "INVESTMENT_GROWTH_PRECISION",
             Self::InvestmentGrowthTooLarge => "INVESTMENT_GROWTH_TOO_LARGE",
-            Self::InvestmentGrowthUnavailable => "INVESTMENT_GROWTH_UNAVAILABLE",
             Self::InvestmentDataInvalid => "INVESTMENT_DATA_INVALID",
         }
     }

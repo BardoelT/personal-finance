@@ -885,7 +885,7 @@ fn test_csd005_ac_17_8_net_deposits_and_capital_growth_over_ipc() {
     assert_eq!(rows[0]["capital_growth"], "200.00");
     assert_eq!(rows[1]["period"], "2026-08");
     assert_eq!(rows[1]["net_deposits"], "0.00");
-    assert_eq!(rows[1]["capital_growth"], Value::Null);
+    assert_eq!(rows[1]["capital_growth"], "12000.00");
 
     // AC-21.4: edit the net deposits; the growth follows.
     let edited = app.ok(
@@ -1008,7 +1008,7 @@ fn test_csd005_ac_26_yearly_totals_over_ipc() {
     let id = account["id"].as_str().unwrap();
     app.ok(
         "add_investment_statement",
-        json!({ "accountId": id, "period": "2025-12", "balance": "11500.00" }),
+        json!({ "accountId": id, "period": "2025-12", "balance": "11500.00", "netDeposits": "11500.00" }),
     );
     app.ok(
         "add_investment_statement",
@@ -1020,7 +1020,7 @@ fn test_csd005_ac_26_yearly_totals_over_ipc() {
         json!([
             { "year": 2026, "closing_balance": "12500.00", "net_deposits": "300.00",
               "capital_growth": "700.00", "statement_count": 1 },
-            { "year": 2025, "closing_balance": "11500.00", "net_deposits": "0.00",
+            { "year": 2025, "closing_balance": "11500.00", "net_deposits": "11500.00",
               "capital_growth": "0.00", "statement_count": 1 },
         ])
     );
@@ -1041,7 +1041,7 @@ fn test_csd007_investment_insights_over_ipc() {
     let id = account["id"].as_str().unwrap();
     app.ok(
         "add_investment_statement",
-        json!({ "accountId": id, "period": "2025-11", "balance": "11000.00" }),
+        json!({ "accountId": id, "period": "2025-11", "balance": "11000.00", "netDeposits": "11000.00" }),
     );
     app.ok(
         "add_investment_statement",
@@ -1055,8 +1055,7 @@ fn test_csd007_investment_insights_over_ipc() {
         json!({
             "year": 2025,
             "opening_balance": "0.00",
-            "new_accounts": "11000.00",
-            "net_deposits": "200.00",
+            "net_deposits": "11200.00",
             "capital_growth": "300.00",
             "growth_percent": null,
             "closing_balance": "11500.00",

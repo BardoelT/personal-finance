@@ -99,7 +99,7 @@ function renderStatements(statements) {
         h('td', { class: 'wrap' }, s.account_name),
         h('td', { class: 'num' }, formatAmount(s.balance)),
         h('td', { class: 'num' }, formatAmount(s.net_deposits)),
-        h('td', { class: 'num' }, s.capital_growth === null ? '—' : formatAmount(s.capital_growth)),
+        h('td', { class: 'num' }, formatAmount(s.capital_growth)),
         h('td', { class: 'note-cell' }, noteSummary(s.note)),
         h(
           'td',
@@ -242,10 +242,11 @@ function periodLooksComplete(period) {
 }
 
 /**
- * The growth field is disabled while there is no earlier statement (REQ-24).
- * This only switches the field off; Rust calculates every figure.
+ * Shows the note while the account has no statement before the chosen period:
+ * it is taken to start at 0.00 (CSD-005 REQ-27). The note is only a hint;
+ * Rust calculates every figure.
  */
-function applyGrowthAvailability() {
+function updateEarlierNote() {
   const form = $('statement-form');
   const period = form.elements.period.value.trim();
   const accountId = form.elements.account_id.value;
@@ -253,13 +254,7 @@ function applyGrowthAvailability() {
   const hasEarlier = periodLooksComplete(period)
     ? others.some((s) => s.period < period)
     : others.length > 0;
-  form.elements.growth.disabled = !hasEarlier;
   $('statement-growth-hint').hidden = hasEarlier;
-  if (!hasEarlier) {
-    form.elements.growth.value = '';
-    $('growth-calculated').hidden = true;
-  }
-  return hasEarlier;
 }
 
 function markCalculated(field) {
@@ -271,14 +266,13 @@ function markCalculated(field) {
 async function recalculate() {
   const form = $('statement-form');
   const run = ++calculationRun;
-  const hasEarlier = applyGrowthAvailability();
-  const source = hasEarlier ? typedField : 'balance';
+  updateEarlierNote();
+  const source = typedField;
   const target = source === 'balance' ? 'growth' : 'balance';
   const value = form.elements[source].value;
   $('statement-error').hidden = true;
-  if (!hasEarlier && source === 'balance') markCalculated(null);
   if (!periodLooksComplete(form.elements.period.value.trim()) || value.trim() === '') {
-    if (hasEarlier || target === 'balance') form.elements[target].value = '';
+    form.elements[target].value = '';
     markCalculated(null);
     return;
   }
@@ -292,11 +286,11 @@ async function recalculate() {
     });
     if (run !== calculationRun) return; // a newer calculation is under way
     if (target === 'growth') {
-      form.elements.growth.value = result.capital_growth ?? '';
+      form.elements.growth.value = result.capital_growth;
     } else {
       form.elements.balance.value = result.balance;
     }
-    markCalculated(target === 'growth' && !hasEarlier ? null : target);
+    markCalculated(target);
   } catch (error) {
     if (run !== calculationRun) return;
     form.elements[target].value = '';
