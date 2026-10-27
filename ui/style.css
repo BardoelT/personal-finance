@@ -17,6 +17,7 @@
   --negative: #dc2626;
   --accent: #4361ee;
   --series-salary: #4361ee; --series-holiday: #0d9488; --series-bonus: #d97706;
+  --series-opening: #4361ee; --series-new: #94a3b8; --series-deposits: #0d9488; --positive: #16a34a;
   --tag-expense-bg: #fee2e2; --tag-expense-fg: #b91c1c;
 }
 
@@ -27,6 +28,7 @@
     --text: #e2e8f0; --muted: #8892b0; --border: rgba(255,255,255,.08);
       --tag-expense-bg: rgba(220,38,38,.2); --tag-expense-fg: #f87171;
     --series-salary: #7b93ff; --series-holiday: #2dd4bf; --series-bonus: #fbbf24;
+    --series-opening: #7b93ff; --series-new: #64748b; --series-deposits: #2dd4bf; --positive: #4ade80;
     color-scheme: dark;
   }
 }
@@ -37,6 +39,7 @@
   --text: #e2e8f0; --muted: #8892b0; --border: rgba(255,255,255,.08);
   --tag-expense-bg: rgba(220,38,38,.2); --tag-expense-fg: #f87171;
   --series-salary: #7b93ff; --series-holiday: #2dd4bf; --series-bonus: #fbbf24;
+  --series-opening: #7b93ff; --series-new: #64748b; --series-deposits: #2dd4bf; --positive: #4ade80;
   color-scheme: dark;
 }
 
@@ -485,3 +488,26 @@ dialog p { font-size: 13.5px; line-height: 1.5; color: var(--muted); }
 .chart-tooltip dt { color: var(--muted); }
 .chart-tooltip dd { text-align: right; font-variant-numeric: tabular-nums; }
 .chart-tooltip dd.negative { color: var(--negative); }
+
+/* ── Investment insights (CSD-007) ── */
+
+.swatch.opening, .bar-opening { background: var(--series-opening); fill: var(--series-opening); }
+.swatch.new-accounts, .bar-new { background: var(--series-new); fill: var(--series-new); }
+.swatch.deposits, .bar-deposits { background: var(--series-deposits); fill: var(--series-deposits); }
+.swatch.growth-up, .bar-growth-up { background: var(--positive); fill: var(--positive); }
+.swatch.growth-down, .bar-growth-down { background: var(--negative); fill: var(--negative); }
+.swatch.marker { width: 14px; height: 0; border-radius: 0; border-top: 3px solid var(--text); }
+.chart-inner .bar-opening, .chart-inner .bar-new, .chart-inner .bar-deposits,
+.chart-inner .bar-growth-up, .chart-inner .bar-growth-down { background: none; stroke: var(--card-bg); stroke-width: 1; }
+.chart-inner .bar-deposits.withdrawal { fill: url(#hatch-deposits); stroke: var(--series-deposits); }
+.chart-inner .partial .bar-opening, .chart-inner .partial .bar-new, .chart-inner .partial .bar-deposits,
+.chart-inner .partial .bar-growth-up, .chart-inner .partial .bar-growth-down { opacity: .55; }
+.hatch-fill { fill: var(--series-deposits); opacity: .35; }
+.hatch-line { stroke: var(--series-deposits); stroke-width: 2; }
+.chart-zero { stroke: var(--muted); stroke-width: 1; }
+.chart-marker { stroke: var(--text); stroke-width: 3; stroke-linecap: butt; }
+.partial .chart-marker { stroke-dasharray: 5 3; }
+.chart-marker-label { fill: var(--text); font-size: 11px; font-weight: 600; text-anchor: middle; font-variant-numeric: tabular-nums;
+  paint-order: stroke; stroke: var(--card-bg); stroke-width: 3px; stroke-linejoin: round; }
+.chart-percent { fill: var(--muted); font-size: 11px; font-weight: 600; text-anchor: middle; font-variant-numeric: tabular-nums; }
+.chart-percent.negative { fill: var(--negative); }

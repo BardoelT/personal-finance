@@ -1025,3 +1025,45 @@ fn test_csd005_ac_26_yearly_totals_over_ipc() {
         ])
     );
 }
+
+#[test]
+fn test_csd007_investment_insights_over_ipc() {
+    let app = harness();
+    // AC-2.3: no statements, no series.
+    assert_eq!(
+        app.ok("get_investment_insights", json!({})),
+        json!({ "years": [] })
+    );
+    let account = app.ok(
+        "create_investment_account",
+        json!({ "input": account_input("Example Brokerage", "Monthly") }),
+    );
+    let id = account["id"].as_str().unwrap();
+    app.ok(
+        "add_investment_statement",
+        json!({ "accountId": id, "period": "2025-11", "balance": "11000.00" }),
+    );
+    app.ok(
+        "add_investment_statement",
+        json!({ "accountId": id, "period": "2025-12", "balance": "11500.00", "netDeposits": "200.00" }),
+    );
+    let insights = app.ok("get_investment_insights", json!({}));
+    let years = insights["years"].as_array().unwrap();
+    // The series runs up to the real current year, so look at 2025 only.
+    assert_eq!(
+        years[0],
+        json!({
+            "year": 2025,
+            "opening_balance": "0.00",
+            "new_accounts": "11000.00",
+            "net_deposits": "200.00",
+            "capital_growth": "300.00",
+            "growth_percent": null,
+            "closing_balance": "11500.00",
+            "statement_count": 2,
+            "is_partial": false
+        })
+    );
+    assert!(years.len() >= 2);
+    assert_eq!(years.last().unwrap()["is_partial"], true);
+}

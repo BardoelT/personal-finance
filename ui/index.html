@@ -214,6 +214,12 @@
         </div>
 
         <div id="investments-content" hidden>
+          <div class="tabs" role="tablist" aria-label="Investment views">
+            <button type="button" class="tab" role="tab" id="investments-tab-overview" aria-controls="investments-overview" aria-selected="true">Overview</button>
+            <button type="button" class="tab" role="tab" id="investments-tab-insights" aria-controls="investments-insights" aria-selected="false" tabindex="-1">Insights</button>
+          </div>
+
+          <div id="investments-overview" role="tabpanel" aria-labelledby="investments-tab-overview">
           <div class="panel">
             <div class="panel-header">
               <span class="panel-title">Accounts</span>
@@ -267,6 +273,27 @@
                 </thead>
                 <tbody id="statements-rows"></tbody>
               </table>
+            </div>
+          </div>
+          </div>
+
+          <div id="investments-insights" role="tabpanel" aria-labelledby="investments-tab-insights" hidden>
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title">Investments per year</span>
+                <ul class="legend" id="investment-insights-legend" aria-label="Legend">
+                  <li><span class="swatch opening"></span>Opening balance</li>
+                  <li><span class="swatch new-accounts"></span>New accounts</li>
+                  <li><span class="swatch deposits"></span>Net deposits</li>
+                  <li><span class="swatch growth-up"></span>Capital growth (gain)</li>
+                  <li><span class="swatch growth-down"></span>Capital growth (loss)</li>
+                  <li><span class="swatch marker"></span>Closing balance</li>
+                </ul>
+              </div>
+              <p class="empty-note" id="investment-insights-empty" hidden>No statements yet. The chart appears once there is a statement.</p>
+              <div class="chart-scroll" id="investment-insights-scroll" hidden>
+                <div class="chart-inner" id="investment-insights-chart"></div>
+              </div>
             </div>
           </div>
         </div>

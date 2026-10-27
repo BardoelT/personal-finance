@@ -3,7 +3,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;
 
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, RoundingStrategy};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
 
@@ -359,6 +359,38 @@ pub struct InvestmentYearlyTotal {
     pub statement_count: usize,
 }
 
+/// One year of the insights chart: the parts of the closing balance, whether
+/// the year is still running and its growth percentage (CSD-007).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct InvestmentInsightsYear {
+    pub year: i32,
+    pub opening_balance: Decimal,
+    pub new_accounts: Decimal,
+    pub net_deposits: Decimal,
+    pub capital_growth: Decimal,
+    /// Capital growth in percent of the opening balance, one decimal; `None`
+    /// when the opening balance is zero.
+    pub growth_percent: Option<Decimal>,
+    pub closing_balance: Decimal,
+    pub statement_count: usize,
+    pub is_partial: bool,
+}
+
+/// Capital growth in percent of the opening balance, to one decimal with
+/// banker's rounding (CSD-007 REQ-6). `None` when the opening balance is zero.
+fn growth_percent(growth: Decimal, opening: Decimal) -> Option<Decimal> {
+    let percent = growth
+        .checked_mul(Decimal::ONE_HUNDRED)?
+        .checked_div(opening)?;
+    let mut rounded = percent.round_dp_with_strategy(1, RoundingStrategy::MidpointNearestEven);
+    if rounded.is_zero() {
+        // A decrease that rounds to zero shows no sign.
+        rounded = Decimal::ZERO;
+    }
+    rounded.rescale(1);
+    Some(rounded)
+}
+
 /// Which of balance and capital growth the user typed in the statement form
 /// (CSD-005 REQ-24).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
@@ -641,6 +673,87 @@ impl Investments {
             .rev()
             .map(|(year, statements)| self.year_total(year, &statements))
             .collect()
+    }
+
+    /// One figure set per calendar year from the first statement up to and
+    /// including the current year, oldest first (CSD-007). Years without
+    /// statements are zero. The current year is partial. Statements after the
+    /// current year, which only a project file can contain, are not shown.
+    #[must_use]
+    pub fn insights(&self, today: YearMonth) -> Vec<InvestmentInsightsYear> {
+        let totals: BTreeMap<i32, InvestmentYearlyTotal> = self
+            .yearly_totals()
+            .into_iter()
+            .map(|total| (total.year, total))
+            .collect();
+        let Some(&first) = totals.keys().next() else {
+            return Vec::new();
+        };
+        (first..=today.year())
+            .map(|year| {
+                let (net_deposits, capital_growth, closing_balance, statement_count) =
+                    totals.get(&year).map_or_else(
+                        || (zero(), zero(), zero(), 0),
+                        |total| {
+                            (
+                                total.net_deposits,
+                                total.capital_growth,
+                                total.closing_balance,
+                                total.statement_count,
+                            )
+                        },
+                    );
+                let opening_balance = self.opening_balance(year);
+                InvestmentInsightsYear {
+                    year,
+                    opening_balance,
+                    new_accounts: self.new_accounts(year),
+                    net_deposits,
+                    capital_growth,
+                    growth_percent: growth_percent(capital_growth, opening_balance),
+                    closing_balance,
+                    statement_count,
+                    is_partial: year == today.year(),
+                }
+            })
+            .collect()
+    }
+
+    /// The balance a year opens with: for each account with a statement in
+    /// the year, its latest balance before the year (CSD-007 section 3).
+    fn opening_balance(&self, year: i32) -> Decimal {
+        self.accounts
+            .iter()
+            .filter(|account| {
+                self.statements
+                    .iter()
+                    .any(|s| s.account_id == account.id && s.period.year() == year)
+            })
+            .filter_map(|account| {
+                self.statements
+                    .iter()
+                    .filter(|s| s.account_id == account.id && s.period.year() < year)
+                    .max_by_key(|s| s.period.sort_key())
+                    .map(|s| s.balance.value())
+            })
+            .fold(zero(), |sum, balance| sum + balance)
+    }
+
+    /// The starting balances of accounts whose first statement falls in the
+    /// year: that statement's balance minus its net deposits (CSD-007).
+    fn new_accounts(&self, year: i32) -> Decimal {
+        self.accounts
+            .iter()
+            .filter_map(|account| {
+                self.statements
+                    .iter()
+                    .filter(|s| s.account_id == account.id)
+                    .min_by_key(|s| s.period.sort_key())
+            })
+            .filter(|first| first.period.year() == year)
+            .fold(zero(), |sum, first| {
+                sum + first.balance.value() - first.net_deposits.value()
+            })
     }
 
     fn year_total(&self, year: i32, statements: &[&Statement]) -> InvestmentYearlyTotal {
@@ -2314,6 +2427,289 @@ mod tests {
         }
         let years: Vec<i32> = yearly(&investments).iter().map(|row| row.0).collect();
         assert_eq!(years, [2026, 2025, 2024]);
+    }
+
+    // ---- CSD-007: investment insights ----
+
+    fn insight_years(investments: &Investments) -> Vec<i32> {
+        investments
+            .insights(today())
+            .iter()
+            .map(|row| row.year)
+            .collect()
+    }
+
+    fn insight(investments: &Investments, year: i32) -> InvestmentInsightsYear {
+        investments
+            .insights(today())
+            .into_iter()
+            .find(|row| row.year == year)
+            .unwrap()
+    }
+
+    /// `(opening, new accounts, net deposits, growth, closing)` as text, after
+    /// checking that the parts add up to the closing balance (REQ-5).
+    fn parts(row: &InvestmentInsightsYear) -> (String, String, String, String, String) {
+        assert_eq!(
+            row.opening_balance + row.new_accounts + row.net_deposits + row.capital_growth,
+            row.closing_balance,
+            "the parts of {} do not add up",
+            row.year
+        );
+        (
+            row.opening_balance.to_string(),
+            row.new_accounts.to_string(),
+            row.net_deposits.to_string(),
+            row.capital_growth.to_string(),
+            row.closing_balance.to_string(),
+        )
+    }
+
+    fn five(
+        opening: &str,
+        new_accounts: &str,
+        net_deposits: &str,
+        growth: &str,
+        closing: &str,
+    ) -> (String, String, String, String, String) {
+        (
+            opening.to_owned(),
+            new_accounts.to_owned(),
+            net_deposits.to_owned(),
+            growth.to_owned(),
+            closing.to_owned(),
+        )
+    }
+
+    fn percent_of(investments: &Investments, year: i32) -> Option<String> {
+        insight(investments, year)
+            .growth_percent
+            .map(|percent| percent.to_string())
+    }
+
+    #[test]
+    fn test_csd007_ac_2_1_the_series_runs_from_the_first_statement_to_the_current_year() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add(&mut investments, id, "2024-03", "1000.00");
+        add(&mut investments, id, "2025-05", "1100.00");
+        add(&mut investments, id, "2026-09", "1200.00");
+        assert_eq!(insight_years(&investments), [2024, 2025, 2026]);
+    }
+
+    #[test]
+    fn test_csd007_ac_2_2_a_single_year() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add(&mut investments, id, "2026-09", "1000.00");
+        assert_eq!(insight_years(&investments), [2026]);
+    }
+
+    #[test]
+    fn test_csd007_ac_2_3_no_statements_give_no_series() {
+        let mut investments = Investments::default();
+        assert_eq!(insight_years(&investments), Vec::<i32>::new());
+        add_account(&mut investments, "Example Brokerage", "Monthly");
+        assert_eq!(insight_years(&investments), Vec::<i32>::new());
+    }
+
+    #[test]
+    fn test_csd007_ac_3_1_a_gap_year_is_zero() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add(&mut investments, id, "2022-06", "1000.00");
+        add(&mut investments, id, "2024-06", "1200.00");
+        assert_eq!(insight_years(&investments), [2022, 2023, 2024, 2025, 2026]);
+        let gap = insight(&investments, 2023);
+        assert_eq!(parts(&gap), five("0.00", "0.00", "0.00", "0.00", "0.00"));
+        assert_eq!(gap.statement_count, 0);
+    }
+
+    #[test]
+    fn test_csd007_ac_3_2_the_year_after_a_gap_opens_with_the_balance_from_before_it() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add(&mut investments, id, "2024-12", "10000.00");
+        add_with_deposits(&mut investments, id, "2026-06", "11000.00", "500.00");
+        assert_eq!(insight(&investments, 2025).statement_count, 0);
+        assert_eq!(
+            parts(&insight(&investments, 2026)),
+            five("10000.00", "0.00", "500.00", "500.00", "11000.00")
+        );
+    }
+
+    #[test]
+    fn test_csd007_ac_4_1_the_current_year_is_partial() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add(&mut investments, id, "2025-05", "1000.00");
+        add(&mut investments, id, "2026-05", "1100.00");
+        assert!(insight(&investments, 2026).is_partial);
+        assert!(!insight(&investments, 2025).is_partial);
+    }
+
+    #[test]
+    fn test_csd007_ac_4_2_a_current_year_without_statements_is_still_listed() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add(&mut investments, id, "2025-12", "1000.00");
+        assert_eq!(insight_years(&investments), [2025, 2026]);
+        let current = insight(&investments, 2026);
+        assert!(current.is_partial);
+        assert_eq!(current.statement_count, 0);
+    }
+
+    #[test]
+    fn test_csd007_ac_5_1_the_parts_of_a_year() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add(&mut investments, id, "2025-11", "11000.00");
+        add_with_deposits(&mut investments, id, "2025-12", "11500.00", "200.00");
+        add_with_deposits(&mut investments, id, "2026-05", "12500.00", "300.00");
+        assert_eq!(
+            parts(&insight(&investments, 2025)),
+            five("0.00", "11000.00", "200.00", "300.00", "11500.00")
+        );
+        assert_eq!(
+            parts(&insight(&investments, 2026)),
+            five("11500.00", "0.00", "300.00", "700.00", "12500.00")
+        );
+    }
+
+    #[test]
+    fn test_csd007_ac_5_2_an_account_that_starts_in_a_later_year() {
+        let mut investments = Investments::default();
+        let brokerage = add_account(&mut investments, "Example Brokerage", "Monthly");
+        let crypto = add_account(&mut investments, "Example Crypto", "Monthly");
+        add(&mut investments, brokerage, "2025-12", "12000.00");
+        add_with_deposits(&mut investments, brokerage, "2026-03", "12600.00", "100.00");
+        add_with_deposits(&mut investments, crypto, "2026-03", "500.00", "400.00");
+        assert_eq!(
+            parts(&insight(&investments, 2026)),
+            five("12000.00", "100.00", "500.00", "500.00", "13100.00")
+        );
+    }
+
+    #[test]
+    fn test_csd007_ac_5_3_an_account_without_a_statement_in_the_year_is_left_out() {
+        let mut investments = Investments::default();
+        let brokerage = add_account(&mut investments, "Example Brokerage", "Monthly");
+        let pension = add_account(&mut investments, "Example Pension", "Yearly");
+        add(&mut investments, brokerage, "2025-12", "12000.00");
+        add(&mut investments, brokerage, "2026-03", "12500.00");
+        add(&mut investments, pension, "2025", "80000.00");
+        assert_eq!(
+            parts(&insight(&investments, 2025)),
+            five("0.00", "92000.00", "0.00", "0.00", "92000.00")
+        );
+        assert_eq!(
+            parts(&insight(&investments, 2026)),
+            five("12000.00", "0.00", "0.00", "500.00", "12500.00")
+        );
+    }
+
+    #[test]
+    fn test_csd007_ac_5_4_a_net_withdrawal_and_a_loss() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add(&mut investments, id, "2025-12", "12000.00");
+        add_with_deposits(&mut investments, id, "2026-03", "11000.00", "-500.00");
+        assert_eq!(
+            parts(&insight(&investments, 2026)),
+            five("12000.00", "0.00", "-500.00", "-500.00", "11000.00")
+        );
+    }
+
+    #[test]
+    fn test_csd007_ac_5_5_net_deposits_and_closing_balance_equal_the_yearly_totals() {
+        let mut investments = Investments::default();
+        let brokerage = add_account(&mut investments, "Example Brokerage", "Monthly");
+        let crypto = add_account(&mut investments, "Example Crypto", "Monthly");
+        let pension = add_account(&mut investments, "Example Pension", "Yearly");
+        add(&mut investments, brokerage, "2025-11", "11000.00");
+        add_with_deposits(&mut investments, brokerage, "2025-12", "11500.00", "200.00");
+        add_with_deposits(&mut investments, brokerage, "2026-03", "12600.00", "100.00");
+        add_with_deposits(&mut investments, crypto, "2026-03", "500.00", "400.00");
+        add(&mut investments, pension, "2024", "70000.00");
+        add_with_deposits(&mut investments, pension, "2025", "80000.00", "6000.00");
+        for total in investments.yearly_totals() {
+            let row = insight(&investments, total.year);
+            assert_eq!(row.closing_balance, total.closing_balance, "{}", total.year);
+            assert_eq!(row.net_deposits, total.net_deposits, "{}", total.year);
+            assert_eq!(row.capital_growth, total.capital_growth, "{}", total.year);
+            parts(&row);
+        }
+    }
+
+    #[test]
+    fn test_csd007_ac_6_1_the_growth_percentage_per_year() {
+        for (opening, closing, percent) in [
+            ("11500.00", "12200.00", "6.1"),
+            ("40000.00", "39000.00", "-2.5"),
+            ("20000.00", "20090.00", "0.4"),
+            ("20000.00", "20000.00", "0.0"),
+        ] {
+            let mut investments = Investments::default();
+            let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+            add(&mut investments, id, "2024-12", opening);
+            add(&mut investments, id, "2025-12", closing);
+            assert_eq!(
+                percent_of(&investments, 2025).as_deref(),
+                Some(percent),
+                "{opening} -> {closing}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_csd007_ac_7_1_the_first_year_has_no_percentage() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add(&mut investments, id, "2025-12", "12000.00");
+        add(&mut investments, id, "2026-03", "12500.00");
+        assert_eq!(percent_of(&investments, 2025), None);
+    }
+
+    #[test]
+    fn test_csd007_ac_7_2_a_gap_year_has_no_percentage() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add(&mut investments, id, "2022-06", "1000.00");
+        add(&mut investments, id, "2024-06", "1200.00");
+        assert_eq!(percent_of(&investments, 2023), None);
+    }
+
+    #[test]
+    fn test_csd007_ac_7_3_the_current_year_has_a_percentage() {
+        let mut investments = Investments::default();
+        let id = add_account(&mut investments, "Example Brokerage", "Monthly");
+        add(&mut investments, id, "2025-12", "12500.00");
+        add(&mut investments, id, "2026-05", "12750.00");
+        assert_eq!(percent_of(&investments, 2026).as_deref(), Some("2.0"));
+        assert!(insight(&investments, 2026).is_partial);
+    }
+
+    #[test]
+    fn test_csd007_ac_7_4_a_year_with_only_new_accounts_has_no_percentage() {
+        let mut investments = Investments::default();
+        let brokerage = add_account(&mut investments, "Example Brokerage", "Monthly");
+        let crypto = add_account(&mut investments, "Example Crypto", "Monthly");
+        add(&mut investments, brokerage, "2025-12", "12000.00");
+        add(&mut investments, crypto, "2026-03", "500.00");
+        assert_eq!(percent_of(&investments, 2026), None);
+    }
+
+    #[test]
+    fn statements_after_the_current_year_are_not_in_the_series() {
+        let id = Uuid::new_v4();
+        let json = format!(
+            r#"{{"accounts":[{{"id":"{id}","name":"Example","statement_period":"Monthly"}}],
+                "statements":[
+                {{"account_id":"{id}","period":"2026-03","balance":"1000.00"}},
+                {{"account_id":"{id}","period":"2027-03","balance":"2000.00"}}]}}"#
+        );
+        let investments: Investments = serde_json::from_str(&json).unwrap();
+        assert_eq!(insight_years(&investments), [2026]);
     }
 
     #[test]

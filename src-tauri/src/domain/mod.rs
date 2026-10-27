@@ -14,8 +14,8 @@ pub use income::{
 };
 pub use investments::{
     AccountInput, Balance, CalculationInput, InvestmentAccount, InvestmentAccountId,
-    InvestmentYearlyTotal, Investments, InvestmentsOverview, NetDeposits, Note, Period,
-    Statement as InvestmentStatement, StatementCalculation, StatementPrefill,
+    InvestmentInsightsYear, InvestmentYearlyTotal, Investments, InvestmentsOverview, NetDeposits,
+    Note, Period, Statement as InvestmentStatement, StatementCalculation, StatementPrefill,
 };
 pub use money::{Amounts, Currency};
 pub use project_data::ProjectData;

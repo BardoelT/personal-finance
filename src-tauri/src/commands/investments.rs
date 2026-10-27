@@ -10,8 +10,8 @@ use tauri::State;
 use super::AppState;
 use crate::domain::{
     AccountInput, Balance, CalculationInput, InvestmentAccount, InvestmentAccountId,
-    InvestmentStatement, InvestmentYearlyTotal, Investments, InvestmentsOverview, NetDeposits,
-    Note, Period, StatementCalculation, StatementPrefill,
+    InvestmentInsightsYear, InvestmentStatement, InvestmentYearlyTotal, Investments,
+    InvestmentsOverview, NetDeposits, Note, Period, StatementCalculation, StatementPrefill,
 };
 use crate::error::AppError;
 
@@ -191,6 +191,23 @@ pub fn yearly_investment_totals(
 ) -> Result<Vec<InvestmentYearlyTotal>, AppError> {
     let project = state.project()?;
     Ok(project.investments().yearly_totals())
+}
+
+/// The yearly series of the Insights chart, computed from the project as it is
+/// now, saved or not (CSD-007 REQ-13).
+#[tauri::command]
+pub fn get_investment_insights(state: State<'_, AppState>) -> Result<InvestmentInsights, AppError> {
+    let today = state.today();
+    let project = state.project()?;
+    Ok(InvestmentInsights {
+        years: project.investments().insights(today),
+    })
+}
+
+/// Payload of `get_investment_insights` (CSD-007 section 5).
+#[derive(Serialize)]
+pub struct InvestmentInsights {
+    years: Vec<InvestmentInsightsYear>,
 }
 
 /// Calculates the balance or the capital growth for the statement form

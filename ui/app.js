@@ -1,8 +1,9 @@
-// Entry point: wires the project controls, the income (with its insights chart) and investments views, the settings and the dashboard.
+// Entry point: wires the project controls, the income and investments views (each with an insights chart), the settings and the dashboard.
 import { showToast, errorText, listen } from './api.js';
 import { initProject, refreshProjectStatus } from './project.js';
 import { initIncome, reloadIncome } from './income.js';
 import { initInsights, reloadInsights } from './insights.js';
+import { initInvestmentInsights, reloadInvestmentInsights } from './investment-insights.js';
 import { initInvestments, reloadInvestments } from './investments.js';
 import { initSettings, reloadSettings } from './settings.js';
 import { reloadDashboard } from './dashboard.js';
@@ -22,6 +23,7 @@ async function start() {
     },
   });
   initInsights();
+  initInvestmentInsights();
   // Investment statements count for the currency confirmation of the settings page.
   initInvestments({
     onChanged: async () => {
@@ -40,6 +42,7 @@ async function start() {
       await reloadIncome();
       if (!document.getElementById('income-insights').hidden) await reloadInsights();
       await reloadInvestments();
+      if (!document.getElementById('investments-insights').hidden) await reloadInvestmentInsights();
       await reloadDashboard();
     },
   });

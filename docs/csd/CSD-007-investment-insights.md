@@ -289,7 +289,7 @@ Scenario: Current year is marked
 ```
 
 **REQ-9: Closing-balance marker** *(ubiquitous)*
-The Insights tab shall draw for each year with statements a horizontal marker line, wider than the bar, at the closing balance, with its compact value beside it, not connected to the markers of other years, and dashed for the current year.
+The Insights tab shall draw for each year with statements a horizontal marker line, wider than the bar, at the closing balance, with its compact value next to it (above the line), not connected to the markers of other years, and dashed for the current year.
 
 ```gherkin
 @AC-9.1
@@ -433,4 +433,4 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
-- 0.1 (27/10/2026): initial draft, approved by the owner.
+- 0.1 (27/10/2026): initial draft, approved by the owner. REQ-9 clarified while implementing: the marker value sits above the line, so it never collides with the next year.
