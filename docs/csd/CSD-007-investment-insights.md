@@ -1,9 +1,9 @@
 ---
 id: CSD-007
 title: Investment insights
-status: approved
+status: draft
 owner: Thijs Bardoel
-version: 0.2
+version: 0.3
 last_updated: 27/10/2026
 related: [CSD-003, CSD-005, CSD-006]
 ---
@@ -11,7 +11,7 @@ related: [CSD-003, CSD-005, CSD-006]
 # CSD-007: Investment insights
 
 ## 1. Intent
-The Investments page lists accounts, statements and a table of yearly totals, but a table does not show how an investment pot grew: how much of the change came from money paid in and how much from the market. This capability adds an insights layer to the Investments page: a chart with one bar per year that starts at the balance the year opened with, adds new accounts and net deposits, and ends with the capital growth, together with a marker at the closing balance and the growth as a percentage of the opening balance. It is for the owner looking back over their own investments. It follows the Income insights of CSD-006 and supersedes CSD-005 NG-4 for this view only, and CSD-005 NG-3 for the growth percentage of this view only.
+The Investments page lists accounts, statements and a table of yearly totals, but a table does not show how an investment pot grew: how much of the change came from money paid in and how much from the market. This capability adds an insights layer to the Investments page: a chart with one bar per year that starts at the balance the year opened with, adds net deposits, and ends with the capital growth, together with a marker at the closing balance and the growth as a percentage of the opening balance. It is for the owner looking back over their own investments. It follows the Income insights of CSD-006 and supersedes CSD-005 NG-4 for this view only, and CSD-005 NG-3 for the growth percentage of this view only.
 
 ## 2. Scope
 ### 2.1 In scope
@@ -33,10 +33,9 @@ The Investments page lists accounts, statements and a table of yearly totals, bu
 |---|---|
 | **Year** | A calendar year. A statement counts in the year of its own period only, as in the yearly totals (CSD-005 REQ-26). |
 | **Current year** | The calendar year of today, in local time. Its figures run up to the latest statement so far, and are therefore partial. |
-| **Opening balance** | For a year: the sum, over the accounts that have a statement in that year, of the balance of each such account's latest statement before that year. An account without an earlier statement adds nothing. |
-| **New accounts** | For a year: the sum, over the accounts whose first statement falls in that year, of that first statement's balance minus its net deposits. |
+| **Opening balance** | For a year: the sum, over the accounts that have a statement in that year, of the balance of each such account's latest statement before that year. An account without an earlier statement adds nothing: it is taken to start at 0.00 (CSD-005), so its balance shows up as net deposits and capital growth. |
 | **Net deposits, capital growth, closing balance** | As in CSD-005: the yearly totals of REQ-26. |
-| **Growth percentage** | The capital growth of a year divided by its opening balance, in percent. It leaves net deposits out and ignores when in the year they arrived, so it is a simple yearly figure and not a time-weighted return. |
+| **Growth percentage** | The capital growth of a year, counting only the accounts that have an opening balance in that year, divided by the opening balance, in percent. It leaves net deposits out and ignores when in the year they arrived, so it is a simple yearly figure and not a time-weighted return. |
 
 ## 4. Requirements
 
@@ -82,7 +81,7 @@ Scenario: No accounts yet
 ```
 
 **REQ-2: Year series** *(ubiquitous)*
-The app shall return one set of figures for every calendar year from the year of the earliest statement up to and including the current year, oldest year first, holding the opening balance, the new accounts, the net deposits, the capital growth, the closing balance and the number of statements.
+The app shall return one set of figures for every calendar year from the year of the earliest statement up to and including the current year, oldest year first, holding the opening balance, the net deposits, the capital growth, the closing balance and the number of statements.
 
 ```gherkin
 @AC-2.1
@@ -117,7 +116,7 @@ Scenario: Gap year
   Given today is 26/10/2026
   And there are statements in 2022 and 2024 but none in 2023
   When the insights are requested
-  Then the year 2023 has opening balance 0.00, new accounts 0.00, net deposits 0.00, capital growth 0.00, closing balance 0.00 and 0 statements
+  Then the year 2023 has opening balance 0.00, net deposits 0.00, capital growth 0.00, closing balance 0.00 and 0 statements
   And the series holds the years 2022, 2023, 2024, 2025 and 2026
 
 @AC-3.2
@@ -151,38 +150,45 @@ Scenario: Current year without statements is still in the series and marked
 ```
 
 **REQ-5: The parts add up to the closing balance** *(ubiquitous)*
-The app shall compute for each year the opening balance and the new accounts as defined in section 3, take the net deposits, the capital growth and the closing balance from the yearly totals of CSD-005 REQ-26, and the opening balance plus the new accounts plus the net deposits plus the capital growth shall equal the closing balance.
+The app shall compute for each year the opening balance as defined in section 3, take the net deposits, the capital growth and the closing balance from the yearly totals of CSD-005 REQ-26, and the opening balance plus the net deposits plus the capital growth shall equal the closing balance.
 
 ```gherkin
 @AC-5.1
 Scenario: Parts of a year
   Given today is 26/10/2026
-  And a monthly account with statements 2025-11 (balance 11000.00), 2025-12 (balance 11500.00, net deposits 200.00) and 2026-05 (balance 12500.00, net deposits 300.00)
+  And a monthly account with statements 2025-11 (balance 11000.00, net deposits 11000.00), 2025-12 (balance 11500.00, net deposits 200.00) and 2026-05 (balance 12500.00, net deposits 300.00)
   When the insights are requested
-  Then 2025 has opening balance 0.00, new accounts 11000.00, net deposits 200.00, capital growth 300.00 and closing balance 11500.00
-  And 2026 has opening balance 11500.00, new accounts 0.00, net deposits 300.00, capital growth 700.00 and closing balance 12500.00
+  Then 2025 has opening balance 0.00, net deposits 11200.00, capital growth 300.00 and closing balance 11500.00
+  And 2026 has opening balance 11500.00, net deposits 300.00, capital growth 700.00 and closing balance 12500.00
+
+@AC-5.6
+Scenario: A first statement without net deposits
+  Given today is 26/10/2026
+  And a monthly account with a statement 2026-03 (balance 1020.00, net deposits 1000.00)
+  When the insights are requested
+  Then 2026 has opening balance 0.00, net deposits 1000.00, capital growth 20.00 and closing balance 1020.00
 
 @AC-5.2
 Scenario: An account that starts in a later year
   Given today is 26/10/2026
-  And account "Example Brokerage" with statements 2025-12 (balance 12000.00) and 2026-03 (balance 12600.00, net deposits 100.00)
+  And account "Example Brokerage" with statements 2025-12 (balance 12000.00, net deposits 12000.00) and 2026-03 (balance 12600.00, net deposits 100.00)
   And account "Example Crypto" with a first statement 2026-03 (balance 500.00, net deposits 400.00)
   When the insights are requested
-  Then 2026 has opening balance 12000.00, new accounts 100.00, net deposits 500.00, capital growth 500.00 and closing balance 13100.00
+  Then 2026 has opening balance 12000.00, net deposits 500.00, capital growth 600.00 and closing balance 13100.00
 
 @AC-5.3
 Scenario: An account without a statement in the year is left out
   Given today is 26/10/2026
-  And a monthly account "Example Brokerage" with statements 2025-12 (balance 12000.00) and 2026-03 (balance 12500.00)
-  And a yearly account "Example Pension" with a statement 2025 (balance 80000.00)
+  And a monthly account "Example Brokerage" with statements 2025-12 (balance 12000.00, net deposits 12000.00) and 2026-03 (balance 12500.00)
+  And a yearly account "Example Pension" with a statement 2025 (balance 80000.00, net deposits 80000.00)
   When the insights are requested
-  Then 2025 has opening balance 0.00, new accounts 92000.00 and closing balance 92000.00
-  And 2026 has opening balance 12000.00, new accounts 0.00, capital growth 500.00 and closing balance 12500.00
+  Then 2025 has opening balance 0.00, net deposits 92000.00 and closing balance 92000.00
+  And 2026 has opening balance 12000.00, net deposits 0.00, capital growth 500.00 and closing balance 12500.00
 
 @AC-5.4
 Scenario: A net withdrawal and a loss
   Given today is 26/10/2026
-  And a monthly account with statements 2025-12 (balance 12000.00) and 2026-03 (balance 11000.00, net deposits -500.00)
+  And a monthly account with statements 2025-12 (balance 12000.00, net deposits 12000.00) and 2026-03 (balance 11000.00, net deposits -500.00)
   When the insights are requested
   Then 2026 has opening balance 12000.00, net deposits -500.00, capital growth -500.00 and closing balance 11000.00
 
@@ -191,18 +197,18 @@ Scenario: Net deposits and closing balance equal the yearly totals
   Given today is 26/10/2026
   And the statements of AC-5.1 and AC-5.2
   When the insights and the yearly totals are requested
-  Then for every year the closing balance and the net deposits of the insights equal those of the yearly totals
+  Then for every year the closing balance, the net deposits and the capital growth of the insights equal those of the yearly totals
 ```
 
 **REQ-6: Growth percentage** *(ubiquitous)*
-The app shall calculate the growth percentage of a year as capital growth ÷ opening balance × 100, rounded to one decimal place with banker's rounding.
+The app shall calculate the growth percentage of a year as the capital growth of the accounts that have an opening balance in that year ÷ the opening balance × 100, rounded to one decimal place with banker's rounding.
 
 ```gherkin
 @AC-6.1
 Scenario Outline: Growth percentage per year
   Given today is 26/10/2026
   And the opening balance of 2025 is <opening>
-  And the capital growth of 2025 is <growth>
+  And the capital growth of 2025 is <growth>, all of it from accounts that are in the opening balance
   When the insights are requested
   Then the growth percentage of 2025 is "<percent>"
 
@@ -212,6 +218,15 @@ Scenario Outline: Growth percentage per year
     | 40000.00 | -1000.00| -2.5    |
     | 20000.00 | 90.00   | 0.4     |
     | 20000.00 | 0.00    | 0.0     |
+
+@AC-6.2
+Scenario: Growth of an account without an opening balance is left out of the percentage
+  Given today is 26/10/2026
+  And account "Example Brokerage" with statements 2025-12 (balance 12000.00, net deposits 12000.00) and 2026-03 (balance 12600.00, net deposits 100.00)
+  And account "Example Crypto" with a first statement 2026-03 (balance 500.00, net deposits 400.00)
+  When the insights are requested
+  Then the capital growth of 2026 is 600.00
+  And the growth percentage of 2026 is "4.2"
 ```
 
 **REQ-7: No growth percentage available** *(unwanted behaviour)*
@@ -242,7 +257,7 @@ Scenario: The current year has a percentage
 ```
 
 **REQ-8: Chart** *(ubiquitous)*
-The Insights tab shall draw one bar per year in the order received, stacked from the bottom as opening balance, new accounts, net deposits and capital growth, in which a positive segment rises from the running total and a negative segment hangs down from it, with capital growth in a positive colour when it is positive and a negative colour when it is negative and a negative net deposit in a hatched fill, on a y-axis that starts at 0 (or at a rounded-down negative value if a running total is negative) and ends at a rounded-up value of at least the highest running total, with gridlines, compact axis labels (such as "10k"), a legend naming the four segments and the closing-balance marker, and no currency.
+The Insights tab shall draw one bar per year in the order received, stacked from the bottom as opening balance, net deposits and capital growth, in which a positive segment rises from the running total and a negative segment hangs down from it, with capital growth in a positive colour when it is positive and a negative colour when it is negative and a negative net deposit in a hatched fill, on a y-axis that starts at 0 (or at a rounded-down negative value if a running total is negative) and ends at a rounded-up value of at least the highest running total, with gridlines, compact axis labels (such as "10k"), a legend naming the segments (opening balance, net deposits, capital growth as gain and as loss) and the closing-balance marker, and no currency.
 
 ```gherkin
 @AC-8.1
@@ -250,8 +265,8 @@ Scenario: Stacked bars per year
   Given the series holds the years 2025 and 2026
   When the user opens the Insights tab
   Then two bars are drawn, 2025 on the left and 2026 on the right
-  And each bar is stacked from opening balance, new accounts, net deposits and capital growth
-  And the legend names Opening balance, New accounts, Net deposits, Capital growth and the closing balance marker
+  And each bar is stacked from opening balance, net deposits and capital growth
+  And the legend names Opening balance, Net deposits, Capital growth and the closing balance marker
 
 @AC-8.2
 Scenario: Growth colour follows the sign
@@ -341,14 +356,14 @@ Scenario: Only decreases are red
 ```
 
 **REQ-11: Details of a year** *(event-driven)*
-When the user hovers over or moves keyboard focus to a year, the Insights tab shall show a tooltip with the year's opening balance, new accounts, net deposits, capital growth, growth percentage, closing balance and number of statements, as REQ-14 lays out, and shall give the same values to screen readers.
+When the user hovers over or moves keyboard focus to a year, the Insights tab shall show a tooltip with the year's opening balance, net deposits, capital growth, growth percentage, closing balance and number of statements, as REQ-14 lays out, and shall give the same values to screen readers.
 
 ```gherkin
 @AC-11.1
 Scenario: Tooltip on hover
-  Given 2026 has opening balance 11500.00, new accounts 0.00, net deposits 300.00, capital growth 700.00, closing balance 12500.00, 1 statement and growth percentage 6.1
+  Given 2026 has opening balance 11500.00, net deposits 300.00, capital growth 700.00, closing balance 12500.00, 1 statement and growth percentage 6.1
   When the user hovers over the 2026 bar
-  Then a tooltip shows those seven values
+  Then a tooltip shows those six values
 
 @AC-11.2
 Scenario: Tooltip on keyboard focus
@@ -361,7 +376,7 @@ Scenario: Tooltip on keyboard focus
 Scenario: Accessible label
   Given 2026 has capital growth -500.00
   When a screen reader reads the 2026 bar
-  Then it announces the year, the seven values and that the capital growth is negative
+  Then it announces the year, the six values and that the capital growth is negative
 ```
 
 **REQ-12: No statements yet** *(state-driven)*
@@ -398,14 +413,14 @@ Scenario: Last statement deleted
 ### 4.1 Legend and highlight
 
 **REQ-14: Legend with the selected year** *(event-driven)*
-When the user hovers over or moves keyboard focus to a year, the Insights tab shall show in the tooltip of that year the colour swatch of the legend on the rows of opening balance, new accounts, net deposits, capital growth and closing balance, with, on the capital growth row, the swatch of a gain when the capital growth is not negative and the swatch of a loss when it is, and shall place the tooltip beside the year's bar, to its right with its top aligned to the top of the bar, to its left when there is no room on the right, and inside the chart area, or centred over its slot when the year has no bar. The legend in the panel header stays.
+When the user hovers over or moves keyboard focus to a year, the Insights tab shall show in the tooltip of that year the colour swatch of the legend on the rows of opening balance, net deposits, capital growth and closing balance, with, on the capital growth row, the swatch of a gain when the capital growth is not negative and the swatch of a loss when it is, and shall place the tooltip beside the year's bar, to its right with its top aligned to the top of the bar, to its left when there is no room on the right, and inside the chart area, or centred over its slot when the year has no bar. The legend in the panel header stays.
 
 ```gherkin
 @AC-14.1
 Scenario: Swatches match the legend
-  Given 2025 has opening balance 10700.00, new accounts 3000.00, net deposits -2500.00, capital growth 3800.00 and closing balance 15000.00
+  Given 2025 has opening balance 10700.00, net deposits 500.00, capital growth 3800.00 and closing balance 15000.00
   When the user hovers over the 2025 bar
-  Then the tooltip rows Opening balance, New accounts, Net deposits, Capital growth and Closing balance each show the swatch of the same colour or line as in the legend
+  Then the tooltip rows Opening balance, Net deposits, Capital growth and Closing balance each show the swatch of the same colour or line as in the legend
   And the Capital growth row shows the gain swatch
   And the rows Growth and Statements show no swatch
 
@@ -461,11 +476,11 @@ When the mouse is over a segment of a bar or over a closing-balance marker, the 
 ```gherkin
 @AC-15.1
 Scenario: Hovering a segment
-  Given the 2025 bar is stacked from opening balance, new accounts, net deposits and capital growth
-  When the user hovers over the new accounts segment
-  Then the New accounts item is highlighted in the tooltip and in the header legend
+  Given the 2025 bar is stacked from opening balance, net deposits and capital growth
+  When the user hovers over the net deposits segment
+  Then the Net deposits item is highlighted in the tooltip and in the header legend
   And the other legend items are dimmed
-  And the new accounts segment is outlined and the other segments of that bar are dimmed
+  And the net deposits segment is outlined and the other segments of that bar are dimmed
 
 @AC-15.2
 Scenario: Hovering the closing-balance marker
@@ -514,8 +529,8 @@ Command: `get_investment_insights()` returns the series, oldest year first:
 ```json
 {
   "years": [
-    { "year": 2025, "opening_balance": "0.00", "new_accounts": "11000.00", "net_deposits": "200.00", "capital_growth": "300.00", "growth_percent": null, "closing_balance": "11500.00", "statement_count": 2, "is_partial": false },
-    { "year": 2026, "opening_balance": "11500.00", "new_accounts": "0.00", "net_deposits": "300.00", "capital_growth": "700.00", "growth_percent": "6.1", "closing_balance": "12500.00", "statement_count": 1, "is_partial": true }
+    { "year": 2025, "opening_balance": "0.00", "net_deposits": "11200.00", "capital_growth": "300.00", "growth_percent": null, "closing_balance": "11500.00", "statement_count": 2, "is_partial": false },
+    { "year": 2026, "opening_balance": "11500.00", "net_deposits": "300.00", "capital_growth": "700.00", "growth_percent": "6.1", "closing_balance": "12500.00", "statement_count": 1, "is_partial": true }
   ]
 }
 ```
@@ -546,5 +561,6 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.3 (27/10/2026): The first statement of an account has a capital growth (CSD-005 0.8), so the "New accounts" segment is gone: it is removed from the definitions, REQ-2, REQ-3, REQ-5, REQ-8, REQ-11, REQ-14, REQ-15, the legend, the tooltip and the `get_investment_insights()` payload. REQ-5 gets AC-5.6, the growth percentage counts only accounts with an opening balance (REQ-6, AC-6.2). Status back to draft until approved (CSD-000 REQ-2).
 - 0.2 (27/10/2026): Legend with the selected year and highlight on hover. New section 4.1 with REQ-14 (swatches in the tooltip, tooltip beside the bar, AC-14.1 to AC-14.8) and REQ-15 (AC-15.1 to AC-15.7), CON-8. REQ-11 points to REQ-14. Approved by the owner. Same change for the income chart in CSD-006 0.2.
 - 0.1 (27/10/2026): initial draft, approved by the owner. REQ-9 clarified while implementing: the marker value sits above the line, so it never collides with the next year.
