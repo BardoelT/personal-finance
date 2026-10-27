@@ -433,4 +433,4 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
-- 0.1 (27/10/2026): initial draft.
+- 0.1 (27/10/2026): initial draft, approved by the owner.
