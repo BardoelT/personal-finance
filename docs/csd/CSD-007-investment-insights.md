@@ -1,7 +1,7 @@
 ---
 id: CSD-007
 title: Investment insights
-status: draft
+status: approved
 owner: Thijs Bardoel
 version: 0.1
 last_updated: 27/10/2026
