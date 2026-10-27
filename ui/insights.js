@@ -2,7 +2,7 @@
 // Rust returns the figures and the growth; this file only draws them, so the
 // only arithmetic here is scaling values to positions on the chart.
 import { invoke, errorText, h, formatAmount, showToast } from './api.js';
-import { svg, niceScale, compact } from './chart.js';
+import { svg, niceScale, compact, placeTooltip, bindHighlight } from './chart.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -36,8 +36,15 @@ function describe(row) {
   );
 }
 
+const swatch = (key) => h('span', { class: `swatch ${key}` });
+const noSwatch = () => h('span', { class: 'swatch-spacer' });
+
 function tooltipFor(row) {
   const negative = row.growth_percent !== null && row.growth_percent.startsWith('-');
+  const line = (key, label, value, cssClass = '') => [
+    h('dt', { 'data-legend': key }, key ? swatch(key) : noSwatch(), label),
+    h('dd', { 'data-legend': key, class: cssClass }, value),
+  ];
   return h(
     'div',
     { class: 'chart-tooltip', role: 'presentation', hidden: true },
@@ -45,24 +52,11 @@ function tooltipFor(row) {
     h(
       'dl',
       {},
-      ...SEGMENTS.flatMap(([field, , label]) => [h('dt', {}, label), h('dd', {}, formatAmount(row[field]))]),
-      h('dt', {}, 'Total gross'),
-      h('dd', {}, formatAmount(row.total_gross)),
-      h('dt', {}, 'Growth'),
-      h('dd', { class: negative ? 'negative' : '' }, growthLabel(row.growth_percent)),
+      ...SEGMENTS.flatMap(([field, cssClass, label]) => line(cssClass.replace('bar-', ''), label, formatAmount(row[field]))),
+      ...line(null, 'Total gross', formatAmount(row.total_gross)),
+      ...line(null, 'Growth', growthLabel(row.growth_percent), negative ? 'negative' : ''),
     ),
   );
-}
-
-function showTooltip(inner, tooltip, hit) {
-  const box = inner.getBoundingClientRect();
-  const slot = hit.getBoundingClientRect();
-  tooltip.hidden = false;
-  const width = tooltip.offsetWidth;
-  const centre = slot.left - box.left + slot.width / 2;
-  const left = Math.min(Math.max(centre - width / 2, 0), Math.max(box.width - width, 0));
-  tooltip.style.left = `${left}px`;
-  tooltip.style.top = '0px';
 }
 
 function drawChart(years) {
@@ -106,9 +100,16 @@ function drawChart(years) {
       const value = Number(row[field]);
       if (value <= 0) continue;
       const segTop = yOf(stacked + value);
-      group.append(svg('rect', { class: cssClass, x: centre - barWidth / 2, y: segTop, width: barWidth, height: yOf(stacked) - segTop }));
+      group.append(
+        svg('rect', { class: cssClass, 'data-legend': cssClass.replace('bar-', ''), x: centre - barWidth / 2, y: segTop, width: barWidth, height: yOf(stacked) - segTop }),
+      );
       stacked += value;
     }
+    // An invisible box over the whole bar, so the tooltip can sit beside it.
+    const bar = stacked > 0
+      ? svg('rect', { class: 'chart-bar-box', x: centre - barWidth / 2, y: yOf(stacked), width: barWidth, height: baseline - yOf(stacked) })
+      : null;
+    if (bar) group.append(bar);
 
     const negative = row.growth_percent !== null && row.growth_percent.startsWith('-');
     group.append(
@@ -118,12 +119,13 @@ function drawChart(years) {
 
     const tooltip = tooltipFor(row);
     tooltips.push(tooltip);
-    const show = () => showTooltip(inner, tooltip, hit);
+    const show = () => placeTooltip(inner, tooltip, bar, hit);
     const hide = () => { tooltip.hidden = true; };
     group.addEventListener('mouseenter', show);
     group.addEventListener('mouseleave', hide);
     group.addEventListener('focus', show);
     group.addEventListener('blur', hide);
+    bindHighlight(group, [$('insights-legend'), tooltip, group]);
     chart.append(group);
   });
 

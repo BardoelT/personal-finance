@@ -2,7 +2,7 @@
 // Rust returns the figures and the growth percentage; this file only draws them,
 // so the only arithmetic here is stacking and scaling values to positions.
 import { invoke, errorText, h, formatAmount, showToast } from './api.js';
-import { svg, niceScale, compact } from './chart.js';
+import { svg, niceScale, compact, placeTooltip, bindHighlight } from './chart.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -46,21 +46,26 @@ function describe(row) {
   );
 }
 
+const swatch = (key) => h('span', { class: `swatch ${key}` });
+const noSwatch = () => h('span', { class: 'swatch-spacer' });
+
 function tooltipFor(row) {
+  const line = (key, label, value, cssClass = '') => [
+    h('dt', { 'data-legend': key }, key ? swatch(key) : noSwatch(), label),
+    h('dd', { 'data-legend': key, class: cssClass }, value),
+  ];
+  const growthKey = isNegative(row.capital_growth) ? 'growth-down' : 'growth-up';
   const rows =
     row.statement_count === 0
-      ? [h('dt', {}, 'Statements'), h('dd', {}, '0')]
+      ? [...line(null, 'Statements', '0')]
       : [
-          ...SEGMENTS.flatMap(([field, label]) => [
-            h('dt', {}, label),
-            h('dd', { class: field === 'capital_growth' && isNegative(row[field]) ? 'negative' : '' }, formatAmount(row[field])),
-          ]),
-          h('dt', {}, 'Growth'),
-          h('dd', { class: row.growth_percent !== null && isNegative(row.growth_percent) ? 'negative' : '' }, percentLabel(row.growth_percent)),
-          h('dt', {}, 'Closing balance'),
-          h('dd', {}, formatAmount(row.closing_balance)),
-          h('dt', {}, 'Statements'),
-          h('dd', {}, String(row.statement_count)),
+          ...line('opening', 'Opening balance', formatAmount(row.opening_balance)),
+          ...line('new-accounts', 'New accounts', formatAmount(row.new_accounts)),
+          ...line('deposits', 'Net deposits', formatAmount(row.net_deposits)),
+          ...line(growthKey, 'Capital growth', formatAmount(row.capital_growth), isNegative(row.capital_growth) ? 'negative' : ''),
+          ...line(null, 'Growth', percentLabel(row.growth_percent), row.growth_percent !== null && isNegative(row.growth_percent) ? 'negative' : ''),
+          ...line('marker', 'Closing balance', formatAmount(row.closing_balance)),
+          ...line(null, 'Statements', String(row.statement_count)),
         ];
   return h(
     'div',
@@ -68,17 +73,6 @@ function tooltipFor(row) {
     h('div', { class: 'tip-title' }, yearLabel(row)),
     h('dl', {}, ...rows),
   );
-}
-
-function showTooltip(inner, tooltip, hit) {
-  const box = inner.getBoundingClientRect();
-  const slot = hit.getBoundingClientRect();
-  tooltip.hidden = false;
-  const width = tooltip.offsetWidth;
-  const centre = slot.left - box.left + slot.width / 2;
-  const left = Math.min(Math.max(centre - width / 2, 0), Math.max(box.width - width, 0));
-  tooltip.style.left = `${left}px`;
-  tooltip.style.top = '0px';
 }
 
 /**
@@ -92,10 +86,11 @@ function piecesOf(row) {
     const value = Number(row[field]);
     if (value === 0) continue;
     const next = level + value;
-    let cssClass = { opening_balance: 'bar-opening', new_accounts: 'bar-new' }[field];
-    if (field === 'net_deposits') cssClass = value < 0 ? 'bar-deposits withdrawal' : 'bar-deposits';
-    if (field === 'capital_growth') cssClass = value < 0 ? 'bar-growth-down' : 'bar-growth-up';
-    pieces.push({ cssClass, low: Math.min(level, next), high: Math.max(level, next), hangs: value < 0 });
+    let key = { opening_balance: 'opening', new_accounts: 'new-accounts' }[field];
+    if (field === 'net_deposits') key = 'deposits';
+    if (field === 'capital_growth') key = value < 0 ? 'growth-down' : 'growth-up';
+    const cssClass = { opening: 'bar-opening', 'new-accounts': 'bar-new', deposits: value < 0 ? 'bar-deposits withdrawal' : 'bar-deposits', 'growth-up': 'bar-growth-up', 'growth-down': 'bar-growth-down' }[key];
+    pieces.push({ key, cssClass, low: Math.min(level, next), high: Math.max(level, next), hangs: value < 0 });
     level = next;
   }
   // Pieces that hang down are drawn last, so a later rise does not hide them.
@@ -162,6 +157,7 @@ function drawChart(years) {
       group.append(
         svg('rect', {
           class: piece.cssClass,
+          'data-legend': piece.key,
           x: centre - barWidth / 2,
           y: yOf(piece.high),
           width: barWidth,
@@ -170,11 +166,24 @@ function drawChart(years) {
       );
     }
 
+    // An invisible box over the whole bar, so the tooltip can sit beside it.
+    const bar = pieces[index].length > 0
+      ? svg('rect', {
+          class: 'chart-bar-box',
+          x: centre - barWidth / 2,
+          y: yOf(Math.max(...pieces[index].map((p) => p.high))),
+          width: barWidth,
+          height: yOf(Math.min(...pieces[index].map((p) => p.low))) - yOf(Math.max(...pieces[index].map((p) => p.high))),
+        })
+      : null;
+    if (bar) group.append(bar);
+
     if (row.statement_count > 0) {
       const y = yOf(Number(row.closing_balance));
       const half = barWidth * 0.7;
       group.append(
-        svg('line', { class: 'chart-marker', x1: centre - half, x2: centre + half, y1: y, y2: y }),
+        svg('line', { class: 'chart-marker-hit', 'data-legend': 'marker', x1: centre - half, x2: centre + half, y1: y, y2: y }),
+        svg('line', { class: 'chart-marker', 'data-legend': 'marker', x1: centre - half, x2: centre + half, y1: y, y2: y }),
         svg('text', { class: 'chart-marker-label', x: centre, y: y - 7 }, axisLabel(Number(row.closing_balance))),
       );
     }
@@ -187,12 +196,13 @@ function drawChart(years) {
 
     const tooltip = tooltipFor(row);
     tooltips.push(tooltip);
-    const show = () => showTooltip(inner, tooltip, hit);
+    const show = () => placeTooltip(inner, tooltip, bar, hit);
     const hide = () => { tooltip.hidden = true; };
     group.addEventListener('mouseenter', show);
     group.addEventListener('mouseleave', hide);
     group.addEventListener('focus', show);
     group.addEventListener('blur', hide);
+    bindHighlight(group, [$('investment-insights-legend'), tooltip, group]);
     chart.append(group);
   });
 

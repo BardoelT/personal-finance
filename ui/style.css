@@ -511,3 +511,19 @@ dialog p { font-size: 13.5px; line-height: 1.5; color: var(--muted); }
   paint-order: stroke; stroke: var(--card-bg); stroke-width: 3px; stroke-linejoin: round; }
 .chart-percent { fill: var(--muted); font-size: 11px; font-weight: 600; text-anchor: middle; font-variant-numeric: tabular-nums; }
 .chart-percent.negative { fill: var(--negative); }
+
+/* ── Legend with the selected year, and highlight on hover (CSD-006 REQ-12/13, CSD-007 REQ-14/15) ── */
+
+.chart-bar-box { fill: none; stroke: none; pointer-events: none; }
+.chart-tooltip dt { display: flex; align-items: center; gap: 6px; padding: 1px 4px; border-radius: 4px; }
+.chart-tooltip dd { padding: 1px 4px; border-radius: 4px; }
+.swatch-spacer { width: 10px; height: 10px; flex: none; }
+.chart-tooltip .swatch { flex: none; }
+.legend li { padding: 2px 6px; border-radius: 4px; }
+.legend li.hl, .chart-tooltip dt.hl, .chart-tooltip dd.hl { background: rgba(67,97,238,.16); color: var(--text); font-weight: 700; }
+.legend li.dim, .chart-tooltip dt.dim, .chart-tooltip dd.dim { opacity: .45; }
+.chart-inner .chart-year-group [data-legend].hl { stroke: var(--text); stroke-width: 2; }
+.chart-inner .chart-year-group .chart-marker.hl { stroke-width: 5; }
+.chart-inner .chart-year-group [data-legend].dim { opacity: .35; }
+.chart-inner .chart-year-group .chart-marker-hit { stroke: transparent; stroke-width: 14; opacity: 1; }
+.chart-inner .chart-year-group .chart-marker-hit[data-legend].hl { stroke: transparent; stroke-width: 14; }
