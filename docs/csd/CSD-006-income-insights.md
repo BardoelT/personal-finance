@@ -1,9 +1,9 @@
 ---
 id: CSD-006
 title: Income insights
-status: approved
+status: draft
 owner: Thijs Bardoel
-version: 0.2
+version: 0.3
 last_updated: 27/10/2026
 related: [CSD-001, CSD-003, CSD-004, CSD-007]
 ---
@@ -337,16 +337,16 @@ Scenario: Keyboard focus shows the same tooltip
 ```
 
 **REQ-13: Highlight while hovering** *(event-driven)*
-When the mouse is over a segment of a bar, the Insights tab shall highlight the legend item of that segment, in bold text on a background chip, in the tooltip and in the panel header legend, dim the other legend items, outline that segment and dim the other segments of that bar, and while the mouse is over no segment, or keyboard focus is on a year, the Insights tab shall highlight nothing.
+When the mouse is over a segment of a bar, the Insights tab shall keep that segment at full colour and ease the other segments of that bar down to 70% opacity, set the legend item of that segment in the full text colour and a heavier font weight in the tooltip and in the panel header legend, ease the other items of the panel header legend down to 70% opacity, and while the mouse is over no segment, or keyboard focus is on a year, the Insights tab shall highlight nothing.
 
 ```gherkin
 @AC-13.1
 Scenario: Hovering a segment
   Given the 2025 bar is stacked from gross salary, holiday pay and bonus
   When the user hovers over the holiday pay segment
-  Then the Holiday pay item is highlighted in the tooltip and in the header legend
-  And the Gross salary and Bonus items are dimmed
-  And the holiday pay segment is outlined and the other segments of that bar are dimmed
+  Then the Holiday pay item is set in the full text colour and a heavier font weight in the tooltip and in the header legend
+  And the Gross salary and Bonus items of the header legend are eased down to 70% opacity
+  And the holiday pay segment keeps its full colour and the other segments of that bar are eased down to 70% opacity
 
 @AC-13.2
 Scenario: Moving to another segment
@@ -364,14 +364,82 @@ Scenario: Leaving the segment
 @AC-13.4
 Scenario: Not colour alone
   Given the user hovers over a segment
-  Then the highlighted item has bold text and a background chip
-  And the segment has an outline
+  Then the highlighted item has a heavier font weight than the other items
+  And the other segments are lighter, not differently coloured
+  And no outline and no background chip is drawn
 
 @AC-13.5
 Scenario: Keyboard focus highlights nothing
   Given the Insights tab shows the chart
   When the user moves focus to the 2025 bar with the Tab key
   Then no legend item is highlighted
+```
+
+**REQ-14: Motion** *(event-driven)*
+When a tooltip appears or moves to another year, or the highlight of REQ-13 changes, the Insights tab shall animate the change over 120 to 150 ms with an ease-out curve: the tooltip fades in and slides 4 px towards its place, it glides to its new place when the user moves from one year to another, and the opacity of segments and legend items eases.
+
+```gherkin
+@AC-14.1
+Scenario: Tooltip fades in
+  Given the Insights tab shows the chart
+  When the user hovers over the 2025 bar
+  Then the tooltip fades in over 120 to 150 ms while it slides 4 px towards its place
+
+@AC-14.2
+Scenario: Tooltip glides between years
+  Given the tooltip of 2025 is shown
+  When the user moves the mouse to the 2026 bar
+  Then the tooltip glides to its new place over 120 to 150 ms instead of jumping
+
+@AC-14.3
+Scenario: Dimming eases
+  Given the user hovers over the holiday pay segment of 2025
+  When the user moves the mouse away from the segment
+  Then the other segments and the legend items ease back to full opacity over 120 to 150 ms
+```
+
+**REQ-15: Reduced motion** *(state-driven)*
+While the user prefers reduced motion, the Insights tab shall show tooltips and highlight changes at once, without fading, sliding or gliding.
+
+```gherkin
+@AC-15.1
+Scenario: Reduced motion
+  Given the user prefers reduced motion
+  When the user hovers over the 2025 bar and then over the 2026 bar
+  Then each tooltip appears at once at its place without sliding or gliding
+  And the dimming of segments and legend items changes at once
+```
+
+**REQ-16: Refined look** *(ubiquitous)*
+The Insights tab shall draw the chart with bars at most 50% of the width of their slot and at most 44 px wide, with the top corners of the topmost segment rounded by 3 px and a 1 px gap between stacked segments in place of an outline, with 1 px gridlines at 55% opacity of the border colour and a 1 px zero line in the muted text colour at 70% opacity if one is drawn, with axis and year labels in the muted text colour at regular font weight, with tooltips of 10 px corner radius, 12 px by 14 px padding, a shadow of at least 16 px blur and at most 12% opacity, a 12 px title in semibold and row labels in the muted text colour, and with series colours of at most 60% HSL saturation and gain and loss colours of at most 55% HSL saturation, in light and in dark mode.
+
+```gherkin
+@AC-16.1
+Scenario: Bars
+  Given the series holds the years 2024, 2025 and 2026
+  When the user opens the Insights tab
+  Then no bar is wider than 50% of its slot or 44 px
+  And the top corners of each bar are rounded by 3 px
+  And stacked segments are separated by a 1 px gap and have no outline
+
+@AC-16.2
+Scenario: Gridlines and labels
+  Given the Insights tab shows the chart
+  Then the gridlines are 1 px lines at 55% opacity of the border colour
+  And the axis labels and the year labels are in the muted text colour at regular font weight
+
+@AC-16.3
+Scenario: Tooltip
+  Given the user hovers over a year
+  Then the tooltip has a 10 px corner radius, 12 px by 14 px padding and a soft shadow
+  And its title is semibold and its row labels are in the muted text colour
+
+@AC-16.4
+Scenario: Colours in both modes
+  Given the Insights tab shows the chart
+  When the app is in light mode and then in dark mode
+  Then the series colours have at most 60% HSL saturation
+  And the gain and loss colours have at most 55% HSL saturation
 ```
 
 ## 5. Interfaces and contracts
@@ -398,6 +466,7 @@ Command: `get_income_insights()` returns the series, oldest year first:
 - CON-5: The Overview tab behaves as before (CSD-001 is unchanged apart from NG-6). Rationale: this capability adds a view and changes no income behaviour.
 - CON-6: Tests and fixtures use synthetic data only. Rationale: the repo is public.
 - CON-7: The highlight of REQ-13 is drawn with CSS classes and carries no meaning by colour alone. Rationale: readers who cannot tell the colours apart, and no new dependency.
+- CON-8: Motion is drawn with CSS transitions only and respects the reduced-motion preference of REQ-15. Rationale: no new dependency, and users who ask for less motion.
 
 ## 7. Verification
 The figures are proven by `cargo test`. Tests are named `test_csd006_ac_<n>_<m>_<description>` (CSD-000 REQ-6).
@@ -405,7 +474,7 @@ The figures are proven by `cargo test`. Tests are named `test_csd006_ac_<n>_<m>_
 | Requirement | Command |
 |---|---|
 | REQ-2 to REQ-6 (data) | `cargo test test_csd006_` |
-| AC-1.1 to AC-1.3, REQ-7, REQ-8, REQ-9, REQ-10, REQ-11, REQ-12, REQ-13 (display) | Manual checklist: tabs, bars and legend, axis, gap and YTD years, growth labels and colours, tooltip by mouse and keyboard, swatches and placement of the tooltip, legend and segment highlight on hover, no highlight on keyboard focus, empty note, refresh after a change, light and dark mode. There is no frontend test setup |
+| AC-1.1 to AC-1.3, REQ-7, REQ-8, REQ-9, REQ-10, REQ-11, REQ-12, REQ-13, REQ-14, REQ-15, REQ-16 (display) | Manual checklist: motion of the tooltip and the dimming, reduced motion, bar shape, gridlines, labels, tooltip look and colours in both modes, tabs, bars and legend, axis, gap and YTD years, growth labels and colours, tooltip by mouse and keyboard, swatches and placement of the tooltip, legend and segment highlight on hover, no highlight on keyboard focus, empty note, refresh after a change, light and dark mode. There is no frontend test setup |
 
 Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 
@@ -413,5 +482,6 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.3 (27/10/2026): Quieter and more refined charts. REQ-13 (AC-13.1, AC-13.4) replaces the chip and outline by a full-colour segment, eased dimming of the rest and a heavier legend label. New REQ-14 motion, REQ-15 reduced motion, REQ-16 refined look (AC-14.1 to AC-16.4), CON-8. The tooltip placement of REQ-12 is unchanged. Status back to draft until approved (CSD-000 REQ-2). Same change for the investment chart in CSD-007 0.4.
 - 0.2 (27/10/2026): Legend with the selected year and highlight on hover. New REQ-12 (swatches in the tooltip, tooltip beside the bar, AC-12.1 to AC-12.6) and REQ-13 (AC-13.1 to AC-13.5), CON-7. REQ-9 points to REQ-12. Approved by the owner. Same change for the investment chart in CSD-007 0.2.
 - 0.1 (26/10/2026): initial draft.
