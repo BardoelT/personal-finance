@@ -1,7 +1,7 @@
 ---
 id: CSD-006
 title: Income insights
-status: draft
+status: approved
 owner: Thijs Bardoel
 version: 0.3
 last_updated: 27/10/2026
@@ -482,6 +482,6 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
-- 0.3 (27/10/2026): Quieter and more refined charts. REQ-13 (AC-13.1, AC-13.4) replaces the chip and outline by a full-colour segment, eased dimming of the rest and a heavier legend label. New REQ-14 motion, REQ-15 reduced motion, REQ-16 refined look (AC-14.1 to AC-16.4), CON-8. The tooltip placement of REQ-12 is unchanged. Status back to draft until approved (CSD-000 REQ-2). Same change for the investment chart in CSD-007 0.4.
+- 0.3 (27/10/2026): Quieter and more refined charts. REQ-13 (AC-13.1, AC-13.4) replaces the chip and outline by a full-colour segment, eased dimming of the rest and a heavier legend label. New REQ-14 motion, REQ-15 reduced motion, REQ-16 refined look (AC-14.1 to AC-16.4), CON-8. The tooltip placement of REQ-12 is unchanged. Approved by the owner. Same change for the investment chart in CSD-007 0.4.
 - 0.2 (27/10/2026): Legend with the selected year and highlight on hover. New REQ-12 (swatches in the tooltip, tooltip beside the bar, AC-12.1 to AC-12.6) and REQ-13 (AC-13.1 to AC-13.5), CON-7. REQ-9 points to REQ-12. Approved by the owner. Same change for the investment chart in CSD-007 0.2.
 - 0.1 (26/10/2026): initial draft.
