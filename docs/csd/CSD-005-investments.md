@@ -1,7 +1,7 @@
 ---
 id: CSD-005
 title: Investments
-status: draft
+status: approved
 owner: Thijs Bardoel
 version: 0.8
 last_updated: 27/10/2026
@@ -1080,7 +1080,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 - OQ-3: (resolved in v0.2) Deleting a statement asks for a confirmation, unlike CSD-001 REQ-8, on purpose: the note of a statement cannot be recreated by copying the previous period (REQ-13). CSD-001 is unchanged.
 
 ## 9. Changelog
-- 0.8 (27/10/2026): The first statement of an account has a capital growth. The account is taken to start at 0.00 before its first statement, so growth = balance − net deposits (REQ-23: AC-23.3 rewritten, AC-23.7 amended, AC-23.9 and AC-23.10 added). The growth field of the form is no longer disabled (REQ-24: AC-24.7, AC-24.8, AC-24.12 rewritten), a note explains the convention (new REQ-27, AC-27.1 to AC-27.4), the yearly totals add the growth of first statements (REQ-26: AC-26.1, 26.3, 26.5, 26.7, 26.9 amended, AC-26.11 added) and AC-17.8 shows a growth instead of a dash. `INVESTMENT_GROWTH_UNAVAILABLE` is removed. Status back to draft until approved (CSD-000 REQ-2).
+- 0.8 (27/10/2026): The first statement of an account has a capital growth. The account is taken to start at 0.00 before its first statement, so growth = balance − net deposits (REQ-23: AC-23.3 rewritten, AC-23.7 amended, AC-23.9 and AC-23.10 added). The growth field of the form is no longer disabled (REQ-24: AC-24.7, AC-24.8, AC-24.12 rewritten), a note explains the convention (new REQ-27, AC-27.1 to AC-27.4), the yearly totals add the growth of first statements (REQ-26: AC-26.1, 26.3, 26.5, 26.7, 26.9 amended, AC-26.11 added) and AC-17.8 shows a growth instead of a dash. `INVESTMENT_GROWTH_UNAVAILABLE` is removed. Approved by the owner.
 - 0.7 (27/10/2026): NG-3 and NG-4 each get a one-line exception for the Insights chart of CSD-007 (the growth percentage of that chart, and the chart itself). No other behaviour changes.
 - 0.6 (26/10/2026): Yearly totals. NG-3 narrowed: per-year totals of closing balance, net deposits and capital growth are in scope, an all-time total is not. New section 4.6 with REQ-26 (AC-26.1 to AC-26.10), CON-11 and the command `yearly_investment_totals`. REQ-17 (section order, AC-17.1, AC-17.9), REQ-18 (AC-18.3) and REQ-20 (AC-20.1, AC-20.2) amended. Approved by the owner.
 - 0.5 (26/10/2026): Net deposits and capital growth. NG-3 narrowed: the optional net deposits per statement and the derived capital growth are in scope, totals and returns percentages are not. New section 4.5 with REQ-21 to REQ-25 (AC-21.1 to AC-25.4), CON-9 and CON-10, the command `calculate_investment_statement` and seven error codes. REQ-11, REQ-13 (AC-13.3), REQ-17 (AC-17.8) and REQ-19 (AC-19.3, AC-19.4) amended. Approved by the owner.
