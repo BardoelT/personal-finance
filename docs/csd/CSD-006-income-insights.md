@@ -1,11 +1,11 @@
 ---
 id: CSD-006
 title: Income insights
-status: approved
+status: draft
 owner: Thijs Bardoel
-version: 0.1
-last_updated: 26/10/2026
-related: [CSD-001, CSD-003, CSD-004]
+version: 0.2
+last_updated: 27/10/2026
+related: [CSD-001, CSD-003, CSD-004, CSD-007]
 ---
 
 # CSD-006: Income insights
@@ -238,7 +238,7 @@ Scenario: Only decreases are red
 ```
 
 **REQ-9: Details of a year** *(event-driven)*
-When the user hovers over or moves keyboard focus to a year, the Insights tab shall show a tooltip with the year's gross salary, holiday pay, bonus, total gross and growth.
+When the user hovers over or moves keyboard focus to a year, the Insights tab shall show a tooltip with the year's gross salary, holiday pay, bonus, total gross and growth, as REQ-12 lays out.
 
 ```gherkin
 @AC-9.1
@@ -292,6 +292,88 @@ Scenario: Last entry deleted
   Then the note of AC-10.1 is shown and no chart is drawn
 ```
 
+**REQ-12: Legend with the selected year** *(event-driven)*
+When the user hovers over or moves keyboard focus to a year, the Insights tab shall show in the tooltip of that year the colour swatch of the legend on the rows of gross salary, holiday pay and bonus, and shall place the tooltip beside the year's bar, to its right with its top aligned to the top of the bar, to its left when there is no room on the right, and inside the chart area, or centred over its slot when the year has no bar. The legend in the panel header stays.
+
+```gherkin
+@AC-12.1
+Scenario: Swatches match the legend
+  Given the year 2025 has gross salary 31000.00, holiday pay 2480.00 and bonus 1000.00
+  When the user hovers over the 2025 bar
+  Then the tooltip rows Gross salary, Holiday pay and Bonus each show the swatch of the same colour as in the legend
+  And the rows Total gross and Growth show no swatch
+
+@AC-12.2
+Scenario: Tooltip beside the bar
+  Given the chart shows the years 2024, 2025 and 2026
+  When the user hovers over the 2024 bar
+  Then the tooltip is shown to the right of that bar
+  And its top is level with the top of that bar
+
+@AC-12.3
+Scenario: Tooltip flips near the right edge
+  Given the chart shows the years 2024, 2025 and 2026
+  When the user hovers over the 2026 bar and the tooltip does not fit to its right
+  Then the tooltip is shown to the left of that bar
+  And it stays inside the chart area
+
+@AC-12.4
+Scenario: Year without a bar
+  Given the year 2023 has total gross 0.00
+  When the user hovers over its slot
+  Then the tooltip is centred over that slot
+
+@AC-12.5
+Scenario: Header legend stays
+  Given the Insights tab shows the chart
+  When the user hovers over a year
+  Then the legend in the panel header is still shown
+
+@AC-12.6
+Scenario: Keyboard focus shows the same tooltip
+  Given the Insights tab shows the chart
+  When the user moves focus to the 2025 bar with the Tab key
+  Then the tooltip is shown beside that bar with the same swatches
+```
+
+**REQ-13: Highlight while hovering** *(event-driven)*
+When the mouse is over a segment of a bar, the Insights tab shall highlight the legend item of that segment, in bold text on a background chip, in the tooltip and in the panel header legend, dim the other legend items, outline that segment and dim the other segments of that bar, and while the mouse is over no segment, or keyboard focus is on a year, the Insights tab shall highlight nothing.
+
+```gherkin
+@AC-13.1
+Scenario: Hovering a segment
+  Given the 2025 bar is stacked from gross salary, holiday pay and bonus
+  When the user hovers over the holiday pay segment
+  Then the Holiday pay item is highlighted in the tooltip and in the header legend
+  And the Gross salary and Bonus items are dimmed
+  And the holiday pay segment is outlined and the other segments of that bar are dimmed
+
+@AC-13.2
+Scenario: Moving to another segment
+  Given the user hovers over the holiday pay segment of 2025
+  When the user moves the mouse to the bonus segment
+  Then only the Bonus item is highlighted
+
+@AC-13.3
+Scenario: Leaving the segment
+  Given the user hovers over a segment
+  When the user moves the mouse to empty space in the year's column
+  Then no legend item is highlighted and no segment is dimmed
+  And the tooltip is still shown
+
+@AC-13.4
+Scenario: Not colour alone
+  Given the user hovers over a segment
+  Then the highlighted item has bold text and a background chip
+  And the segment has an outline
+
+@AC-13.5
+Scenario: Keyboard focus highlights nothing
+  Given the Insights tab shows the chart
+  When the user moves focus to the 2025 bar with the Tab key
+  Then no legend item is highlighted
+```
+
 ## 5. Interfaces and contracts
 
 Command: `get_income_insights()` returns the series, oldest year first:
@@ -315,6 +397,7 @@ Command: `get_income_insights()` returns the series, oldest year first:
 - CON-4: Chart colours come from CSS variables and are legible in light and dark mode. Rationale: the app already supports both.
 - CON-5: The Overview tab behaves as before (CSD-001 is unchanged apart from NG-6). Rationale: this capability adds a view and changes no income behaviour.
 - CON-6: Tests and fixtures use synthetic data only. Rationale: the repo is public.
+- CON-7: The highlight of REQ-13 is drawn with CSS classes and carries no meaning by colour alone. Rationale: readers who cannot tell the colours apart, and no new dependency.
 
 ## 7. Verification
 The figures are proven by `cargo test`. Tests are named `test_csd006_ac_<n>_<m>_<description>` (CSD-000 REQ-6).
@@ -322,7 +405,7 @@ The figures are proven by `cargo test`. Tests are named `test_csd006_ac_<n>_<m>_
 | Requirement | Command |
 |---|---|
 | REQ-2 to REQ-6 (data) | `cargo test test_csd006_` |
-| AC-1.1 to AC-1.3, REQ-7, REQ-8, REQ-9, REQ-10, REQ-11 (display) | Manual checklist: tabs, bars and legend, axis, gap and YTD years, growth labels and colours, tooltip by mouse and keyboard, empty note, refresh after a change, light and dark mode. There is no frontend test setup |
+| AC-1.1 to AC-1.3, REQ-7, REQ-8, REQ-9, REQ-10, REQ-11, REQ-12, REQ-13 (display) | Manual checklist: tabs, bars and legend, axis, gap and YTD years, growth labels and colours, tooltip by mouse and keyboard, swatches and placement of the tooltip, legend and segment highlight on hover, no highlight on keyboard focus, empty note, refresh after a change, light and dark mode. There is no frontend test setup |
 
 Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 
@@ -330,4 +413,5 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.2 (27/10/2026): Legend with the selected year and highlight on hover. New REQ-12 (swatches in the tooltip, tooltip beside the bar, AC-12.1 to AC-12.6) and REQ-13 (AC-13.1 to AC-13.5), CON-7. REQ-9 points to REQ-12. Status back to draft until approved (CSD-000 REQ-2). Same change for the investment chart in CSD-007 0.2.
 - 0.1 (26/10/2026): initial draft.

@@ -1,9 +1,9 @@
 ---
 id: CSD-007
 title: Investment insights
-status: approved
+status: draft
 owner: Thijs Bardoel
-version: 0.1
+version: 0.2
 last_updated: 27/10/2026
 related: [CSD-003, CSD-005, CSD-006]
 ---
@@ -341,7 +341,7 @@ Scenario: Only decreases are red
 ```
 
 **REQ-11: Details of a year** *(event-driven)*
-When the user hovers over or moves keyboard focus to a year, the Insights tab shall show a tooltip with the year's opening balance, new accounts, net deposits, capital growth, growth percentage, closing balance and number of statements, and shall give the same values to screen readers.
+When the user hovers over or moves keyboard focus to a year, the Insights tab shall show a tooltip with the year's opening balance, new accounts, net deposits, capital growth, growth percentage, closing balance and number of statements, as REQ-14 lays out, and shall give the same values to screen readers.
 
 ```gherkin
 @AC-11.1
@@ -395,6 +395,118 @@ Scenario: Last statement deleted
   Then the note of AC-12.1 is shown and no chart is drawn
 ```
 
+### 4.1 Legend and highlight
+
+**REQ-14: Legend with the selected year** *(event-driven)*
+When the user hovers over or moves keyboard focus to a year, the Insights tab shall show in the tooltip of that year the colour swatch of the legend on the rows of opening balance, new accounts, net deposits, capital growth and closing balance, with, on the capital growth row, the swatch of a gain when the capital growth is not negative and the swatch of a loss when it is, and shall place the tooltip beside the year's bar, to its right with its top aligned to the top of the bar, to its left when there is no room on the right, and inside the chart area, or centred over its slot when the year has no bar. The legend in the panel header stays.
+
+```gherkin
+@AC-14.1
+Scenario: Swatches match the legend
+  Given 2025 has opening balance 10700.00, new accounts 3000.00, net deposits -2500.00, capital growth 3800.00 and closing balance 15000.00
+  When the user hovers over the 2025 bar
+  Then the tooltip rows Opening balance, New accounts, Net deposits, Capital growth and Closing balance each show the swatch of the same colour or line as in the legend
+  And the Capital growth row shows the gain swatch
+  And the rows Growth and Statements show no swatch
+
+@AC-14.2
+Scenario: A loss shows the loss swatch
+  Given 2023 has capital growth -800.00
+  When the user hovers over the 2023 bar
+  Then the Capital growth row shows the loss swatch
+
+@AC-14.3
+Scenario: Zero growth shows the gain swatch
+  Given 2024 has statements and capital growth 0.00
+  When the user hovers over the 2024 bar
+  Then the Capital growth row shows the gain swatch
+
+@AC-14.4
+Scenario: Tooltip beside the bar
+  Given the chart shows the years 2024, 2025 and 2026
+  When the user hovers over the 2024 bar
+  Then the tooltip is shown to the right of that bar
+  And its top is level with the top of that bar
+
+@AC-14.5
+Scenario: Tooltip flips near the right edge
+  Given the chart shows the years 2024, 2025 and 2026
+  When the user hovers over the 2026 bar and the tooltip does not fit to its right
+  Then the tooltip is shown to the left of that bar
+  And it stays inside the chart area
+
+@AC-14.6
+Scenario: Year without a bar
+  Given the year 2023 has no statements
+  When the user hovers over its slot
+  Then the tooltip is centred over that slot
+  And it shows no swatch
+
+@AC-14.7
+Scenario: Header legend stays
+  Given the Insights tab shows the chart
+  When the user hovers over a year
+  Then the legend in the panel header is still shown
+
+@AC-14.8
+Scenario: Keyboard focus shows the same tooltip
+  Given the Insights tab shows the chart
+  When the user moves focus to the 2025 bar with the Tab key
+  Then the tooltip is shown beside that bar with the same swatches
+```
+
+**REQ-15: Highlight while hovering** *(event-driven)*
+When the mouse is over a segment of a bar or over a closing-balance marker, the Insights tab shall highlight the legend item of that segment or marker, in bold text on a background chip, in the tooltip and in the panel header legend, dim the other legend items, outline that segment or marker and dim the other segments of that bar, and while the mouse is over no segment or marker, or keyboard focus is on a year, the Insights tab shall highlight nothing. Where segments overlap, the one drawn on top is the one hovered.
+
+```gherkin
+@AC-15.1
+Scenario: Hovering a segment
+  Given the 2025 bar is stacked from opening balance, new accounts, net deposits and capital growth
+  When the user hovers over the new accounts segment
+  Then the New accounts item is highlighted in the tooltip and in the header legend
+  And the other legend items are dimmed
+  And the new accounts segment is outlined and the other segments of that bar are dimmed
+
+@AC-15.2
+Scenario: Hovering the closing-balance marker
+  Given 2025 has closing balance 15000.00
+  When the user hovers over its marker
+  Then the Closing balance item is highlighted in the tooltip and in the header legend
+  And the marker is outlined
+
+@AC-15.3
+Scenario: Gain and loss are separate legend items
+  Given 2025 has capital growth 3800.00 and 2023 has capital growth -800.00
+  When the user hovers over the capital growth segment of 2023
+  Then the Capital growth (loss) item is highlighted in the header legend
+  And the Capital growth (gain) item is not highlighted
+
+@AC-15.4
+Scenario: Leaving the segment
+  Given the user hovers over a segment
+  When the user moves the mouse to empty space in the year's column
+  Then no legend item is highlighted and no segment is dimmed
+  And the tooltip is still shown
+
+@AC-15.5
+Scenario: Overlapping segments
+  Given 2025 has a net withdrawal that hangs down over the growth segment
+  When the user hovers over the overlap
+  Then the Net deposits item is highlighted
+
+@AC-15.6
+Scenario: Not colour alone
+  Given the user hovers over a segment
+  Then the highlighted item has bold text and a background chip
+  And the segment has an outline
+
+@AC-15.7
+Scenario: Keyboard focus highlights nothing
+  Given the Insights tab shows the chart
+  When the user moves focus to the 2025 bar with the Tab key
+  Then no legend item is highlighted
+```
+
 ## 5. Interfaces and contracts
 
 Command: `get_investment_insights()` returns the series, oldest year first:
@@ -418,6 +530,7 @@ Command: `get_investment_insights()` returns the series, oldest year first:
 - CON-5: The Overview tab behaves as before, and the income insights chart behaves exactly as before; helpers shared by both charts may move into a common `ui/` module without changing the income chart's output. Rationale: this capability adds a view and changes no existing behaviour.
 - CON-6: Tests and fixtures use synthetic data only. Rationale: the repo is public.
 - CON-7: The figures are computed from the stored statements each time they are needed and are never stored in the project file. Rationale: stored figures would go stale when a statement changes.
+- CON-8: The highlight of REQ-15 is drawn with CSS classes and carries no meaning by colour alone. Rationale: readers who cannot tell the colours apart, and no new dependency.
 
 ## 7. Verification
 The figures are proven by `cargo test`. Tests are named `test_csd007_ac_<n>_<m>_<description>` (CSD-000 REQ-6).
@@ -425,7 +538,7 @@ The figures are proven by `cargo test`. Tests are named `test_csd007_ac_<n>_<m>_
 | Requirement | Command |
 |---|---|
 | REQ-2 to REQ-7 (data) | `cargo test test_csd007_` |
-| AC-1.1 to AC-1.3, REQ-8 to REQ-13 (display) | Manual checklist: tabs, stacked and hanging segments, hatched fill, growth colours, axis, gap and YTD years, closing markers, growth percentage labels and colours, tooltip by mouse and keyboard, empty note, refresh after a change, light and dark mode, and the income chart unchanged. There is no frontend test setup |
+| AC-1.1 to AC-1.3, REQ-8 to REQ-15 (display) | Manual checklist: tabs, stacked and hanging segments, hatched fill, growth colours, axis, gap and YTD years, closing markers, growth percentage labels and colours, tooltip by mouse and keyboard, swatches and placement of the tooltip, legend, segment and marker highlight on hover, no highlight on keyboard focus, empty note, refresh after a change, light and dark mode, and the income chart unchanged. There is no frontend test setup |
 
 Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 
@@ -433,4 +546,5 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.2 (27/10/2026): Legend with the selected year and highlight on hover. New section 4.1 with REQ-14 (swatches in the tooltip, tooltip beside the bar, AC-14.1 to AC-14.8) and REQ-15 (AC-15.1 to AC-15.7), CON-8. REQ-11 points to REQ-14. Status back to draft until approved (CSD-000 REQ-2). Same change for the income chart in CSD-006 0.2.
 - 0.1 (27/10/2026): initial draft, approved by the owner. REQ-9 clarified while implementing: the marker value sits above the line, so it never collides with the next year.
