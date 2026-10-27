@@ -1,7 +1,7 @@
 ---
 id: CSD-006
 title: Income insights
-status: draft
+status: approved
 owner: Thijs Bardoel
 version: 0.2
 last_updated: 27/10/2026
@@ -413,5 +413,5 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
-- 0.2 (27/10/2026): Legend with the selected year and highlight on hover. New REQ-12 (swatches in the tooltip, tooltip beside the bar, AC-12.1 to AC-12.6) and REQ-13 (AC-13.1 to AC-13.5), CON-7. REQ-9 points to REQ-12. Status back to draft until approved (CSD-000 REQ-2). Same change for the investment chart in CSD-007 0.2.
+- 0.2 (27/10/2026): Legend with the selected year and highlight on hover. New REQ-12 (swatches in the tooltip, tooltip beside the bar, AC-12.1 to AC-12.6) and REQ-13 (AC-13.1 to AC-13.5), CON-7. REQ-9 points to REQ-12. Approved by the owner. Same change for the investment chart in CSD-007 0.2.
 - 0.1 (26/10/2026): initial draft.
