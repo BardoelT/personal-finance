@@ -1,11 +1,11 @@
 ---
 id: CSD-003
 title: Project settings
-status: approved
+status: draft
 owner: Thijs Bardoel
-version: 0.5
+version: 0.6
 last_updated: 28/10/2026
-related: [CSD-001, CSD-002, CSD-005, CSD-008]
+related: [CSD-001, CSD-002, CSD-005, CSD-008, CSD-009]
 ---
 
 # CSD-003: Project settings
@@ -135,7 +135,7 @@ Scenario: Choosing the current currency changes nothing
 ```
 
 **REQ-5: Confirm when amounts exist** *(event-driven)*
-While the project has entries (paychecks, annual statements or investment statements), when the user chooses another currency, the app shall ask for confirmation, explaining that amounts are not converted, before changing the currency.
+While the project has entries (paychecks, annual statements, investment statements or bank entries), when the user chooses another currency, the app shall ask for confirmation, explaining that amounts are not converted, before changing the currency.
 
 ```gherkin
 @AC-5.1
@@ -174,6 +174,20 @@ Scenario: Confirmation with only an investment statement
 @AC-5.6
 Scenario: An investment account without statements needs no confirmation
   Given a project in "EUR" with an investment account and no statements
+  When the user chooses "USD"
+  Then no confirmation is asked
+  And the project currency is "USD"
+
+@AC-5.7
+Scenario: Confirmation with only a bank entry
+  Given a project in "EUR" with no jobs, no investments and a bank account with 1 entry for 2026-09 with balance 2500.00
+  When the user chooses "USD"
+  Then a confirmation says the amounts are not converted
+  And choosing "Cancel" keeps "EUR" and the balance 2500.00
+
+@AC-5.8
+Scenario: A bank account without entries needs no confirmation
+  Given a project in "EUR" with a bank account and no entries
   When the user chooses "USD"
   Then no confirmation is asked
   And the project currency is "USD"
@@ -233,7 +247,7 @@ Scenario: Other views show no currency
 
 ## 5. Interfaces and contracts
 
-Commands: `get_settings()` returns `{ currency, entry_count }` (the frontend reads the currency only for the Settings page), and `set_currency(currency)` returns the same. `entry_count` (paychecks, annual statements and investment statements) lets the frontend decide whether REQ-5 applies.
+Commands: `get_settings()` returns `{ currency, entry_count }` (the frontend reads the currency only for the Settings page), and `set_currency(currency)` returns the same. `entry_count` (paychecks, annual statements, investment statements and bank entries) lets the frontend decide whether REQ-5 applies.
 
 Menu: the item `open-settings` is added to the app menu, below About, with the accelerator ⌘,. Choosing it emits the event `menu-action` with that id, as the File menu items do (CSD-002 REQ-9).
 
@@ -263,6 +277,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.6 (28/10/2026): Bank entries (CSD-009) also count as entries for the currency confirmation: REQ-5 reworded, AC-5.7 and AC-5.8 added, `entry_count` counts them. Back to `draft` until the owner approves.
 - 0.5 (28/10/2026): The page is called "Settings" instead of "Project settings" and its currency sits in a "General" panel (definition, REQ-1, AC-1.2), because CSD-008 adds an "Appearance" panel with an application preference. NG-3 points to CSD-008.
 - 0.4 (26/10/2026): REQ-8 reversed: the currency is shown only on the Settings page, no longer in section titles (AC-8.1 rewritten).
 - 0.3 (26/10/2026): Investment statements (CSD-005) also count as entries for the currency confirmation: REQ-5 reworded, AC-5.5 and AC-5.6 added, `entry_count` counts them. REQ-8 points to the currency in the Investments section titles (CSD-005 REQ-20).
