@@ -1,5 +1,6 @@
 // Project file: runs the File menu actions and shows the unsaved-changes indicator (CSD-002).
-import { invoke, listen, confirmAction, showToast, errorText } from './api.js';
+import { invoke, listen, errorText } from '../shared/ipc.js';
+import { confirmAction, showToast } from '../shared/dom.js';
 
 let status = { unsaved_changes: false, has_path: false };
 

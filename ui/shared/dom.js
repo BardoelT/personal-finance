@@ -1,23 +1,6 @@
-// Thin wrappers around the Tauri API plus small DOM helpers.
-// The frontend only displays what Rust returns; it computes no figures.
-
-const tauri = window.__TAURI__;
-
-export function invoke(command, args) {
-  return tauri.core.invoke(command, args);
-}
-
-export function listen(eventName, handler) {
-  return tauri.event.listen(eventName, handler);
-}
-
-/** Safe, user-facing text of an error returned by a command. */
-export function errorText(error) {
-  if (error && typeof error.message === 'string' && error.message) {
-    return error.message;
-  }
-  return 'Something went wrong. Please try again.';
-}
+// Small DOM helpers shared by every page: element builder, icon buttons, toast
+// and the confirmation dialog.
+import { errorText } from './ipc.js';
 
 /** Builds an element. Strings become text nodes, so user data is never parsed as HTML. */
 export function h(tag, attrs = {}, ...children) {
@@ -61,18 +44,6 @@ export function iconButton(kind, label, onClick) {
   }
   const danger = kind === 'delete' ? ' danger' : '';
   return h('button', { type: 'button', class: `icon-btn${danger}`, 'aria-label': label, title: label, onClick }, svg);
-}
-
-/** Shows an ISO date such as "2024-03-01" as dd/mm/yyyy (CSD-001 REQ-22). Display only. */
-export function formatDate(iso) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso.split('-').reverse().join('/') : String(iso);
-}
-
-/** Adds thousands separators to a decimal string such as "3000.00". Display only. */
-export function formatAmount(text) {
-  const [whole, fraction] = String(text).split('.');
-  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  return fraction === undefined ? grouped : `${grouped}.${fraction}`;
 }
 
 let toastTimer = null;
@@ -123,4 +94,11 @@ export function confirmAction({ title, message, confirmLabel, danger = false }) 
     dialog.oncancel = () => finish(false); // Escape
     dialog.showModal();
   });
+}
+
+/** Shows `error` as safe text in the error box with the given id. */
+export function showError(id, error) {
+  const box = document.getElementById(id);
+  box.textContent = errorText(error);
+  box.hidden = false;
 }

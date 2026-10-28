@@ -1,8 +1,10 @@
 // Income insights: the yearly stacked chart of the Income page (CSD-006).
 // Rust returns the figures and the growth; this file only draws them, so the
 // only arithmetic here is scaling values to positions on the chart.
-import { invoke, errorText, h, formatAmount, showToast } from './api.js';
-import { svg, niceScale, compact, segmentShape, createTooltip, bindHighlight, swatch, noSwatch, legendLabel } from './chart.js';
+import { invoke, errorText } from '../shared/ipc.js';
+import { h, showToast } from '../shared/dom.js';
+import { formatAmount } from '../shared/format.js';
+import { svg, niceScale, compact, segmentShape, createTooltip, bindHighlight, swatch, noSwatch, legendLabel } from '../shared/chart.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -141,7 +143,7 @@ function drawChart(years) {
 }
 
 /** Loads the series from Rust and draws it, or shows the note when there is no income yet. */
-export async function reloadInsights() {
+export async function reloadIncomeInsights() {
   const { years } = await invoke('get_income_insights');
   $('insights-empty').hidden = years.length > 0;
   $('insights-scroll').hidden = years.length === 0;
@@ -169,11 +171,11 @@ function selectTab(index, { focus = false } = {}) {
   if (focus) $(TABS[index].tab).focus();
   // Opening Insights recomputes it, so it never shows stale figures (REQ-11).
   if (TABS[index].panel === 'income-insights') {
-    reloadInsights().catch((error) => showToast(errorText(error)));
+    reloadIncomeInsights().catch((error) => showToast(errorText(error)));
   }
 }
 
-export function initInsights() {
+export function initIncomeInsights() {
   window.addEventListener('resize', () => {
     if (drawnYears && !$('insights-scroll').hidden && $('insights-scroll').offsetParent !== null) drawChart(drawnYears);
   });

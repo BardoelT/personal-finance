@@ -1,5 +1,7 @@
 // Investments: accounts with a monthly or yearly statement, each a balance, net deposits and a note (CSD-005).
-import { invoke, errorText, h, iconButton, formatAmount, confirmAction, showToast } from './api.js';
+import { invoke, errorText } from '../shared/ipc.js';
+import { h, iconButton, confirmAction, showToast, showError } from '../shared/dom.js';
+import { formatAmount, currentYear, currentMonth } from '../shared/format.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -11,15 +13,6 @@ let onChanged = async () => {};
 function statementCount(account) {
   if (account.statement_count === 0) return 'No statements yet';
   return `${account.statement_count} statement${account.statement_count === 1 ? '' : 's'}`;
-}
-
-function currentYear() {
-  return String(new Date().getFullYear());
-}
-
-function currentMonth() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
 /** The first line of a note, with an ellipsis when there is more (CSD-005 REQ-17). */
@@ -113,7 +106,7 @@ function renderStatements(statements) {
 }
 
 /** Reloads everything from Rust. */
-export async function reloadInvestments() {
+export async function reloadInvestmentsOverview() {
   const overview = await invoke('list_investment_accounts');
   renderAccounts(overview);
   if (overview.accounts.length === 0) {
@@ -129,14 +122,8 @@ export async function reloadInvestments() {
 }
 
 async function changed() {
-  await reloadInvestments();
+  await reloadInvestmentsOverview();
   await onChanged();
-}
-
-function showError(id, error) {
-  const box = $(id);
-  box.textContent = errorText(error);
-  box.hidden = false;
 }
 
 // ---- Account dialog ----
@@ -397,7 +384,7 @@ async function deleteStatement(statement) {
   }
 }
 
-export function initInvestments({ onChanged: callback }) {
+export function initInvestmentsOverview({ onChanged: callback }) {
   onChanged = callback;
   $('account-add').addEventListener('click', () => openAccountDialog(null));
   $('account-add-first').addEventListener('click', () => openAccountDialog(null));

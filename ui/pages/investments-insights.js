@@ -1,8 +1,10 @@
 // Investment insights: the yearly stacked chart of the Investments page (CSD-007).
 // Rust returns the figures and the growth percentage; this file only draws them,
 // so the only arithmetic here is stacking and scaling values to positions.
-import { invoke, errorText, h, formatAmount, showToast } from './api.js';
-import { svg, niceScale, compact, segmentShape, createTooltip, bindHighlight, swatch, noSwatch, legendLabel } from './chart.js';
+import { invoke, errorText } from '../shared/ipc.js';
+import { h, showToast } from '../shared/dom.js';
+import { formatAmount } from '../shared/format.js';
+import { svg, niceScale, compact, segmentShape, createTooltip, bindHighlight, swatch, noSwatch, legendLabel } from '../shared/chart.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -190,7 +192,7 @@ function drawChart(years) {
 }
 
 /** Loads the series from Rust and draws it, or shows the note when there is no statement yet. */
-export async function reloadInvestmentInsights() {
+export async function reloadInvestmentsInsights() {
   const { years } = await invoke('get_investment_insights');
   $('investment-insights-empty').hidden = years.length > 0;
   $('investment-insights-scroll').hidden = years.length === 0;
@@ -218,11 +220,11 @@ function selectTab(index, { focus = false } = {}) {
   if (focus) $(TABS[index].tab).focus();
   // Opening Insights recomputes it, so it never shows stale figures (REQ-13).
   if (TABS[index].panel === 'investments-insights') {
-    reloadInvestmentInsights().catch((error) => showToast(errorText(error)));
+    reloadInvestmentsInsights().catch((error) => showToast(errorText(error)));
   }
 }
 
-export function initInvestmentInsights() {
+export function initInvestmentsInsights() {
   window.addEventListener('resize', () => {
     if (drawnYears && !$('investment-insights-scroll').hidden && $('investment-insights-scroll').offsetParent !== null) drawChart(drawnYears);
   });

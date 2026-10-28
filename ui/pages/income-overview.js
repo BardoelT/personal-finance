@@ -1,5 +1,7 @@
 // Employment income: jobs, yearly totals over all jobs, and the paychecks and annual statements of all jobs (CSD-001).
-import { invoke, errorText, h, iconButton, formatAmount, formatDate, confirmAction, showToast } from './api.js';
+import { invoke, errorText } from '../shared/ipc.js';
+import { h, iconButton, confirmAction, showToast, showError } from '../shared/dom.js';
+import { formatAmount, formatDate, currentYear, currentMonth } from '../shared/format.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -18,15 +20,6 @@ function jobMeta(job) {
 function entryCount(job) {
   const noun = job.pay_period === 'Yearly' ? 'statement' : 'paycheck';
   return `${job.entry_count} ${noun}${job.entry_count === 1 ? '' : 's'}`;
-}
-
-function currentYear() {
-  return String(new Date().getFullYear());
-}
-
-function currentMonth() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
 function amountCell(value) {
@@ -104,7 +97,7 @@ function renderEntries(entries) {
 }
 
 /** Reloads everything from Rust. */
-export async function reloadIncome() {
+export async function reloadIncomeOverview() {
   jobs = await invoke('list_jobs');
   renderJobs();
   if (jobs.length === 0) return;
@@ -114,14 +107,8 @@ export async function reloadIncome() {
 }
 
 async function changed() {
-  await reloadIncome();
+  await reloadIncomeOverview();
   await onChanged();
-}
-
-function showError(id, error) {
-  const box = $(id);
-  box.textContent = errorText(error);
-  box.hidden = false;
 }
 
 // ---- Job dialog ----
@@ -314,7 +301,7 @@ async function deleteEntry(entry) {
   }
 }
 
-export function initIncome({ onChanged: callback }) {
+export function initIncomeOverview({ onChanged: callback }) {
   onChanged = callback;
   $('job-add').addEventListener('click', () => openJobDialog(null));
   $('job-add-first').addEventListener('click', () => openJobDialog(null));

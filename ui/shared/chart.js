@@ -2,7 +2,7 @@
 // numbers into positions and labels and handle the tooltip and the legend
 // highlight; the figures themselves come from Rust.
 
-import { h } from './api.js';
+import { h } from './dom.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const TICK_INTERVALS = 4;
