@@ -1,4 +1,4 @@
-// Entry point: wires the project controls, the income and investments views (each with an insights chart), the settings and the dashboard.
+// Entry point: wires the project controls, the income, investments and bank accounts views (each with an insights chart), the settings and the dashboard.
 import { errorText, listen } from './shared/ipc.js';
 import { showToast } from './shared/dom.js';
 import { initProject, refreshProjectStatus } from './pages/project.js';
@@ -6,6 +6,8 @@ import { initIncomeOverview, reloadIncomeOverview } from './pages/income-overvie
 import { initIncomeInsights, reloadIncomeInsightsIfOpen } from './pages/income-insights.js';
 import { initInvestmentsInsights, reloadInvestmentsInsightsIfOpen } from './pages/investments-insights.js';
 import { initInvestmentsOverview, reloadInvestmentsOverview } from './pages/investments-overview.js';
+import { initBankInsights, reloadBankInsightsIfOpen } from './pages/bank-insights.js';
+import { initBankOverview, reloadBankOverview } from './pages/bank-overview.js';
 import { initSettings, loadPreferences, reloadSettings } from './pages/settings.js';
 import { reloadDashboard } from './pages/dashboard.js';
 
@@ -42,6 +44,14 @@ async function start() {
       await reloadSettings();
     },
   });
+  initBankInsights();
+  // Bank entries count for the currency confirmation of the settings page (CSD-009 REQ-24).
+  initBankOverview({
+    onChanged: async () => {
+      await refreshProjectStatus();
+      await reloadSettings();
+    },
+  });
   initSettings({
     onChanged: async () => {
       await refreshProjectStatus();
@@ -54,6 +64,8 @@ async function start() {
       await reloadIncomeInsightsIfOpen();
       await reloadInvestmentsOverview();
       await reloadInvestmentsInsightsIfOpen();
+      await reloadBankOverview();
+      await reloadBankInsightsIfOpen();
       await reloadDashboard();
     },
   });
@@ -73,6 +85,7 @@ async function start() {
   await reloadSettings();
   await reloadIncomeOverview();
   await reloadInvestmentsOverview();
+  await reloadBankOverview();
   await reloadDashboard();
 }
 

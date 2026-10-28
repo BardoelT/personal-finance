@@ -59,6 +59,15 @@
           Investments
         </button>
 
+        <button class="nav-item" data-section="bank">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 10l9-6 9 6"/>
+            <path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/>
+            <path d="M3 20h18"/>
+          </svg>
+          Bank accounts
+        </button>
+
         <div class="nav-section-label">Insights</div>
 
         <button class="nav-item" data-section="reports">
@@ -302,6 +311,92 @@
         </div>
       </section>
 
+      <!-- Bank accounts -->
+      <section class="section" id="bank" aria-labelledby="bank-title">
+        <div class="section-header">
+          <h1 class="section-title" id="bank-title">Bank accounts</h1>
+        </div>
+
+        <div class="placeholder" id="bank-empty" hidden>
+          <p>No bank accounts yet. Add your first bank account to start tracking its balance.</p>
+          <button type="button" class="btn primary" id="bank-account-add-first">Add your first bank account</button>
+        </div>
+
+        <div id="bank-content" hidden>
+          <div class="tabs" role="tablist" aria-label="Bank account views">
+            <button type="button" class="tab" role="tab" id="bank-tab-overview" aria-controls="bank-overview" aria-selected="true">Overview</button>
+            <button type="button" class="tab" role="tab" id="bank-tab-insights" aria-controls="bank-insights" aria-selected="false" tabindex="-1">Insights</button>
+          </div>
+
+          <div id="bank-overview" role="tabpanel" aria-labelledby="bank-tab-overview">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Accounts</span>
+              <button type="button" class="btn primary" id="bank-account-add">Add account</button>
+            </div>
+            <ul class="job-list" id="bank-account-list"></ul>
+            <div class="job-row account-total" id="bank-account-total" hidden>
+              <span class="job-name">Total of latest balances</span>
+              <span class="job-meta"></span>
+              <span class="account-balance" id="bank-account-total-value"></span>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">Yearly totals</span></div>
+            <p class="empty-note" id="bank-totals-empty" hidden>No totals yet. Totals appear once there is an entry.</p>
+            <div class="table-wrap">
+              <table class="data-table" id="bank-totals-table" hidden>
+                <thead>
+                  <tr>
+                    <th scope="col">Year</th>
+                    <th scope="col" class="num">Closing balance</th>
+                    <th scope="col" class="num">Entries</th>
+                  </tr>
+                </thead>
+                <tbody id="bank-totals-rows"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Entries</span>
+              <button type="button" class="btn primary" id="bank-entry-add">Add entry</button>
+            </div>
+            <p class="empty-note" id="bank-entries-empty" hidden>No entries yet.</p>
+            <div class="table-wrap">
+              <table class="data-table" id="bank-entries-table" hidden>
+                <thead>
+                  <tr>
+                    <th scope="col">Period</th>
+                    <th scope="col">Account</th>
+                    <th scope="col" class="num">Balance</th>
+                    <th scope="col">Note</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody id="bank-entries-rows"></tbody>
+              </table>
+            </div>
+          </div>
+          </div>
+
+          <div id="bank-insights" role="tabpanel" aria-labelledby="bank-tab-insights" hidden>
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title">Bank accounts per year</span>
+                <ul class="legend" id="bank-insights-legend" aria-label="Legend"></ul>
+              </div>
+              <p class="empty-note" id="bank-insights-empty" hidden>No entries yet. The chart appears once there is an entry.</p>
+              <div class="chart-scroll" id="bank-insights-scroll" hidden>
+                <div class="chart-inner" id="bank-insights-chart"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Settings -->
       <section class="section" id="settings" aria-labelledby="settings-title">
         <div class="section-header">
@@ -465,6 +560,54 @@
       <div class="dialog-actions">
         <button type="button" class="btn" data-cancel>Cancel</button>
         <button type="submit" class="btn primary">Save statement</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="bank-account-dialog" aria-labelledby="bank-account-dialog-title">
+    <form method="dialog" id="bank-account-form" novalidate>
+      <h2 id="bank-account-dialog-title">Add account</h2>
+      <label class="field">Account name
+        <input type="text" name="name" maxlength="100" autocomplete="off" required>
+      </label>
+      <label class="field">Entry period
+        <select name="entry_period">
+          <option value="Monthly">Monthly</option>
+          <option value="Yearly">Yearly</option>
+        </select>
+        <span class="field-hint" id="bank-account-period-hint" hidden>The entry period cannot change once the account has entries.</span>
+      </label>
+      <p class="form-error" id="bank-account-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn" data-cancel>Cancel</button>
+        <button type="submit" class="btn primary">Save account</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="bank-entry-dialog" aria-labelledby="bank-entry-dialog-title">
+    <form method="dialog" id="bank-entry-form" novalidate>
+      <h2 id="bank-entry-dialog-title">Add entry</h2>
+      <label class="field">Account
+        <select name="account_id"></select>
+      </label>
+      <div class="field-action">
+        <button type="button" class="btn" id="bank-entry-copy">Copy previous month</button>
+      </div>
+      <label class="field"><span id="bank-entry-period-label">Month (YYYY-MM)</span>
+        <input type="text" name="period" inputmode="numeric" placeholder="2026-09" maxlength="7" autocomplete="off" required>
+      </label>
+      <label class="field">Balance
+        <input type="text" name="balance" inputmode="decimal" placeholder="0.00" autocomplete="off" required>
+      </label>
+      <label class="field">Note (optional)
+        <textarea name="note" rows="4" autocomplete="off"></textarea>
+      </label>
+      <p class="field-hint">Use a dot for decimals, for example 2500.00. The balance is the closing balance of the period. A negative balance, such as -150.25, means the account is overdrawn. A note can be up to 2000 characters.</p>
+      <p class="form-error" id="bank-entry-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn" data-cancel>Cancel</button>
+        <button type="submit" class="btn primary">Save entry</button>
       </div>
     </form>
   </dialog>

@@ -39,14 +39,20 @@ const BAR_RADIUS = 3;
 /**
  * A bar segment from `yTop` down to `yBottom`, inset by half the 1 px gap so
  * stacked segments are separated by a gap and not by an outline. The topmost
- * segment of a bar has rounded top corners (CSD-006 REQ-16, CSD-007 REQ-18).
+ * segment of a bar has rounded top corners (CSD-006 REQ-16, CSD-007 REQ-18);
+ * `rounded` is `true` or 'top' for that, and 'bottom' for the lowest segment
+ * that hangs below the zero line (CSD-010 REQ-13).
  */
 export function segmentShape(attrs, x, width, yTop, yBottom, { rounded = false } = {}) {
   const y = yTop + BAR_GAP / 2;
   const height = Math.max(yBottom - yTop - BAR_GAP, 0.5);
   if (!rounded) return svg('rect', { ...attrs, x, y, width, height });
   const r = Math.min(BAR_RADIUS, width / 2, height);
-  const d = `M${x},${y + height} V${y + r} Q${x},${y} ${x + r},${y} H${x + width - r} Q${x + width},${y} ${x + width},${y + r} V${y + height} Z`;
+  const bottom = y + height;
+  const d =
+    rounded === 'bottom'
+      ? `M${x},${y} H${x + width} V${bottom - r} Q${x + width},${bottom} ${x + width - r},${bottom} H${x + r} Q${x},${bottom} ${x},${bottom - r} Z`
+      : `M${x},${bottom} V${y + r} Q${x},${y} ${x + r},${y} H${x + width - r} Q${x + width},${y} ${x + width},${y + r} V${bottom} Z`;
   return svg('path', { ...attrs, d });
 }
 

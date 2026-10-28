@@ -39,11 +39,15 @@ export function axisLabel(value) {
  *
  * - `command`, `ariaLabel`: the Rust command that returns `{ years }`, and the chart's name
  * - `plotHeight`, `minSlotWidth`, `zeroLine`: the size, and whether the zero line gets its own style
- * - `piecesOf(row)`: the stacked pieces `{ key, cssClass, low, high, hangs }` in drawing order
+ * - `piecesOf(row)`: the stacked pieces `{ key, cssClass, low, high, hangs }` in drawing order;
+ *   a piece may also carry `label` (its accessible name) and `rounding` (`'top'`, `'bottom'` or `false`),
+ *   which otherwise rounds the top of the highest piece
  * - `extraLevels(row)`: further values the axis must reach (such as a closing balance)
  * - `describe(row)`, `tooltipContent(row)`: the screen-reader text and the tooltip rows
  * - `decorate(row, geometry)`: extra nodes for a bar (growth label, marker)
  * - `labelLines(row)`: the lines under the axis, `[{ text, className }]`
+ * - `onLoaded(data)` (optional): runs with the whole response before drawing, for a legend built from it
+ * - `highlightAcrossYears` (optional): a highlighted series is highlighted in every year, not only the hovered one
  */
 export function createYearlyChart(strategy) {
   const part = (suffix) => document.getElementById(suffix ? `${strategy.id}-${suffix}` : strategy.id);
@@ -108,12 +112,12 @@ export function createYearlyChart(strategy) {
       yearPieces.forEach((piece, i) =>
         group.append(
           segmentShape(
-            { class: piece.cssClass, 'data-legend': piece.key },
+            { class: piece.cssClass, 'data-legend': piece.key, ...(piece.label ? { 'aria-label': piece.label } : {}) },
             centre - barWidth / 2,
             barWidth,
             yOf(piece.high),
             yOf(piece.low),
-            { rounded: i === topmost },
+            { rounded: piece.rounding === undefined ? i === topmost : piece.rounding },
           ),
         ),
       );
@@ -133,7 +137,7 @@ export function createYearlyChart(strategy) {
       group.addEventListener('mouseleave', () => tooltip.hide());
       group.addEventListener('focus', () => tooltip.show(strategy.tooltipContent(row), bar, hit));
       group.addEventListener('blur', () => tooltip.hide());
-      bindHighlight(group, [part('legend'), tooltip.element, group]);
+      bindHighlight(group, strategy.highlightAcrossYears ? [part('legend'), inner] : [part('legend'), tooltip.element, group]);
       chart.append(group);
     });
 
@@ -142,7 +146,9 @@ export function createYearlyChart(strategy) {
 
   /** Loads the series from Rust and draws it, or shows the note when there is nothing yet. */
   async function reload() {
-    const { years } = await invoke(strategy.command);
+    const data = await invoke(strategy.command);
+    const { years } = data;
+    strategy.onLoaded?.(data);
     part('empty').hidden = years.length > 0;
     part('scroll').hidden = years.length === 0;
     if (years.length === 0) {

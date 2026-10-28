@@ -19,6 +19,8 @@
   --series-salary: hsl(228, 58%, 60%); --series-holiday: hsl(174, 40%, 42%); --series-bonus: hsl(36, 60%, 52%);
   --series-opening: hsl(228, 58%, 60%); --series-deposits: hsl(174, 40%, 42%);
   --chart-gain: hsl(145, 38%, 44%); --chart-loss: hsl(0, 48%, 58%);
+  /* The eight colours of the banks in the bank accounts chart (CSD-010 REQ-8). */
+  --bank-0: hsl(228, 58%, 60%); --bank-1: hsl(174, 40%, 42%); --bank-2: hsl(36, 60%, 52%); --bank-3: hsl(340, 45%, 58%); --bank-4: hsl(262, 40%, 60%); --bank-5: hsl(95, 34%, 44%); --bank-6: hsl(200, 52%, 48%); --bank-7: hsl(18, 55%, 54%);
   --tag-expense-bg: #fee2e2; --tag-expense-fg: #b91c1c;
 }
 
@@ -31,6 +33,7 @@
     --series-salary: hsl(228, 58%, 72%); --series-holiday: hsl(174, 45%, 55%); --series-bonus: hsl(38, 60%, 62%);
     --series-opening: hsl(228, 58%, 72%); --series-deposits: hsl(174, 45%, 55%);
     --chart-gain: hsl(145, 40%, 56%); --chart-loss: hsl(0, 52%, 68%);
+    --bank-0: hsl(228, 58%, 72%); --bank-1: hsl(174, 45%, 55%); --bank-2: hsl(38, 60%, 62%); --bank-3: hsl(340, 50%, 70%); --bank-4: hsl(262, 45%, 72%); --bank-5: hsl(95, 36%, 56%); --bank-6: hsl(200, 55%, 60%); --bank-7: hsl(18, 58%, 64%);
     color-scheme: dark;
   }
 }
@@ -43,6 +46,7 @@
   --series-salary: hsl(228, 58%, 72%); --series-holiday: hsl(174, 45%, 55%); --series-bonus: hsl(38, 60%, 62%);
   --series-opening: hsl(228, 58%, 72%); --series-deposits: hsl(174, 45%, 55%);
   --chart-gain: hsl(145, 40%, 56%); --chart-loss: hsl(0, 52%, 68%);
+  --bank-0: hsl(228, 58%, 72%); --bank-1: hsl(174, 45%, 55%); --bank-2: hsl(38, 60%, 62%); --bank-3: hsl(340, 50%, 70%); --bank-4: hsl(262, 45%, 72%); --bank-5: hsl(95, 36%, 56%); --bank-6: hsl(200, 55%, 60%); --bank-7: hsl(18, 58%, 64%);
   color-scheme: dark;
 }
 
