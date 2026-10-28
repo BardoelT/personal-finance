@@ -1,10 +1,10 @@
 ---
 id: CSD-001
 title: Employment income tracking
-status: approved
+status: draft
 owner: Thijs Bardoel
-version: 0.11
-last_updated: 26/10/2026
+version: 0.12
+last_updated: 28/10/2026
 related: [CSD-000, CSD-002, CSD-003, CSD-006]
 ---
 
@@ -18,6 +18,7 @@ The app tracks wealth but has no view of what comes in. This capability lets the
 - Create, edit, end and delete jobs.
 - Create, edit and delete one paycheck per monthly job per calendar month.
 - Create, edit and delete one annual statement per yearly job per calendar year.
+- Change the month of an existing paycheck and the year of an existing annual statement (REQ-29).
 - One employment view with the jobs, the yearly totals over all jobs and the paychecks and annual statements of all jobs.
 - Income data is part of the project file. Saving and loading is specified in CSD-002.
 
@@ -30,6 +31,8 @@ The app tracks wealth but has no view of what comes in. This capability lets the
 - NG-6: A chart or other income-over-time visualisation, except the yearly insights view of CSD-006. Yearly totals over all jobs are in scope (REQ-11).
 - NG-7: Automatic calculation of holiday pay or any other amount. All amounts are entered manually.
 - NG-8: (moved to CSD-002 NG-1 in v0.4)
+- NG-9: Moving an entry to another job. Only the month or year of an entry can change (REQ-29).
+- NG-10: Changing the months or years of several entries at once.
 
 ## 3. Definitions
 | Term | Meaning |
@@ -246,7 +249,7 @@ Scenario: Boundary amount accepted
 ```
 
 **REQ-8: Edit and delete an entry** *(event-driven)*
-When the user edits the amounts of an existing paycheck or annual statement or deletes it, the app shall apply the change without asking for confirmation, validating edited amounts under REQ-7. The month of an existing paycheck and the year of an existing annual statement shall not be editable.
+When the user edits the amounts of an existing paycheck or annual statement or deletes it, the app shall apply the change without asking for confirmation, validating edited amounts under REQ-7. Changing the month of a paycheck or the year of an annual statement is specified in REQ-29.
 
 ```gherkin
 @AC-8.1
@@ -269,12 +272,7 @@ Scenario: Delete paycheck
   Then only the paycheck for 2026-04 exists
   And no confirmation was asked
 
-@AC-8.4
-Scenario: Month stays fixed on edit
-  Given a paycheck for 2026-05 with gross 3000.00
-  When the user edits its amounts
-  Then the edit offers no month field
-  And the paycheck is still for 2026-05
+# @AC-8.4 (removed in v0.12): the month of a paycheck is editable now, see AC-29.1 to AC-29.6.
 
 @AC-8.5
 Scenario: Edit and delete an annual statement
@@ -285,12 +283,7 @@ Scenario: Edit and delete an annual statement
   Then the job has no annual statements
   And no confirmation was asked
 
-@AC-8.6
-Scenario: Year stays fixed on edit
-  Given an annual statement for 2025 with gross 40000.00
-  When the user edits its amounts
-  Then the edit offers no year field
-  And the statement is still for 2025
+# @AC-8.6 (removed in v0.12): the year of an annual statement is editable now, see AC-29.3 and AC-29.6.
 
 @AC-8.7
 Scenario: Invalid statement edit rejected
@@ -298,6 +291,117 @@ Scenario: Invalid statement edit rejected
   When the user sets gross salary to -1.00
   Then the edit is rejected with error code "PAYCHECK_AMOUNT_NEGATIVE"
   And the statement still has gross 40000.00
+```
+
+**REQ-29: Change the month or year of an entry** *(event-driven)*
+When the user changes the month of an existing paycheck or the year of an existing annual statement in the edit form and saves, the app shall give the entry the new month or year together with any amounts edited at the same time, without asking for confirmation. The entry stays with its job, and the entries list, the yearly totals and the insights show it under its new month or year.
+
+```gherkin
+@AC-29.1
+Scenario: Move a paycheck to another month
+  Given a job with a paycheck for 2026-04 with gross 3000.00
+  When the user changes its month to 2026-03
+  Then the job has a paycheck for 2026-03 with gross 3000.00
+  And the job has no paycheck for 2026-04
+  And no confirmation was asked
+
+@AC-29.2
+Scenario: Change the month and an amount together
+  Given a paycheck for 2026-05 with gross 3000.00, holiday pay 0.00 and bonus 0.00
+  When the user changes its month to 2026-04 and sets holiday pay to 2400.00
+  Then the paycheck for 2026-04 has holiday pay 2400.00 and total gross 5400.00
+  And there is no paycheck for 2026-05
+
+@AC-29.3
+Scenario: Move an annual statement to another year
+  Given a yearly job with an annual statement for 2025 with gross 40000.00
+  When the user changes its year to 2024
+  Then the job has an annual statement for 2024 with gross 40000.00
+  And the job has no annual statement for 2025
+
+@AC-29.4
+Scenario: The yearly totals follow the move
+  Given a monthly job with paychecks for 2025-11 and 2025-12, each with gross 3000.00
+  When the user changes the month of the paycheck for 2025-12 to 2026-01
+  Then the yearly total of 2025 has total gross 3000.00
+  And the yearly total of 2026 has total gross 3000.00
+
+@AC-29.5
+Scenario: Keeping the month changes only the amounts
+  Given a paycheck for 2026-05 with gross 3000.00
+  When the user saves it with the month 2026-05 and gross 3200.00
+  Then the paycheck for 2026-05 has gross 3200.00
+  And no error about a duplicate month is shown
+
+@AC-29.6
+Scenario Outline: The edit form offers the month or year
+  Given <entry>
+  When the user opens it for editing
+  Then the form shows <field> "<value>" and the job, which cannot be changed
+
+  Examples:
+    | entry                                        | field | value   |
+    | a paycheck for 2026-05                       | month | 2026-05 |
+    | an annual statement for 2025                 | year  | 2025    |
+
+@AC-29.7
+Scenario: A move is an unsaved change
+  Given a saved project with a paycheck for 2026-05
+  When the user changes its month to 2026-04
+  Then the unsaved indicator is shown
+```
+
+**REQ-30: Invalid new month or year** *(unwanted behaviour)*
+If the new month or year of an edited entry is later than the current month or year, or the job already has another entry for it, or the edit also has an invalid amount, then the app shall reject the whole edit with the error code of the violated rule and leave the entry, with its month or year and its amounts, as it was. The start and end dates of the job do not matter, as in REQ-5 and REQ-25, and another job may have an entry for the same month or year.
+
+```gherkin
+@AC-30.1
+Scenario Outline: A month or year in the future is rejected
+  Given the current date is 26/10/2026
+  And <entry>
+  When the user changes its <field> to "<new>"
+  Then the edit is rejected with error code "<code>"
+  And <entry> is unchanged
+
+  Examples:
+    | entry                                                | field | new     | code                      |
+    | a paycheck for 2026-05 with gross 3000.00            | month | 2026-11 | PAYCHECK_MONTH_IN_FUTURE  |
+    | an annual statement for 2025 with gross 40000.00     | year  | 2027    | STATEMENT_YEAR_IN_FUTURE  |
+
+@AC-30.2
+Scenario: A month that already has a paycheck is rejected
+  Given a job with a paycheck for 2026-04 with gross 2000.00 and one for 2026-05 with gross 3000.00
+  When the user changes the month of the paycheck for 2026-05 to 2026-04 and sets holiday pay to 100.00
+  Then the edit is rejected with error code "PAYCHECK_DUPLICATE_MONTH"
+  And the paycheck for 2026-04 still has gross 2000.00
+  And the paycheck for 2026-05 still has gross 3000.00 and holiday pay 0.00
+
+@AC-30.3
+Scenario: A year that already has an annual statement is rejected
+  Given a yearly job with annual statements for 2024 and 2025
+  When the user changes the year of the statement for 2025 to 2024
+  Then the edit is rejected with error code "STATEMENT_DUPLICATE_YEAR"
+  And both statements still exist with their own years
+
+@AC-30.4
+Scenario: An invalid amount rejects the whole edit
+  Given a paycheck for 2026-05 with gross 3000.00
+  When the user changes its month to 2026-04 and sets gross salary to -1.00
+  Then the edit is rejected with error code "PAYCHECK_AMOUNT_NEGATIVE"
+  And the paycheck is still for 2026-05 with gross 3000.00
+  And the unsaved indicator is not shown
+
+@AC-30.5
+Scenario: The job dates do not matter
+  Given a job that started on 01/03/2024 with a paycheck for 2026-05
+  When the user changes its month to 2024-01
+  Then the job has a paycheck for 2024-01
+
+@AC-30.6
+Scenario: Another job may have the same month
+  Given two monthly jobs, the first with a paycheck for 2026-04 and the second with one for 2026-05
+  When the user changes the month of the second job's paycheck to 2026-04
+  Then both jobs have a paycheck for 2026-04
 ```
 
 **REQ-9: Copy previous month or year** *(event-driven)*
@@ -684,7 +788,7 @@ erDiagram
 The project file keeps annual statements in their own list `statements` next to `paychecks`. A job without a pay period is Monthly: `format_version` stays 1 and nothing is migrated, as the app is not released yet. Years are `YYYY` everywhere. Statements follow the same amount rules as paychecks and use the same amount error codes.
 
 Commands (all inputs validated in Rust; amounts cross IPC as decimal strings):
-`list_jobs`, `create_job`, `update_job`, `delete_job`, `list_entries()` (paychecks and annual statements of all jobs, each with its employer and period; replaces `list_paychecks()`), `add_paycheck`, `add_statement`, `update_paycheck`, `update_statement`, `delete_paycheck`, `delete_statement`, `copy_previous_entry(job_id)` (replaces `copy_previous_paycheck`), `yearly_totals()` (over all jobs). Project commands (save, open, new) are in CSD-002. The income data is stored as one section of the project file defined there.
+`list_jobs`, `create_job`, `update_job`, `delete_job`, `list_entries()` (paychecks and annual statements of all jobs, each with its employer and period; replaces `list_paychecks()`), `add_paycheck`, `add_statement`, `update_paycheck` and `update_statement` (the month or year that identifies the entry stays an argument, and a new month or year is an extra argument, equal to it when the period does not change; the edit is applied as a whole or not at all, REQ-30), `delete_paycheck`, `delete_statement`, `copy_previous_entry(job_id)` (replaces `copy_previous_paycheck`), `yearly_totals()` (over all jobs). Project commands (save, open, new) are in CSD-002. The income data is stored as one section of the project file defined there.
 
 Error codes (returned as code plus safe message): `JOB_EMPLOYER_REQUIRED`, `JOB_START_REQUIRED`, `JOB_END_BEFORE_START`, `PAYCHECK_MONTH_IN_FUTURE`, `PAYCHECK_DUPLICATE_MONTH`, `PAYCHECK_GROSS_INVALID`, `PAYCHECK_AMOUNT_NEGATIVE`, `PAYCHECK_AMOUNT_PRECISION`, `PAYCHECK_AMOUNT_TOO_LARGE`, `JOB_DATE_INVALID`, `JOB_PERIOD_UNSUPPORTED`, `JOB_PERIOD_LOCKED`, `JOB_PERIOD_MISMATCH`, `STATEMENT_DUPLICATE_YEAR`, `STATEMENT_YEAR_IN_FUTURE`, `STATEMENT_YEAR_INVALID`. Project error codes are in CSD-002.
 
@@ -704,8 +808,8 @@ All ACs are proven by `cargo test`, with domain logic tested in `domain/`. Tests
 
 | Requirement | Command |
 |---|---|
-| All of REQ-1 to REQ-13 and REQ-24 to REQ-27, and AC-22.2 and AC-22.3 | `cargo test test_csd001_` |
-| AC-1.7, AC-5.6, AC-22.1, REQ-28, REQ-23 (AC-23.1, AC-23.2, AC-23.4) and the display parts of AC-9.3 to AC-9.5, AC-11.2, AC-13.2 | Manual checklist: section order and contents, job buttons and paycheck counts, no selection, dd/mm/yyyy dates, default job in the add form. There is no frontend test setup |
+| All of REQ-1 to REQ-13, REQ-24 to REQ-27, REQ-29 (except AC-29.6) and REQ-30, and AC-22.2 and AC-22.3 | `cargo test test_csd001_` |
+| AC-1.7, AC-5.6, AC-22.1, AC-29.6, REQ-28, REQ-23 (AC-23.1, AC-23.2, AC-23.4) and the display parts of AC-9.3 to AC-9.5, AC-11.2, AC-13.2 | Manual checklist: section order and contents, job buttons and paycheck counts, no selection, dd/mm/yyyy dates, default job in the add form, the month or year field in the edit form. There is no frontend test setup |
 | AC-23.3 (data) | `cargo test test_csd001_ac_23_` covers the data of the entries table (all jobs, their employer and period) |
 | One requirement, e.g. REQ-5 | `cargo test test_csd001_ac_5_` |
 
@@ -717,11 +821,12 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 - OQ-3: (moved to CSD-002 OQ-2 in v0.4) The `CLAUDE.md` update at approval.
 - OQ-4: (resolved in v0.2, moved to CSD-003 in v0.8) Currencies are EUR, USD and GBP.
 - OQ-5: (moved to CSD-002 in v0.4) Testing the unsaved state, resolved there.
-- OQ-6: (resolved in v0.2) The month of an existing paycheck is not editable.
+- OQ-6: (resolved in v0.2, reversed in v0.12) The month of an existing paycheck was not editable. It is editable now, and so is the year of an annual statement: REQ-29, REQ-30.
 - OQ-7: (resolved in v0.2) Deleting a single paycheck needs no confirmation.
 - OQ-8: (resolved in v0.8) The project is single-currency: per-job currency, `JOB_CURRENCY_*`, the Currency column and the CON-1 exception are removed (CSD-003).
 
 ## 9. Changelog
+- 0.12 (28/10/2026): The month of a paycheck and the year of an annual statement can be changed when editing (GitHub issue 12). REQ-8 no longer forbids it, AC-8.4 and AC-8.6 are removed, new REQ-29 (AC-29.1 to AC-29.7) and REQ-30 (AC-30.1 to AC-30.6) reuse the add rules and error codes, NG-9 and NG-10 added, OQ-6 reversed, the commands `update_paycheck` and `update_statement` take a new month or year. Back to `draft` until the owner approves.
 - 0.11 (26/10/2026): NG-6 no longer excludes the yearly insights chart of CSD-006. No other change to income behaviour.
 - 0.10 (26/10/2026): Consistent action layout. REQ-23: "Add job" moves to the Jobs section header, the job actions become the icon buttons Edit (pencil) and Delete (trash), and all row actions are flush right (AC-23.2 amended, AC-23.5 and AC-23.6 added).
 - 0.9 (26/10/2026): Jobs get a pay period, Monthly or Yearly. Yearly jobs hold one annual statement per calendar year instead of monthly paychecks. New REQ-24 to REQ-28 (pay period lock, add statement, one per year, entries match the pay period, add form), REQ-1, REQ-7 to REQ-13 and REQ-23 extended to entries, error codes and data model updated. The Paychecks section becomes Paychecks and statements with a Period column. `format_version` stays 1.

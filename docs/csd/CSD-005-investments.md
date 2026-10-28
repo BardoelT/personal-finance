@@ -1,10 +1,10 @@
 ---
 id: CSD-005
 title: Investments
-status: approved
+status: draft
 owner: Thijs Bardoel
-version: 0.8
-last_updated: 27/10/2026
+version: 0.9
+last_updated: 28/10/2026
 related: [CSD-000, CSD-001, CSD-002, CSD-003, CSD-007]
 ---
 
@@ -17,6 +17,7 @@ The app tracks wealth but has no view of what the user has invested. This capabi
 ### 2.1 In scope
 - Create, edit and delete investment accounts, each with a name and a statement period (Monthly or Yearly).
 - Create, edit and delete one statement per account per period: a closing balance, optional net deposits (default 0.00) and an optional note.
+- Change the period of an existing statement (REQ-28).
 - Capital growth per statement, derived from the balance, the previous statement and the net deposits, and shown in the Statements section.
 - A statement form that calculates the balance or the capital growth from the other, given the net deposits.
 - Yearly totals per calendar year over all accounts: closing balance, net deposits, capital growth and the number of statements, like the yearly totals of employment income (CSD-001 REQ-11).
@@ -34,6 +35,8 @@ The app tracks wealth but has no view of what the user has invested. This capabi
 - NG-8: A note on the account itself, an account type and an institution name.
 - NG-9: Import of statements (PDF, CSV, broker export).
 - NG-10: Rich text or attachments in notes.
+- NG-11: Moving a statement to another account. Only the period of a statement can change (REQ-28).
+- NG-12: Changing the periods of several statements at once.
 
 ## 3. Definitions
 | Term | Meaning |
@@ -359,7 +362,7 @@ Scenario: Line breaks are kept
 ```
 
 **REQ-11: Edit a statement** *(event-driven)*
-When the user edits an existing statement, the app shall change its balance, net deposits and note under REQ-9, REQ-22 and REQ-10. The period of an existing statement shall not be editable.
+When the user edits an existing statement, the app shall change its balance, net deposits and note under REQ-9, REQ-22 and REQ-10. Changing the period of a statement is specified in REQ-28.
 
 ```gherkin
 @AC-11.1
@@ -374,11 +377,126 @@ Scenario: Clear a note
   When the user empties the note
   Then the statement has an empty note
 
-@AC-11.3
-Scenario: The period cannot be edited
-  Given a statement for 2026-09
+# @AC-11.3 (removed in v0.9): the period of a statement is editable now, see AC-28.6.
+```
+
+**REQ-28: Change the period of a statement** *(event-driven)*
+When the user changes the period of an existing statement in the edit form and saves, the app shall give the statement the new period together with any balance, net deposits and note edited at the same time, without asking for confirmation. The statement stays with its account, and the capital growth, the latest balances, the yearly totals and the insights show it under its new period.
+
+```gherkin
+@AC-28.1
+Scenario: Move a statement to another month
+  Given a monthly account with a statement for 2026-09 with balance 12500.00 and note "First"
+  When the user changes its period to 2026-08
+  Then the account has a statement for 2026-08 with balance 12500.00 and note "First"
+  And the account has no statement for 2026-09
+  And no confirmation was asked
+
+@AC-28.2
+Scenario: Change the period and the balance together
+  Given a monthly account with a statement for 2026-09 with balance 12500.00
+  When the user changes its period to 2026-08 and sets the balance to 12750.00
+  Then the statement for 2026-08 has balance 12750.00
+  And there is no statement for 2026-09
+
+@AC-28.3
+Scenario: Move a yearly statement
+  Given a yearly account with a statement for 2025 with balance 12500.00
+  When the user changes its period to 2024
+  Then the account has a statement for 2024 with balance 12500.00
+  And the account has no statement for 2025
+
+@AC-28.4
+Scenario: The capital growth follows the move
+  Given the current date is 26/10/2026
+  And a monthly account with statements 2026-07 (balance 10000.00, net deposits 10000.00), 2026-08 (balance 10500.00) and 2026-09 (balance 11000.00)
+  When the user changes the period of the statement for 2026-08 to 2026-10
+  Then the capital growth of 2026-07 is 0.00
+  And the capital growth of 2026-09 is 1000.00
+  And the capital growth of 2026-10 is -500.00
+
+@AC-28.5
+Scenario: The yearly totals follow the move
+  Given a monthly account with statements 2025-11 (balance 11000.00, net deposits 11000.00), 2025-12 (balance 11500.00, net deposits 200.00) and 2026-05 (balance 12500.00, net deposits 300.00)
+  When the user changes the period of the statement for 2025-12 to 2026-01
+  Then 2025 shows closing balance 11000.00, net deposits 11000.00, capital growth 0.00, statements 1
+  And 2026 shows closing balance 12500.00, net deposits 500.00, capital growth 1000.00, statements 2
+
+@AC-28.6
+Scenario Outline: The edit form offers the period
+  Given <statement>
   When the user opens it for editing
-  Then the period is shown but cannot be changed
+  Then the form shows the <field> "<value>" and the account, which cannot be changed
+
+  Examples:
+    | statement                                  | field | value   |
+    | a monthly statement for 2026-09            | month | 2026-09 |
+    | a yearly statement for 2025                | year  | 2025    |
+
+@AC-28.7
+Scenario: Keeping the period changes only the values
+  Given a monthly account with a statement for 2026-09 with balance 12500.00
+  When the user saves it with the period 2026-09 and balance 12750.00
+  Then the statement for 2026-09 has balance 12750.00
+  And no error about a duplicate period is shown
+
+@AC-28.8
+Scenario: A move is an unsaved change
+  Given a saved project with a monthly statement for 2026-09
+  When the user changes its period to 2026-08
+  Then the unsaved indicator is shown
+```
+
+**REQ-29: Invalid new period** *(unwanted behaviour)*
+If the new period of an edited statement is later than the current month (monthly account) or the current year (yearly account), or the account already has another statement for it, or it does not match the statement period of the account, or the edit also has an invalid value, then the app shall reject the whole edit with the error code of the violated rule and leave the statement, with its period and its values, as it was. Another account may have a statement for the same period.
+
+```gherkin
+@AC-29.1
+Scenario Outline: A period in the future is rejected
+  Given the current date is 26/10/2026
+  And <account> with a statement for <old> with balance 12500.00
+  When the user changes its period to "<new>"
+  Then the edit is rejected with error code "INVESTMENT_STATEMENT_IN_FUTURE"
+  And the statement for <old> still has balance 12500.00
+
+  Examples:
+    | account         | old     | new     |
+    | a monthly account | 2026-09 | 2026-11 |
+    | a yearly account  | 2025    | 2027    |
+
+@AC-29.2
+Scenario: A period that already has a statement is rejected
+  Given a monthly account with a statement for 2026-08 with balance 12000.00 and one for 2026-09 with balance 12500.00
+  When the user changes the period of the statement for 2026-09 to 2026-08 and sets the balance to 13000.00
+  Then the edit is rejected with error code "INVESTMENT_STATEMENT_DUPLICATE"
+  And the statement for 2026-08 still has balance 12000.00
+  And the statement for 2026-09 still has balance 12500.00
+
+@AC-29.3
+Scenario Outline: A period of the wrong kind is rejected
+  Given <account> with a statement for <old>
+  When the user changes its period to "<new>"
+  Then the edit is rejected with error code "INVESTMENT_PERIOD_MISMATCH"
+  And the statement is still for <old>
+
+  Examples:
+    | account           | old     | new     |
+    | a monthly account | 2026-09 | 2026    |
+    | a yearly account  | 2025    | 2024-12 |
+
+@AC-29.4
+Scenario: An invalid value rejects the whole edit
+  Given a monthly account with a statement for 2026-09 with balance 12500.00
+  When the user changes its period to 2026-08 and sets the balance to -1.00
+  Then the edit is rejected with error code "INVESTMENT_BALANCE_NEGATIVE"
+  And the statement is still for 2026-09 with balance 12500.00
+  And the unsaved indicator is not shown
+
+@AC-29.5
+Scenario: Another account may have the same period
+  Given two monthly accounts, the first with a statement for 2026-08 and the second with one for 2026-09
+  When the user changes the period of the second account's statement to 2026-08
+  Then both accounts have a statement for 2026-08
 ```
 
 **REQ-12: Delete a statement** *(event-driven)*
@@ -787,7 +905,7 @@ Scenario: Deleting the previous statement changes the growth
 ```
 
 **REQ-24: Calculate balance or capital growth in the form** *(event-driven)*
-When the user enters a balance or a capital growth, or changes the net deposits, in the statement form for an account and a period, the app shall calculate, in Rust, the other one of balance and capital growth from the previous statement of that account (0.00 when there is none) and the net deposits, and shall show it marked as calculated. The form shall start with net deposits 0.00, shall treat the last of balance and capital growth that the user typed in as the input, and shall store only the balance and the net deposits.
+When the user enters a balance or a capital growth, or changes the net deposits, in the statement form for an account and a period, the app shall calculate, in Rust, the other one of balance and capital growth from the previous statement of that account (0.00 when there is none; the statement being edited never counts as a previous statement) and the net deposits, and shall show it marked as calculated. The form shall start with net deposits 0.00, shall treat the last of balance and capital growth that the user typed in as the input, and shall store only the balance and the net deposits.
 
 ```gherkin
 @AC-24.1
@@ -866,6 +984,18 @@ Scenario: Growth entered for a first statement
   Given a monthly account without statements
   When a capital growth of 200.00 with net deposits 1000.00 is submitted for calculation for 2026-09
   Then the balance is calculated as 1200.00
+
+@AC-24.13
+Scenario: The statement being edited is not its own previous statement
+  Given a monthly account with statements for 2026-07 (balance 10000.00) and 2026-08 (balance 10500.00)
+  When the user opens the edit form of the statement for 2026-08, changes its period to 2026-09 and enters balance 11000.00
+  Then the capital growth is calculated as 1000.00 and marked as calculated
+
+@AC-24.14
+Scenario: Editing without a period change uses the earlier statement
+  Given a monthly account with statements for 2026-07 (balance 10000.00) and 2026-08 (balance 10500.00)
+  When the user opens the edit form of the statement for 2026-08 and enters balance 10700.00
+  Then the capital growth is calculated as 700.00 and marked as calculated
 ```
 
 **REQ-25: Invalid values in the calculation** *(unwanted behaviour)*
@@ -1043,7 +1173,7 @@ Capital growth is not part of the model: it is derived (REQ-23).
 
 The project file gets a new section `investments` with the lists `accounts` and `statements`. Balances and net deposits are decimal strings. `format_version` stays 1 and nothing is migrated: a file without the section opens with no accounts, and a statement without `net_deposits` opens with 0.00, as the app is not released yet.
 
-Commands (all inputs validated in Rust; amounts cross IPC as decimal strings): `list_investment_accounts()` (each account with its statement count and latest balance and period, plus the total), `create_investment_account`, `update_investment_account`, `delete_investment_account`, `list_investment_statements()` (statements of all accounts, each with its account name, its net deposits and its capital growth), `add_investment_statement` and `update_investment_statement` (both take the net deposits), `delete_investment_statement`, `copy_previous_investment_statement(account_id)`, `yearly_investment_totals()` (over all accounts; each row has the year, closing balance, net deposits, capital growth and statement count, newest year first), and `calculate_investment_statement(account_id, period, net_deposits, input, value)` (`input` is `balance` or `growth`; returns the balance and the capital growth, or an error code; it stores nothing). Project commands (save, open, new) are in CSD-002.
+Commands (all inputs validated in Rust; amounts cross IPC as decimal strings): `list_investment_accounts()` (each account with its statement count and latest balance and period, plus the total), `create_investment_account`, `update_investment_account`, `delete_investment_account`, `list_investment_statements()` (statements of all accounts, each with its account name, its net deposits and its capital growth), `add_investment_statement` and `update_investment_statement` (both take the net deposits; `update_investment_statement` keeps the period that identifies the statement as an argument and takes the new period as an extra one, equal to it when the period does not change, and applies the edit as a whole or not at all, REQ-29), `delete_investment_statement`, `copy_previous_investment_statement(account_id)`, `yearly_investment_totals()` (over all accounts; each row has the year, closing balance, net deposits, capital growth and statement count, newest year first), and `calculate_investment_statement(account_id, period, net_deposits, input, value, ignore_period)` (`input` is `balance` or `growth`; `ignore_period` is optional: the current period of the statement being edited, which never counts as a previous statement, REQ-24; returns the balance and the capital growth, or an error code; it stores nothing). Project commands (save, open, new) are in CSD-002.
 
 Error codes (returned as code plus safe message): `INVESTMENT_ACCOUNT_NAME_REQUIRED`, `INVESTMENT_ACCOUNT_NAME_TOO_LONG`, `INVESTMENT_ACCOUNT_NAME_DUPLICATE`, `INVESTMENT_PERIOD_UNSUPPORTED`, `INVESTMENT_PERIOD_LOCKED`, `INVESTMENT_PERIOD_MISMATCH`, `INVESTMENT_STATEMENT_IN_FUTURE`, `INVESTMENT_STATEMENT_PERIOD_INVALID`, `INVESTMENT_STATEMENT_DUPLICATE`, `INVESTMENT_BALANCE_INVALID`, `INVESTMENT_BALANCE_NEGATIVE`, `INVESTMENT_BALANCE_PRECISION`, `INVESTMENT_BALANCE_TOO_LARGE`, `INVESTMENT_NOTE_TOO_LONG`, `INVESTMENT_NET_DEPOSITS_INVALID`, `INVESTMENT_NET_DEPOSITS_PRECISION`, `INVESTMENT_NET_DEPOSITS_TOO_LARGE`, `INVESTMENT_GROWTH_INVALID`, `INVESTMENT_GROWTH_PRECISION`, `INVESTMENT_GROWTH_TOO_LARGE`, `INVESTMENT_ACCOUNT_NOT_FOUND`, `INVESTMENT_STATEMENT_NOT_FOUND`. The last two are returned for an account or a statement that does not exist (a stale screen). Project error codes are in CSD-002.
 
@@ -1065,9 +1195,9 @@ All ACs are proven by `cargo test`, with domain logic tested in `domain/`. Tests
 
 | Requirement | Command |
 |---|---|
-| All of REQ-1 to REQ-13, REQ-15, REQ-16, REQ-19, REQ-21 to REQ-23 and REQ-26 | `cargo test test_csd005_` |
-| AC-24.1 to AC-24.5, AC-24.9, AC-24.11, AC-24.12, AC-25.1 to AC-25.4 (the calculation itself) | `cargo test test_csd005_ac_24_` and `cargo test test_csd005_ac_25_` cover the `calculate_investment_statement` command and the domain logic behind it |
-| AC-14.1 to AC-14.3, REQ-17 (all ACs, with AC-17.9), REQ-18 (with AC-18.3), REQ-20 and AC-11.3, AC-17.4, AC-17.7, AC-24.6 to AC-24.8, AC-24.10, REQ-27 (form behaviour) | Manual checklist: form labels, section order and contents, section titles without a currency, button placement, left-pane item, empty states, note cut-off, plain-text note, the calculated marking, the enabled growth field and the note when there is no earlier statement. There is no frontend test setup |
+| All of REQ-1 to REQ-13, REQ-15, REQ-16, REQ-19, REQ-21 to REQ-23, REQ-26, REQ-28 (except AC-28.6) and REQ-29 | `cargo test test_csd005_` |
+| AC-24.1 to AC-24.5, AC-24.9, AC-24.11 to AC-24.14, AC-25.1 to AC-25.4 (the calculation itself) | `cargo test test_csd005_ac_24_` and `cargo test test_csd005_ac_25_` cover the `calculate_investment_statement` command and the domain logic behind it |
+| AC-14.1 to AC-14.3, REQ-17 (all ACs, with AC-17.9), REQ-18 (with AC-18.3), REQ-20 and AC-28.6 (the period field in the edit form), AC-17.4, AC-17.7, AC-24.6 to AC-24.8, AC-24.10, REQ-27 (form behaviour) | Manual checklist: form labels, section order and contents, section titles without a currency, button placement, left-pane item, empty states, note cut-off, plain-text note, the calculated marking, the enabled growth field and the note when there is no earlier statement. There is no frontend test setup |
 | The currency confirmation for investment statements | Governed by CSD-003 REQ-5 (AC-5.5, AC-5.6), verified there |
 | AC-17.2, AC-17.3 (data) | `cargo test test_csd005_ac_17_` covers the data of the accounts and statements tables |
 | One requirement, e.g. REQ-6 | `cargo test test_csd005_ac_6_` |
@@ -1080,6 +1210,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 - OQ-3: (resolved in v0.2) Deleting a statement asks for a confirmation, unlike CSD-001 REQ-8, on purpose: the note of a statement cannot be recreated by copying the previous period (REQ-13). CSD-001 is unchanged.
 
 ## 9. Changelog
+- 0.9 (28/10/2026): The period of a statement can be changed when editing (GitHub issue 12). REQ-11 no longer forbids it, AC-11.3 is removed, new REQ-28 (AC-28.1 to AC-28.8) and REQ-29 (AC-29.1 to AC-29.5) reuse the add rules and error codes, REQ-24 ignores the statement being edited as a previous statement (AC-24.13, AC-24.14), NG-11 and NG-12 added, `update_investment_statement` takes a new period and `calculate_investment_statement` an optional `ignore_period`. Back to `draft` until the owner approves.
 - 0.8 (27/10/2026): The first statement of an account has a capital growth. The account is taken to start at 0.00 before its first statement, so growth = balance − net deposits (REQ-23: AC-23.3 rewritten, AC-23.7 amended, AC-23.9 and AC-23.10 added). The growth field of the form is no longer disabled (REQ-24: AC-24.7, AC-24.8, AC-24.12 rewritten), a note explains the convention (new REQ-27, AC-27.1 to AC-27.4), the yearly totals add the growth of first statements (REQ-26: AC-26.1, 26.3, 26.5, 26.7, 26.9 amended, AC-26.11 added) and AC-17.8 shows a growth instead of a dash. `INVESTMENT_GROWTH_UNAVAILABLE` is removed. Approved by the owner.
 - 0.7 (27/10/2026): NG-3 and NG-4 each get a one-line exception for the Insights chart of CSD-007 (the growth percentage of that chart, and the chart itself). No other behaviour changes.
 - 0.6 (26/10/2026): Yearly totals. NG-3 narrowed: per-year totals of closing balance, net deposits and capital growth are in scope, an all-time total is not. New section 4.6 with REQ-26 (AC-26.1 to AC-26.10), CON-11 and the command `yearly_investment_totals`. REQ-17 (section order, AC-17.1, AC-17.9), REQ-18 (AC-18.3) and REQ-20 (AC-20.1, AC-20.2) amended. Approved by the owner.
