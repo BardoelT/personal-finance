@@ -3,9 +3,9 @@ id: CSD-003
 title: Project settings
 status: draft
 owner: Thijs Bardoel
-version: 0.4
-last_updated: 26/10/2026
-related: [CSD-001, CSD-002, CSD-005]
+version: 0.5
+last_updated: 28/10/2026
+related: [CSD-001, CSD-002, CSD-005, CSD-008]
 ---
 
 # CSD-003: Project settings
@@ -22,7 +22,7 @@ Settings that belong to the whole project, such as its currency, need one place 
 ### 2.2 Non-goals
 - NG-1: Converting amounts between currencies, and exchange rates.
 - NG-2: A currency per job or per paycheck.
-- NG-3: Settings that live outside the project file (application preferences).
+- NG-3: Settings that live outside the project file (application preferences). They are specified in CSD-008, and appear on the same page in their own panel.
 - NG-4: Currencies other than EUR, USD and GBP.
 - NG-5: Migrating project files made before this capability. Such a file opens with the default settings and its per-job currencies are ignored. The owner recreates old files.
 
@@ -30,7 +30,7 @@ Settings that belong to the whole project, such as its currency, need one place 
 | Term | Meaning |
 |---|---|
 | **Project currency** | The one currency of every amount in the project. |
-| **Settings page** | The page "Project settings", reached from the left pane or the app menu. |
+| **Settings page** | The page "Settings", reached from the left pane or the app menu. Its "General" panel holds the project settings, and its "Appearance" panel holds an application preference (CSD-008). |
 
 ## 4. Requirements
 
@@ -56,7 +56,7 @@ sequenceDiagram
 ```
 
 **REQ-1: Settings page** *(ubiquitous)*
-The app shall offer a page "Project settings" as the last navigation item of the left pane, above the project status indicator.
+The app shall offer a page "Settings" as the last navigation item of the left pane, above the project status indicator.
 
 ```gherkin
 @AC-1.1
@@ -69,7 +69,7 @@ Scenario: Settings is the last item in the left pane
 Scenario: The page shows the currency setting
   Given the app has started
   When the user opens Settings
-  Then the page "Project settings" shows a "Currency" choice with the current project currency
+  Then the page "Settings" shows a "General" panel with a "Currency" choice with the current project currency
 ```
 
 **REQ-2: Settings in the app menu** *(ubiquitous)*
@@ -263,6 +263,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.5 (28/10/2026): The page is called "Settings" instead of "Project settings" and its currency sits in a "General" panel (definition, REQ-1, AC-1.2), because CSD-008 adds an "Appearance" panel with an application preference. NG-3 points to CSD-008.
 - 0.4 (26/10/2026): REQ-8 reversed: the currency is shown only on the Settings page, no longer in section titles (AC-8.1 rewritten).
 - 0.3 (26/10/2026): Investment statements (CSD-005) also count as entries for the currency confirmation: REQ-5 reworded, AC-5.5 and AC-5.6 added, `entry_count` counts them. REQ-8 points to the currency in the Investments section titles (CSD-005 REQ-20).
 - 0.2 (26/10/2026): The currency confirmation also applies to annual statements (CSD-001 0.9): REQ-5 says entries, AC-5.4 added, `paycheck_count` becomes `entry_count`.
