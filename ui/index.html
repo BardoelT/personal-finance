@@ -305,7 +305,7 @@
       <!-- Settings -->
       <section class="section" id="settings" aria-labelledby="settings-title">
         <div class="section-header">
-          <h1 class="section-title" id="settings-title">Project settings</h1>
+          <h1 class="section-title" id="settings-title">Settings</h1>
         </div>
         <div class="panel">
           <div class="panel-header"><span class="panel-title">General</span></div>
@@ -318,6 +318,20 @@
               <option value="EUR">EUR</option>
               <option value="USD">USD</option>
               <option value="GBP">GBP</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">Appearance</span></div>
+          <div class="setting-row">
+            <div class="setting-text">
+              <label class="setting-name" for="setting-theme">Theme</label>
+              <p class="setting-help">System follows the appearance of macOS. This applies to the app on this Mac, not to the project.</p>
+            </div>
+            <select id="setting-theme">
+              <option value="system">System</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
             </select>
           </div>
         </div>
