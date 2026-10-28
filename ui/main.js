@@ -3,8 +3,8 @@ import { errorText, listen } from './shared/ipc.js';
 import { showToast } from './shared/dom.js';
 import { initProject, refreshProjectStatus } from './pages/project.js';
 import { initIncomeOverview, reloadIncomeOverview } from './pages/income-overview.js';
-import { initIncomeInsights, reloadIncomeInsights } from './pages/income-insights.js';
-import { initInvestmentsInsights, reloadInvestmentsInsights } from './pages/investments-insights.js';
+import { initIncomeInsights, reloadIncomeInsightsIfOpen } from './pages/income-insights.js';
+import { initInvestmentsInsights, reloadInvestmentsInsightsIfOpen } from './pages/investments-insights.js';
 import { initInvestmentsOverview, reloadInvestmentsOverview } from './pages/investments-overview.js';
 import { initSettings, reloadSettings } from './pages/settings.js';
 import { reloadDashboard } from './pages/dashboard.js';
@@ -41,9 +41,9 @@ async function start() {
     onReplaced: async () => {
       await reloadSettings();
       await reloadIncomeOverview();
-      if (!document.getElementById('income-insights').hidden) await reloadIncomeInsights();
+      await reloadIncomeInsightsIfOpen();
       await reloadInvestmentsOverview();
-      if (!document.getElementById('investments-insights').hidden) await reloadInvestmentsInsights();
+      await reloadInvestmentsInsightsIfOpen();
       await reloadDashboard();
     },
   });
