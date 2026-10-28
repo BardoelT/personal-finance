@@ -1,5 +1,6 @@
 //! Pure business logic: no Tauri, no IO.
 
+pub mod bank_accounts;
 pub mod error;
 pub mod income;
 pub mod investments;
@@ -8,6 +9,10 @@ pub mod preferences;
 pub mod project_data;
 pub mod settings;
 
+pub use bank_accounts::{
+    BankAccount, BankAccountId, BankAccounts, BankBalance, BankEntry, BankInsights, BankOverview,
+    BankYearlyTotal, EntryPrefill,
+};
 pub use error::DomainError;
 pub use income::{
     Entry, Income, IncomeInsightsYear, IncomeOverview, IncomeYearlyTotal, Job, JobId, JobInput,

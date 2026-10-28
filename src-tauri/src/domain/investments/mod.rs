@@ -18,6 +18,7 @@ mod totals;
 mod tests;
 
 pub use account::{AccountInput, InvestmentAccount, InvestmentAccountId};
+pub(crate) use amounts::MAX_BALANCE;
 pub use amounts::{Balance, NetDeposits, Note};
 pub use growth::{CalculationInput, StatementCalculation};
 pub use insights::InvestmentInsightsYear;

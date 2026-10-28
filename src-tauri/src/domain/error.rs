@@ -1,7 +1,7 @@
 use thiserror::Error;
 
-/// Validation and lookup failures of the income (CSD-001) and investments
-/// (CSD-005) domains.
+/// Validation and lookup failures of the income (CSD-001), investments
+/// (CSD-005) and bank accounts (CSD-009) domains.
 ///
 /// Messages are safe to show to the user: they never contain user data.
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
@@ -104,6 +104,38 @@ pub enum DomainError {
     InvestmentGrowthTooLarge,
     #[error("The investment data is not consistent.")]
     InvestmentDataInvalid,
+    #[error("Enter an account name.")]
+    BankAccountNameRequired,
+    #[error("The account name can be at most 100 characters.")]
+    BankAccountNameTooLong,
+    #[error("A bank account with this name already exists.")]
+    BankAccountNameDuplicate,
+    #[error("This bank account does not exist.")]
+    BankAccountNotFound,
+    #[error("Choose Monthly or Yearly.")]
+    BankAccountPeriodUnsupported,
+    #[error("The entry period cannot change once the account has entries.")]
+    BankAccountPeriodLocked,
+    #[error("A monthly account has monthly entries and a yearly account has yearly entries.")]
+    BankEntryPeriodMismatch,
+    #[error("An entry cannot be for a period that has not started yet.")]
+    BankEntryInFuture,
+    #[error("Enter the month as YYYY-MM or the year as YYYY.")]
+    BankEntryPeriodInvalid,
+    #[error("This account already has an entry for that period.")]
+    BankEntryDuplicate,
+    #[error("There is no entry for that period.")]
+    BankEntryNotFound,
+    #[error("Enter the balance as a number such as 2500.00 or -150.25.")]
+    BankEntryBalanceInvalid,
+    #[error("The balance can have at most 2 decimal places.")]
+    BankEntryBalancePrecision,
+    #[error("The balance can be at most 1000000000.00, or -1000000000.00.")]
+    BankEntryBalanceTooLarge,
+    #[error("A note can be at most 2000 characters.")]
+    BankEntryNoteTooLong,
+    #[error("The bank account data is not consistent.")]
+    BankDataInvalid,
 }
 
 impl DomainError {
@@ -159,6 +191,22 @@ impl DomainError {
             Self::InvestmentGrowthPrecision => "INVESTMENT_GROWTH_PRECISION",
             Self::InvestmentGrowthTooLarge => "INVESTMENT_GROWTH_TOO_LARGE",
             Self::InvestmentDataInvalid => "INVESTMENT_DATA_INVALID",
+            Self::BankAccountNameRequired => "BANK_ACCOUNT_NAME_REQUIRED",
+            Self::BankAccountNameTooLong => "BANK_ACCOUNT_NAME_TOO_LONG",
+            Self::BankAccountNameDuplicate => "BANK_ACCOUNT_NAME_DUPLICATE",
+            Self::BankAccountNotFound => "BANK_ACCOUNT_NOT_FOUND",
+            Self::BankAccountPeriodUnsupported => "BANK_ACCOUNT_PERIOD_UNSUPPORTED",
+            Self::BankAccountPeriodLocked => "BANK_ACCOUNT_PERIOD_LOCKED",
+            Self::BankEntryPeriodMismatch => "BANK_ENTRY_PERIOD_MISMATCH",
+            Self::BankEntryInFuture => "BANK_ENTRY_IN_FUTURE",
+            Self::BankEntryPeriodInvalid => "BANK_ENTRY_PERIOD_INVALID",
+            Self::BankEntryDuplicate => "BANK_ENTRY_DUPLICATE",
+            Self::BankEntryNotFound => "BANK_ENTRY_NOT_FOUND",
+            Self::BankEntryBalanceInvalid => "BANK_ENTRY_BALANCE_INVALID",
+            Self::BankEntryBalancePrecision => "BANK_ENTRY_BALANCE_PRECISION",
+            Self::BankEntryBalanceTooLarge => "BANK_ENTRY_BALANCE_TOO_LARGE",
+            Self::BankEntryNoteTooLong => "BANK_ENTRY_NOTE_TOO_LONG",
+            Self::BankDataInvalid => "BANK_DATA_INVALID",
         }
     }
 }
