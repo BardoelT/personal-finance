@@ -16,8 +16,9 @@
   --border: #e2e8f0;
   --negative: #dc2626;
   --accent: #4361ee;
-  --series-salary: #4361ee; --series-holiday: #0d9488; --series-bonus: #d97706;
-  --series-opening: #4361ee; --series-deposits: #0d9488; --positive: #16a34a;
+  --series-salary: hsl(228, 58%, 60%); --series-holiday: hsl(174, 40%, 42%); --series-bonus: hsl(36, 60%, 52%);
+  --series-opening: hsl(228, 58%, 60%); --series-deposits: hsl(174, 40%, 42%);
+  --chart-gain: hsl(145, 38%, 44%); --chart-loss: hsl(0, 48%, 58%);
   --tag-expense-bg: #fee2e2; --tag-expense-fg: #b91c1c;
 }
 
@@ -27,8 +28,9 @@
     --card-shadow: 0 1px 4px rgba(0,0,0,.4);
     --text: #e2e8f0; --muted: #8892b0; --border: rgba(255,255,255,.08);
       --tag-expense-bg: rgba(220,38,38,.2); --tag-expense-fg: #f87171;
-    --series-salary: #7b93ff; --series-holiday: #2dd4bf; --series-bonus: #fbbf24;
-    --series-opening: #7b93ff; --series-deposits: #2dd4bf; --positive: #4ade80;
+    --series-salary: hsl(228, 58%, 72%); --series-holiday: hsl(174, 45%, 55%); --series-bonus: hsl(38, 60%, 62%);
+    --series-opening: hsl(228, 58%, 72%); --series-deposits: hsl(174, 45%, 55%);
+    --chart-gain: hsl(145, 40%, 56%); --chart-loss: hsl(0, 52%, 68%);
     color-scheme: dark;
   }
 }
@@ -38,8 +40,9 @@
   --card-shadow: 0 1px 4px rgba(0,0,0,.4);
   --text: #e2e8f0; --muted: #8892b0; --border: rgba(255,255,255,.08);
   --tag-expense-bg: rgba(220,38,38,.2); --tag-expense-fg: #f87171;
-  --series-salary: #7b93ff; --series-holiday: #2dd4bf; --series-bonus: #fbbf24;
-  --series-opening: #7b93ff; --series-deposits: #2dd4bf; --positive: #4ade80;
+  --series-salary: hsl(228, 58%, 72%); --series-holiday: hsl(174, 45%, 55%); --series-bonus: hsl(38, 60%, 62%);
+  --series-opening: hsl(228, 58%, 72%); --series-deposits: hsl(174, 45%, 55%);
+  --chart-gain: hsl(145, 40%, 56%); --chart-loss: hsl(0, 52%, 68%);
   color-scheme: dark;
 }
 
@@ -455,74 +458,73 @@ dialog p { font-size: 13.5px; line-height: 1.5; color: var(--muted); }
 .tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
 .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 4px; }
 
-.legend { list-style: none; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; color: var(--muted); }
-.legend li { display: flex; align-items: center; gap: 6px; }
-.swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.legend { list-style: none; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); }
+.legend li { display: flex; align-items: center; gap: 6px; padding: 2px 4px; transition: opacity 140ms ease-out, color 140ms ease-out; }
+.swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; }
 .swatch.salary, .bar-salary { background: var(--series-salary); fill: var(--series-salary); }
 .swatch.holiday, .bar-holiday { background: var(--series-holiday); fill: var(--series-holiday); }
 .swatch.bonus, .bar-bonus { background: var(--series-bonus); fill: var(--series-bonus); }
+.swatch.opening, .bar-opening { background: var(--series-opening); fill: var(--series-opening); }
+.swatch.deposits, .bar-deposits { background: var(--series-deposits); fill: var(--series-deposits); }
+.swatch.growth-up, .bar-growth-up { background: var(--chart-gain); fill: var(--chart-gain); }
+.swatch.growth-down, .bar-growth-down { background: var(--chart-loss); fill: var(--chart-loss); }
+.swatch.marker { width: 14px; height: 0; border-radius: 0; border-top: 2px solid var(--muted); }
+.swatch-spacer { width: 10px; height: 10px; flex: none; }
+
+/* A heavier label takes no extra width: a hidden bold copy reserves the room. */
+.legend-label { display: inline-flex; flex-direction: column; align-items: flex-start; }
+.legend-label::after { content: attr(data-text); font-weight: 600; height: 0; overflow: hidden; visibility: hidden; }
+.legend li.hl, .chart-tooltip dt.hl { color: var(--text); }
+.legend li.hl .legend-label, .chart-tooltip dt.hl .legend-label { font-weight: 600; }
+.legend li.dim { opacity: .7; }
 
 .chart-scroll { overflow-x: auto; padding: 16px 12px 12px; }
 .chart-inner { position: relative; }
 .chart-inner svg { display: block; width: 100%; height: auto; }
-.chart-inner .bar-salary, .chart-inner .bar-holiday, .chart-inner .bar-bonus { background: none; stroke: var(--card-bg); stroke-width: 1; }
-.chart-inner .partial .bar-salary, .chart-inner .partial .bar-holiday, .chart-inner .partial .bar-bonus { opacity: .55; }
-.chart-grid { stroke: var(--border); stroke-width: 1; }
-.chart-axis-label, .chart-year, .chart-growth { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart-inner [data-legend] { background: none; transition: opacity 140ms ease-out, stroke-width 140ms ease-out; }
+.chart-inner .partial .bar-salary, .chart-inner .partial .bar-holiday, .chart-inner .partial .bar-bonus,
+.chart-inner .partial .bar-opening, .chart-inner .partial .bar-deposits,
+.chart-inner .partial .bar-growth-up, .chart-inner .partial .bar-growth-down { opacity: .55; }
+.chart-inner .chart-year-group [data-legend].dim { opacity: .7; }
+.chart-inner .partial [data-legend].dim { opacity: .4; }
+.chart-inner .bar-deposits.withdrawal { fill-opacity: .35; stroke: var(--series-deposits); stroke-width: 1; stroke-dasharray: 3 2; }
+.chart-grid { stroke: var(--border); stroke-opacity: .55; stroke-width: 1; }
+.chart-zero { stroke: var(--muted); stroke-opacity: .7; stroke-width: 1; }
+.chart-axis-label, .chart-year { fill: var(--muted); font-size: 11px; font-weight: 400; font-variant-numeric: tabular-nums; }
 .chart-axis-label { text-anchor: end; }
-.chart-year, .chart-growth { text-anchor: middle; }
-.chart-growth { font-weight: 600; fill: var(--text); }
-.chart-growth.negative { fill: var(--negative); }
+.chart-year { text-anchor: middle; }
+.chart-growth, .chart-percent { font-size: 11px; font-weight: 500; text-anchor: middle; font-variant-numeric: tabular-nums; }
+.chart-growth { fill: var(--text); }
+.chart-percent { fill: var(--muted); }
+.chart-growth.negative, .chart-percent.negative { fill: var(--negative); }
+.chart-marker { stroke: var(--muted); stroke-width: 2; stroke-linecap: round; }
+.chart-inner .chart-year-group .chart-marker.hl { stroke-width: 3; }
+.partial .chart-marker { stroke-dasharray: 5 3; }
+.chart-marker-hit { stroke: transparent; stroke-width: 14; }
+.chart-marker-label { fill: var(--text); font-size: 10px; font-weight: 500; text-anchor: middle; font-variant-numeric: tabular-nums;
+  paint-order: stroke; stroke: var(--card-bg); stroke-width: 3px; stroke-linejoin: round; }
+.chart-bar-box { fill: none; stroke: none; pointer-events: none; }
 .chart-hit { fill: transparent; stroke: none; }
 .chart-year-group { outline: none; cursor: default; }
-.chart-year-group:hover .chart-hit { fill: rgba(67,97,238,.06); }
-.chart-year-group:focus-visible .chart-hit { stroke: var(--accent); stroke-width: 2; fill: rgba(67,97,238,.06); }
+.chart-year-group:hover .chart-hit { fill: rgba(67,97,238,.04); }
+.chart-year-group:focus-visible .chart-hit { stroke: var(--accent); stroke-width: 2; fill: rgba(67,97,238,.04); }
 
 .chart-tooltip {
   position: absolute; z-index: 2; pointer-events: none; min-width: 190px;
   background: var(--card-bg); color: var(--text); border: 1px solid var(--border);
-  border-radius: 8px; box-shadow: var(--card-shadow); padding: 10px 12px; font-size: 12px;
+  border-radius: 10px; box-shadow: 0 10px 28px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.05); padding: 12px 14px; font-size: 12px;
+  opacity: 0; visibility: hidden; transform: translate(var(--slide-x, 0), var(--slide-y, 0));
+  transition: opacity 140ms ease-out, transform 140ms ease-out, left 140ms ease-out, top 140ms ease-out, visibility 0s linear 140ms;
 }
-.chart-tooltip .tip-title { font-weight: 700; margin-bottom: 6px; }
-.chart-tooltip dl { display: grid; grid-template-columns: 1fr auto; gap: 3px 16px; }
-.chart-tooltip dt { color: var(--muted); }
+.chart-tooltip.is-open { opacity: 1; visibility: visible; transform: none; transition: opacity 140ms ease-out, transform 140ms ease-out, left 140ms ease-out, top 140ms ease-out, visibility 0s; }
+.chart-tooltip.no-glide { transition: none; }
+.chart-tooltip .tip-title { font-size: 12px; font-weight: 600; margin-bottom: 8px; }
+.chart-tooltip dl { display: grid; grid-template-columns: 1fr auto; gap: 4px 18px; }
+.chart-tooltip dt { display: flex; align-items: center; gap: 6px; color: var(--muted); transition: color 140ms ease-out; }
 .chart-tooltip dd { text-align: right; font-variant-numeric: tabular-nums; }
 .chart-tooltip dd.negative { color: var(--negative); }
-
-/* ── Investment insights (CSD-007) ── */
-
-.swatch.opening, .bar-opening { background: var(--series-opening); fill: var(--series-opening); }
-.swatch.deposits, .bar-deposits { background: var(--series-deposits); fill: var(--series-deposits); }
-.swatch.growth-up, .bar-growth-up { background: var(--positive); fill: var(--positive); }
-.swatch.growth-down, .bar-growth-down { background: var(--negative); fill: var(--negative); }
-.swatch.marker { width: 14px; height: 0; border-radius: 0; border-top: 3px solid var(--text); }
-.chart-inner .bar-opening, .chart-inner .bar-deposits,
-.chart-inner .bar-growth-up, .chart-inner .bar-growth-down { background: none; stroke: var(--card-bg); stroke-width: 1; }
-.chart-inner .bar-deposits.withdrawal { fill: url(#hatch-deposits); stroke: var(--series-deposits); }
-.chart-inner .partial .bar-opening, .chart-inner .partial .bar-deposits,
-.chart-inner .partial .bar-growth-up, .chart-inner .partial .bar-growth-down { opacity: .55; }
-.hatch-fill { fill: var(--series-deposits); opacity: .35; }
-.hatch-line { stroke: var(--series-deposits); stroke-width: 2; }
-.chart-zero { stroke: var(--muted); stroke-width: 1; }
-.chart-marker { stroke: var(--text); stroke-width: 3; stroke-linecap: butt; }
-.partial .chart-marker { stroke-dasharray: 5 3; }
-.chart-marker-label { fill: var(--text); font-size: 11px; font-weight: 600; text-anchor: middle; font-variant-numeric: tabular-nums;
-  paint-order: stroke; stroke: var(--card-bg); stroke-width: 3px; stroke-linejoin: round; }
-.chart-percent { fill: var(--muted); font-size: 11px; font-weight: 600; text-anchor: middle; font-variant-numeric: tabular-nums; }
-.chart-percent.negative { fill: var(--negative); }
-
-/* ── Legend with the selected year, and highlight on hover (CSD-006 REQ-12/13, CSD-007 REQ-14/15) ── */
-
-.chart-bar-box { fill: none; stroke: none; pointer-events: none; }
-.chart-tooltip dt { display: flex; align-items: center; gap: 6px; padding: 1px 4px; border-radius: 4px; }
-.chart-tooltip dd { padding: 1px 4px; border-radius: 4px; }
-.swatch-spacer { width: 10px; height: 10px; flex: none; }
 .chart-tooltip .swatch { flex: none; }
-.legend li { padding: 2px 6px; border-radius: 4px; }
-.legend li.hl, .chart-tooltip dt.hl, .chart-tooltip dd.hl { background: rgba(67,97,238,.16); color: var(--text); font-weight: 700; }
-.legend li.dim, .chart-tooltip dt.dim, .chart-tooltip dd.dim { opacity: .45; }
-.chart-inner .chart-year-group [data-legend].hl { stroke: var(--text); stroke-width: 2; }
-.chart-inner .chart-year-group .chart-marker.hl { stroke-width: 5; }
-.chart-inner .chart-year-group [data-legend].dim { opacity: .35; }
-.chart-inner .chart-year-group .chart-marker-hit { stroke: transparent; stroke-width: 14; opacity: 1; }
-.chart-inner .chart-year-group .chart-marker-hit[data-legend].hl { stroke: transparent; stroke-width: 14; }
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-tooltip, .chart-tooltip.is-open, .chart-inner [data-legend], .legend li, .chart-tooltip dt { transition: none !important; }
+}

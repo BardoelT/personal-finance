@@ -2,7 +2,7 @@
 // Rust returns the figures and the growth; this file only draws them, so the
 // only arithmetic here is scaling values to positions on the chart.
 import { invoke, errorText, h, formatAmount, showToast } from './api.js';
-import { svg, niceScale, compact, placeTooltip, bindHighlight } from './chart.js';
+import { svg, niceScale, compact, segmentShape, createTooltip, bindHighlight, swatch, noSwatch, legendLabel } from './chart.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -10,7 +10,7 @@ const MARGIN = { top: 28, right: 16, bottom: 30, left: 48 };
 const PLOT_HEIGHT = 240;
 const MIN_PLOT_WIDTH = 560;
 const MIN_SLOT_WIDTH = 56;
-const MAX_BAR_WIDTH = 56;
+const MAX_BAR_WIDTH = 44;
 const SEGMENTS = [
   ['gross_salary', 'bar-salary', 'Gross salary'],
   ['holiday_pay', 'bar-holiday', 'Holiday pay'],
@@ -36,18 +36,13 @@ function describe(row) {
   );
 }
 
-const swatch = (key) => h('span', { class: `swatch ${key}` });
-const noSwatch = () => h('span', { class: 'swatch-spacer' });
-
-function tooltipFor(row) {
+function tooltipContent(row) {
   const negative = row.growth_percent !== null && row.growth_percent.startsWith('-');
   const line = (key, label, value, cssClass = '') => [
-    h('dt', { 'data-legend': key }, key ? swatch(key) : noSwatch(), label),
+    h('dt', { 'data-legend': key }, key ? swatch(key) : noSwatch(), legendLabel(label)),
     h('dd', { 'data-legend': key, class: cssClass }, value),
   ];
-  return h(
-    'div',
-    { class: 'chart-tooltip', role: 'presentation', hidden: true },
+  return [
     h('div', { class: 'tip-title' }, yearLabel(row)),
     h(
       'dl',
@@ -56,15 +51,20 @@ function tooltipFor(row) {
       ...line(null, 'Total gross', formatAmount(row.total_gross)),
       ...line(null, 'Growth', growthLabel(row.growth_percent), negative ? 'negative' : ''),
     ),
-  );
+  ];
 }
 
+let drawnYears = null;
+
 function drawChart(years) {
+  drawnYears = years;
   const inner = $('insights-chart');
   const count = years.length;
-  const plotWidth = Math.max(count * MIN_SLOT_WIDTH, MIN_PLOT_WIDTH);
+  // Draw at the real pixel width, so bars, lines and text are never scaled up.
+  const available = inner.clientWidth - MARGIN.left - MARGIN.right;
+  const plotWidth = Math.max(count * MIN_SLOT_WIDTH, MIN_PLOT_WIDTH, available);
   const slot = plotWidth / count;
-  const barWidth = Math.min(slot * 0.6, MAX_BAR_WIDTH);
+  const barWidth = Math.min(slot * 0.5, MAX_BAR_WIDTH);
   const width = MARGIN.left + plotWidth + MARGIN.right;
   const height = MARGIN.top + PLOT_HEIGHT + MARGIN.bottom;
   const baseline = MARGIN.top + PLOT_HEIGHT;
@@ -83,7 +83,7 @@ function drawChart(years) {
     );
   }
 
-  const tooltips = [];
+  const tooltip = createTooltip(inner);
   years.forEach((row, index) => {
     const centre = MARGIN.left + slot * index + slot / 2;
     const group = svg('g', {
@@ -96,15 +96,25 @@ function drawChart(years) {
     group.append(hit);
 
     let stacked = 0;
+    const pieces = [];
     for (const [field, cssClass] of SEGMENTS) {
       const value = Number(row[field]);
       if (value <= 0) continue;
-      const segTop = yOf(stacked + value);
-      group.append(
-        svg('rect', { class: cssClass, 'data-legend': cssClass.replace('bar-', ''), x: centre - barWidth / 2, y: segTop, width: barWidth, height: yOf(stacked) - segTop }),
-      );
+      pieces.push({ cssClass, from: stacked, to: stacked + value });
       stacked += value;
     }
+    pieces.forEach((piece, i) =>
+      group.append(
+        segmentShape(
+          { class: piece.cssClass, 'data-legend': piece.cssClass.replace('bar-', '') },
+          centre - barWidth / 2,
+          barWidth,
+          yOf(piece.to),
+          yOf(piece.from),
+          { rounded: i === pieces.length - 1 },
+        ),
+      ),
+    );
     // An invisible box over the whole bar, so the tooltip can sit beside it.
     const bar = stacked > 0
       ? svg('rect', { class: 'chart-bar-box', x: centre - barWidth / 2, y: yOf(stacked), width: barWidth, height: baseline - yOf(stacked) })
@@ -117,19 +127,17 @@ function drawChart(years) {
       svg('text', { class: 'chart-year', x: centre, y: baseline + 18 }, yearLabel(row)),
     );
 
-    const tooltip = tooltipFor(row);
-    tooltips.push(tooltip);
-    const show = () => placeTooltip(inner, tooltip, bar, hit);
-    const hide = () => { tooltip.hidden = true; };
+    const show = () => tooltip.show(tooltipContent(row), bar, hit);
+    const hide = () => tooltip.hide();
     group.addEventListener('mouseenter', show);
     group.addEventListener('mouseleave', hide);
     group.addEventListener('focus', show);
     group.addEventListener('blur', hide);
-    bindHighlight(group, [$('insights-legend'), tooltip, group]);
+    bindHighlight(group, [$('insights-legend'), tooltip.element, group]);
     chart.append(group);
   });
 
-  inner.replaceChildren(chart, ...tooltips);
+  inner.replaceChildren(chart, tooltip.element);
 }
 
 /** Loads the series from Rust and draws it, or shows the note when there is no income yet. */
@@ -166,6 +174,9 @@ function selectTab(index, { focus = false } = {}) {
 }
 
 export function initInsights() {
+  window.addEventListener('resize', () => {
+    if (drawnYears && !$('insights-scroll').hidden && $('insights-scroll').offsetParent !== null) drawChart(drawnYears);
+  });
   TABS.forEach(({ tab }, index) => {
     $(tab).addEventListener('click', () => selectTab(index));
     $(tab).addEventListener('keydown', (event) => {

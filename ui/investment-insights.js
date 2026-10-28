@@ -2,7 +2,7 @@
 // Rust returns the figures and the growth percentage; this file only draws them,
 // so the only arithmetic here is stacking and scaling values to positions.
 import { invoke, errorText, h, formatAmount, showToast } from './api.js';
-import { svg, niceScale, compact, placeTooltip, bindHighlight } from './chart.js';
+import { svg, niceScale, compact, segmentShape, createTooltip, bindHighlight, swatch, noSwatch, legendLabel } from './chart.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -10,7 +10,7 @@ const MARGIN = { top: 28, right: 16, bottom: 46, left: 48 };
 const PLOT_HEIGHT = 260;
 const MIN_PLOT_WIDTH = 560;
 const MIN_SLOT_WIDTH = 64;
-const MAX_BAR_WIDTH = 56;
+const MAX_BAR_WIDTH = 44;
 const SEGMENTS = [
   ['opening_balance', 'Opening balance'],
   ['net_deposits', 'Net deposits'],
@@ -45,12 +45,9 @@ function describe(row) {
   );
 }
 
-const swatch = (key) => h('span', { class: `swatch ${key}` });
-const noSwatch = () => h('span', { class: 'swatch-spacer' });
-
-function tooltipFor(row) {
+function tooltipContent(row) {
   const line = (key, label, value, cssClass = '') => [
-    h('dt', { 'data-legend': key }, key ? swatch(key) : noSwatch(), label),
+    h('dt', { 'data-legend': key }, key ? swatch(key) : noSwatch(), legendLabel(label)),
     h('dd', { 'data-legend': key, class: cssClass }, value),
   ];
   const growthKey = isNegative(row.capital_growth) ? 'growth-down' : 'growth-up';
@@ -65,12 +62,7 @@ function tooltipFor(row) {
           ...line('marker', 'Closing balance', formatAmount(row.closing_balance)),
           ...line(null, 'Statements', String(row.statement_count)),
         ];
-  return h(
-    'div',
-    { class: 'chart-tooltip', role: 'presentation', hidden: true },
-    h('div', { class: 'tip-title' }, yearLabel(row)),
-    h('dl', {}, ...rows),
-  );
+  return [h('div', { class: 'tip-title' }, yearLabel(row)), h('dl', {}, ...rows)];
 }
 
 /**
@@ -95,25 +87,17 @@ function piecesOf(row) {
   return [...pieces.filter((p) => !p.hangs), ...pieces.filter((p) => p.hangs)];
 }
 
-function hatchPattern() {
-  return svg(
-    'defs',
-    {},
-    svg(
-      'pattern',
-      { id: 'hatch-deposits', width: 6, height: 6, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' },
-      svg('rect', { class: 'hatch-fill', width: 6, height: 6 }),
-      svg('line', { class: 'hatch-line', x1: 0, y1: 0, x2: 0, y2: 6 }),
-    ),
-  );
-}
+let drawnYears = null;
 
 function drawChart(years) {
+  drawnYears = years;
   const inner = $('investment-insights-chart');
   const count = years.length;
-  const plotWidth = Math.max(count * MIN_SLOT_WIDTH, MIN_PLOT_WIDTH);
+  // Draw at the real pixel width, so bars, lines and text are never scaled up.
+  const available = inner.clientWidth - MARGIN.left - MARGIN.right;
+  const plotWidth = Math.max(count * MIN_SLOT_WIDTH, MIN_PLOT_WIDTH, available);
   const slot = plotWidth / count;
-  const barWidth = Math.min(slot * 0.55, MAX_BAR_WIDTH);
+  const barWidth = Math.min(slot * 0.5, MAX_BAR_WIDTH);
   const width = MARGIN.left + plotWidth + MARGIN.right;
   const height = MARGIN.top + PLOT_HEIGHT + MARGIN.bottom;
   const bottomEdge = MARGIN.top + PLOT_HEIGHT;
@@ -130,7 +114,6 @@ function drawChart(years) {
 
   const chart = svg('svg', { viewBox: `0 0 ${width} ${height}`, role: 'group', 'aria-label': 'Investments per year' });
   chart.style.minWidth = `${width}px`;
-  chart.append(hatchPattern());
 
   for (const tick of allTicks) {
     chart.append(
@@ -139,7 +122,7 @@ function drawChart(years) {
     );
   }
 
-  const tooltips = [];
+  const tooltip = createTooltip(inner);
   years.forEach((row, index) => {
     const centre = MARGIN.left + slot * index + slot / 2;
     const group = svg('g', {
@@ -151,18 +134,19 @@ function drawChart(years) {
     const hit = svg('rect', { class: 'chart-hit', x: centre - slot / 2, y: MARGIN.top, width: slot, height: PLOT_HEIGHT + MARGIN.bottom });
     group.append(hit);
 
-    for (const piece of pieces[index]) {
+    const topmost = pieces[index].reduce((best, piece, i, all) => (piece.high >= all[best].high ? i : best), 0);
+    pieces[index].forEach((piece, i) =>
       group.append(
-        svg('rect', {
-          class: piece.cssClass,
-          'data-legend': piece.key,
-          x: centre - barWidth / 2,
-          y: yOf(piece.high),
-          width: barWidth,
-          height: yOf(piece.low) - yOf(piece.high),
-        }),
-      );
-    }
+        segmentShape(
+          { class: piece.cssClass, 'data-legend': piece.key },
+          centre - barWidth / 2,
+          barWidth,
+          yOf(piece.high),
+          yOf(piece.low),
+          { rounded: i === topmost },
+        ),
+      ),
+    );
 
     // An invisible box over the whole bar, so the tooltip can sit beside it.
     const bar = pieces[index].length > 0
@@ -192,19 +176,17 @@ function drawChart(years) {
       svg('text', { class: `chart-percent${negative ? ' negative' : ''}`, x: centre, y: bottomEdge + 34 }, percentLabel(row.growth_percent)),
     );
 
-    const tooltip = tooltipFor(row);
-    tooltips.push(tooltip);
-    const show = () => placeTooltip(inner, tooltip, bar, hit);
-    const hide = () => { tooltip.hidden = true; };
+    const show = () => tooltip.show(tooltipContent(row), bar, hit);
+    const hide = () => tooltip.hide();
     group.addEventListener('mouseenter', show);
     group.addEventListener('mouseleave', hide);
     group.addEventListener('focus', show);
     group.addEventListener('blur', hide);
-    bindHighlight(group, [$('investment-insights-legend'), tooltip, group]);
+    bindHighlight(group, [$('investment-insights-legend'), tooltip.element, group]);
     chart.append(group);
   });
 
-  inner.replaceChildren(chart, ...tooltips);
+  inner.replaceChildren(chart, tooltip.element);
 }
 
 /** Loads the series from Rust and draws it, or shows the note when there is no statement yet. */
@@ -241,6 +223,9 @@ function selectTab(index, { focus = false } = {}) {
 }
 
 export function initInvestmentInsights() {
+  window.addEventListener('resize', () => {
+    if (drawnYears && !$('investment-insights-scroll').hidden && $('investment-insights-scroll').offsetParent !== null) drawChart(drawnYears);
+  });
   TABS.forEach(({ tab }, index) => {
     $(tab).addEventListener('click', () => selectTab(index));
     $(tab).addEventListener('keydown', (event) => {

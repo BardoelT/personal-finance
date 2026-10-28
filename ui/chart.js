@@ -2,6 +2,8 @@
 // numbers into positions and labels and handle the tooltip and the legend
 // highlight; the figures themselves come from Rust.
 
+import { h } from './api.js';
+
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const TICK_INTERVALS = 4;
 
@@ -31,29 +33,88 @@ export function compact(value) {
 
 const clamp = (value, low, high) => Math.min(Math.max(value, low), Math.max(high, low));
 
+const BAR_GAP = 1;
+const BAR_RADIUS = 3;
+
 /**
- * Places a year's tooltip beside its bar: to the right with its top level with
- * the bar, to the left when there is no room, and inside the chart. Without a
- * bar (a gap year) it is centred over the slot (CSD-006 REQ-12, CSD-007 REQ-14).
+ * A bar segment from `yTop` down to `yBottom`, inset by half the 1 px gap so
+ * stacked segments are separated by a gap and not by an outline. The topmost
+ * segment of a bar has rounded top corners (CSD-006 REQ-16, CSD-007 REQ-18).
  */
-export function placeTooltip(inner, tooltip, bar, slot) {
-  const box = inner.getBoundingClientRect();
-  tooltip.hidden = false;
-  const width = tooltip.offsetWidth;
-  const height = tooltip.offsetHeight;
-  if (!bar) {
-    const slotBox = slot.getBoundingClientRect();
-    const centre = slotBox.left - box.left + slotBox.width / 2;
-    tooltip.style.left = `${clamp(centre - width / 2, 0, box.width - width)}px`;
-    tooltip.style.top = '0px';
-    return;
+export function segmentShape(attrs, x, width, yTop, yBottom, { rounded = false } = {}) {
+  const y = yTop + BAR_GAP / 2;
+  const height = Math.max(yBottom - yTop - BAR_GAP, 0.5);
+  if (!rounded) return svg('rect', { ...attrs, x, y, width, height });
+  const r = Math.min(BAR_RADIUS, width / 2, height);
+  const d = `M${x},${y + height} V${y + r} Q${x},${y} ${x + r},${y} H${x + width - r} Q${x + width},${y} ${x + width},${y + r} V${y + height} Z`;
+  return svg('path', { ...attrs, d });
+}
+
+/** A legend swatch for the series `key`, or a spacer that keeps rows without one aligned. */
+export const swatch = (key) => h('span', { class: `swatch ${key}` });
+export const noSwatch = () => h('span', { class: 'swatch-spacer' });
+
+/** A legend label whose heavier weight takes no extra width, so highlighting never moves its neighbours. */
+export const legendLabel = (text) => h('span', { class: 'legend-label', 'data-text': text }, text);
+
+/**
+ * The one tooltip of a chart. It fades in and slides 4 px, and glides to the
+ * next year when the user moves along the bars (CSD-006 REQ-14, CSD-007 REQ-16).
+ * It sits beside the bar, to its right, or to its left when there is no room,
+ * and inside the chart; without a bar it is centred over the slot.
+ */
+export function createTooltip(inner) {
+  const element = h('div', { class: 'chart-tooltip', role: 'presentation' });
+  let closeTimer = null;
+
+  function place(bar, slot) {
+    const box = inner.getBoundingClientRect();
+    const width = element.offsetWidth;
+    const height = element.offsetHeight;
+    if (!bar) {
+      const slotBox = slot.getBoundingClientRect();
+      const centre = slotBox.left - box.left + slotBox.width / 2;
+      element.style.left = `${clamp(centre - width / 2, 0, box.width - width)}px`;
+      element.style.top = '0px';
+      element.style.setProperty('--slide-x', '0px');
+      element.style.setProperty('--slide-y', '4px');
+      return;
+    }
+    const edge = bar.getBoundingClientRect();
+    const gap = 8;
+    let left = edge.right - box.left + gap;
+    let slide = '-4px';
+    if (left + width > box.width) {
+      left = edge.left - box.left - gap - width;
+      slide = '4px';
+    }
+    element.style.left = `${clamp(left, 0, box.width - width)}px`;
+    element.style.top = `${clamp(edge.top - box.top, 0, box.height - height)}px`;
+    element.style.setProperty('--slide-x', slide);
+    element.style.setProperty('--slide-y', '0px');
   }
-  const edge = bar.getBoundingClientRect();
-  const gap = 8;
-  let left = edge.right - box.left + gap;
-  if (left + width > box.width) left = edge.left - box.left - gap - width;
-  tooltip.style.left = `${clamp(left, 0, box.width - width)}px`;
-  tooltip.style.top = `${clamp(edge.top - box.top, 0, box.height - height)}px`;
+
+  return {
+    element,
+    show(content, bar, slot) {
+      clearTimeout(closeTimer);
+      const wasOpen = element.classList.contains('is-open');
+      // A tooltip that was closed appears in place; only an open one glides.
+      if (!wasOpen) element.classList.add('no-glide');
+      element.replaceChildren(...content);
+      place(bar, slot);
+      if (!wasOpen) {
+        void element.offsetWidth;
+        element.classList.remove('no-glide');
+      }
+      element.classList.add('is-open');
+    },
+    /** Closes after a moment, so moving to the next year glides instead of closing and reopening. */
+    hide() {
+      clearTimeout(closeTimer);
+      closeTimer = setTimeout(() => element.classList.remove('is-open'), 80);
+    },
+  };
 }
 
 /**
