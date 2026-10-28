@@ -137,12 +137,15 @@ pub fn update_investment_statement(
     state: State<'_, AppState>,
     account_id: String,
     period: String,
+    new_period: String,
     balance: String,
     net_deposits: Option<String>,
     note: Option<String>,
 ) -> Result<StatementView, AppError> {
+    let today = state.today();
     let account_id = InvestmentAccountId::parse(&account_id)?;
     let period = Period::parse(&period)?;
+    let new_period = Period::parse(&new_period)?;
     let balance = Balance::parse(&balance)?;
     let net_deposits = NetDeposits::parse(net_deposits.as_deref().unwrap_or_default())?;
     let note = Note::new(note.as_deref().unwrap_or_default())?;
@@ -150,9 +153,11 @@ pub fn update_investment_statement(
     let statement = project.investments_mut().update_statement(
         account_id,
         period,
+        new_period,
         balance,
         net_deposits,
         note,
+        today,
     )?;
     statement_view(&project, &statement)
 }
@@ -220,9 +225,11 @@ pub fn calculate_investment_statement(
     net_deposits: Option<String>,
     input: CalculationInput,
     value: String,
+    ignore_period: Option<String>,
 ) -> Result<StatementCalculation, AppError> {
     let account_id = InvestmentAccountId::parse(&account_id)?;
     let period = Period::parse(&period)?;
+    let ignore_period = ignore_period.as_deref().map(Period::parse).transpose()?;
     let project = state.project()?;
     Ok(project.investments().calculate(
         account_id,
@@ -230,6 +237,7 @@ pub fn calculate_investment_statement(
         net_deposits.as_deref().unwrap_or_default(),
         input,
         &value,
+        ignore_period,
     )?)
 }
 

@@ -34,14 +34,16 @@ impl Investments {
     #[must_use]
     pub fn capital_growth(&self, statement: &InvestmentStatement) -> Decimal {
         let previous = self
-            .previous_balance(statement.account_id, statement.period)
+            .previous_balance(statement.account_id, statement.period, None)
             .unwrap_or_else(zero);
         with_two_decimals(statement.balance.value() - previous - statement.net_deposits.value())
     }
 
     /// Calculates the other one of balance and capital growth for the
     /// statement form, from the value the user typed in and the net deposits.
-    /// Nothing is stored (CSD-005 REQ-24, REQ-25).
+    /// `ignore` is the current period of the statement being edited, which
+    /// never counts as a previous statement. Nothing is stored (CSD-005
+    /// REQ-24, REQ-25).
     ///
     /// # Errors
     /// Returns `InvestmentAccountNotFound`, `InvestmentPeriodMismatch`, or the
@@ -53,13 +55,14 @@ impl Investments {
         net_deposits: &str,
         input: CalculationInput,
         value: &str,
+        ignore: Option<Period>,
     ) -> Result<StatementCalculation, DomainError> {
         if self.account(account_id)?.statement_period != period.kind() {
             return Err(DomainError::InvestmentPeriodMismatch);
         }
         let net_deposits = NetDeposits::parse(net_deposits)?.value();
         let previous = self
-            .previous_balance(account_id, period)
+            .previous_balance(account_id, period, ignore)
             .unwrap_or_else(zero);
         match input {
             CalculationInput::Balance => {

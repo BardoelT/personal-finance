@@ -532,6 +532,97 @@ mod tests {
         assert!(!project.status().unsaved_changes);
     }
 
+    // ---- CSD-001 REQ-29, REQ-30 and CSD-005 REQ-28, REQ-29: moving an entry ----
+
+    fn move_paycheck(project: &mut Project, job: JobId, from: &str, to: &str) -> bool {
+        let month = |text: &str| YearMonth::parse(text).unwrap();
+        project
+            .income_mut()
+            .update_paycheck(
+                job,
+                month(from),
+                month(to),
+                Amounts::parse("3000.00", "", "").unwrap(),
+                month("2026-10"),
+            )
+            .is_ok()
+    }
+
+    #[test]
+    fn test_csd001_ac_29_7_a_move_is_an_unsaved_change() {
+        let dir = TempDir::new().unwrap();
+        let (mut project, _) = saved_project(&dir, "example-a.wealth");
+        let job = project.income().jobs()[0].id;
+        add_paycheck(&mut project, job, "2026-05", "3000.00");
+        project.save().unwrap();
+        assert!(!project.status().unsaved_changes);
+
+        assert!(move_paycheck(&mut project, job, "2026-05", "2026-04"));
+        assert!(project.status().unsaved_changes);
+        // Moving it back restores the saved state, so the indicator clears.
+        assert!(move_paycheck(&mut project, job, "2026-04", "2026-05"));
+        assert!(!project.status().unsaved_changes);
+    }
+
+    #[test]
+    fn test_csd001_ac_30_4_a_rejected_move_is_not_an_unsaved_change() {
+        let dir = TempDir::new().unwrap();
+        let (mut project, _) = saved_project(&dir, "example-a.wealth");
+        let job = project.income().jobs()[0].id;
+        add_paycheck(&mut project, job, "2026-04", "2000.00");
+        add_paycheck(&mut project, job, "2026-05", "3000.00");
+        project.save().unwrap();
+
+        // In the future, and already taken.
+        assert!(!move_paycheck(&mut project, job, "2026-05", "2026-11"));
+        assert!(!move_paycheck(&mut project, job, "2026-05", "2026-04"));
+        assert!(!project.status().unsaved_changes);
+    }
+
+    #[test]
+    fn test_csd005_ac_28_8_a_move_is_an_unsaved_change() {
+        use crate::domain::investments::{AccountInput, Balance, NetDeposits, Note, Period};
+        let dir = TempDir::new().unwrap();
+        let (mut project, _) = saved_project(&dir, "example-a.wealth");
+        let account = project
+            .investments_mut()
+            .create_account(&AccountInput {
+                name: "Example Brokerage".to_owned(),
+                statement_period: Some("Monthly".to_owned()),
+            })
+            .unwrap()
+            .id;
+        let period = |text: &str| Period::parse(text).unwrap();
+        let today = YearMonth::parse("2026-10").unwrap();
+        project
+            .investments_mut()
+            .add_statement(
+                account,
+                period("2026-09"),
+                Balance::parse("12500.00").unwrap(),
+                NetDeposits::default(),
+                Note::default(),
+                today,
+            )
+            .unwrap();
+        project.save().unwrap();
+        assert!(!project.status().unsaved_changes);
+
+        project
+            .investments_mut()
+            .update_statement(
+                account,
+                period("2026-09"),
+                period("2026-08"),
+                Balance::parse("12500.00").unwrap(),
+                NetDeposits::default(),
+                Note::default(),
+                today,
+            )
+            .unwrap();
+        assert!(project.status().unsaved_changes);
+    }
+
     // REQ-4 (confirm close) and REQ-7 (confirm before replacing) are dialogs in
     // the UI: see the manual checklist in CSD-002 section 7.
 

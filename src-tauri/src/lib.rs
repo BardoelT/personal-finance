@@ -9,7 +9,7 @@ mod storage;
 use tauri::{Emitter, Manager, RunEvent, Runtime, WindowEvent};
 use time::UtcOffset;
 
-use commands::{dashboard, income, investments, project, settings, AppState};
+use commands::{dashboard, income, investments, preferences, project, settings, AppState};
 
 /// Event the frontend listens for to ask "quit with unsaved changes?".
 const CLOSE_REQUESTED_EVENT: &str = "close-requested";
@@ -63,6 +63,8 @@ fn configure<R: Runtime>(builder: tauri::Builder<R>, utc_offset: UtcOffset) -> t
             dashboard::get_dashboard,
             settings::get_settings,
             settings::set_currency,
+            preferences::get_preferences,
+            preferences::set_theme,
             project::project_status,
             project::take_startup_notice,
             project::new_project,
@@ -94,11 +96,23 @@ pub fn run() {
             .setup(|app| {
                 // CSD-002 REQ-8: reopen the last used project. Without a config
                 // folder the app simply starts empty.
-                if let Ok(dir) = app.path().app_config_dir() {
+                let config_dir = app.path().app_config_dir().ok();
+                if let Some(dir) = &config_dir {
                     if let Ok(mut project) = app.state::<AppState>().project() {
-                        project.restore(storage::LastProject::in_dir(&dir));
+                        project.restore(storage::LastProject::in_dir(dir));
                     }
                 }
+
+                // CSD-008: the saved theme also goes to the native window, so
+                // it is right before the first page is shown (REQ-6, REQ-7).
+                let saved = config_dir.as_deref().map_or_else(
+                    storage::Preferences::unavailable,
+                    storage::Preferences::in_dir,
+                );
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.set_theme(preferences::window_theme(saved.load_theme()));
+                }
+                app.manage(saved);
                 Ok(())
             })
             // Native menus need the main thread, so the IPC tests skip this.

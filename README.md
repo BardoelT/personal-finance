@@ -103,6 +103,7 @@ Behaviour is defined in Capability Specification Documents in [`docs/csd/`](docs
 | [CSD-005](docs/csd/CSD-005-investments.md) | Investments (accounts, statements, net deposits, capital growth, yearly totals) |
 | [CSD-006](docs/csd/CSD-006-income-insights.md) | Income insights chart |
 | [CSD-007](docs/csd/CSD-007-investment-insights.md) | Investment insights chart |
+| [CSD-008](docs/csd/CSD-008-application-preferences.md) | Application preferences (theme) |
 
 Only specs with `status: approved` are implemented; check a spec's status before relying on it. Tests reference acceptance criteria in their names, for example `test_csd002_ac_1_1_...`.
 

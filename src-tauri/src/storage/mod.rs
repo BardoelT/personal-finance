@@ -1,10 +1,12 @@
-//! Persistence: the project file (CSD-002).
+//! Persistence: the project file (CSD-002) and the application preferences (CSD-008).
 
 mod file;
 mod last_project;
+mod preferences;
 mod project;
 
 pub use last_project::LastProject;
+pub use preferences::Preferences;
 pub use project::{OpenOutcome, Project, ProjectStatus, SaveOutcome};
 
 use std::io;
@@ -25,6 +27,8 @@ pub enum StorageError {
     InvalidFile,
     #[error("The project has no file yet.")]
     NoPath,
+    #[error("The theme could not be saved.")]
+    PreferencesSaveFailed(#[source] io::Error),
 }
 
 impl StorageError {
@@ -36,6 +40,7 @@ impl StorageError {
             Self::OpenFailed(_) => "PROJECT_OPEN_FAILED",
             Self::InvalidFile => "PROJECT_INVALID_FILE",
             Self::NoPath => "PROJECT_NO_PATH",
+            Self::PreferencesSaveFailed(_) => "PREFERENCES_SAVE_FAILED",
         }
     }
 }

@@ -9,6 +9,7 @@ use tauri::{ipc::InvokeBody, App, Manager, WebviewWindow, WebviewWindowBuilder};
 use time::UtcOffset;
 
 use crate::configure;
+use crate::storage::Preferences;
 
 struct Harness {
     window: WebviewWindow<MockRuntime>,
@@ -19,6 +20,20 @@ fn harness() -> Harness {
     let app = configure(mock_builder(), UtcOffset::UTC)
         .build(mock_context(noop_assets()))
         .unwrap();
+    let window = WebviewWindowBuilder::new(&app, "main", tauri::WebviewUrl::default())
+        .build()
+        .unwrap();
+    Harness { window, _app: app }
+}
+
+/// An app whose preference file lives in `config_dir`, as `run` sets it up.
+fn harness_in(config_dir: &std::path::Path) -> Harness {
+    let app = configure(
+        mock_builder().manage(Preferences::in_dir(config_dir)),
+        UtcOffset::UTC,
+    )
+    .build(mock_context(noop_assets()))
+    .unwrap();
     let window = WebviewWindowBuilder::new(&app, "main", tauri::WebviewUrl::default())
         .build()
         .unwrap();
@@ -130,7 +145,7 @@ fn income_flow_through_ipc_matches_what_the_frontend_expects() {
 
     let updated = app.ok(
         "update_paycheck",
-        json!({ "jobId": job_id, "month": "2026-05", "amounts": amounts("3100.00", "2400.00", "") }),
+        json!({ "jobId": job_id, "month": "2026-05", "newMonth": "2026-05", "amounts": amounts("3100.00", "2400.00", "") }),
     );
     assert_eq!(updated["gross_salary"], "3100.00");
 
@@ -566,7 +581,7 @@ fn test_csd001_annual_statements_can_be_copied_edited_and_deleted_over_ipc() {
     // REQ-8: edit and delete a statement.
     let edited = app.ok(
         "update_statement",
-        json!({ "jobId": yearly_id, "year": "2025", "amounts": amounts("40000.00", "2000", "3000") }),
+        json!({ "jobId": yearly_id, "year": "2025", "newYear": "2025", "amounts": amounts("40000.00", "2000", "3000") }),
     );
     assert_eq!(edited["total_gross"], "45000.00");
     app.ok(
@@ -808,7 +823,7 @@ fn test_csd005_investment_statements_can_be_copied_edited_and_deleted_over_ipc()
     // AC-11.1: edit the balance and the note.
     let edited = app.ok(
         "update_investment_statement",
-        json!({ "accountId": id, "period": "2026-08", "balance": "12750.00", "note": "Corrected" }),
+        json!({ "accountId": id, "period": "2026-08", "newPeriod": "2026-08", "balance": "12750.00", "note": "Corrected" }),
     );
     assert_eq!(edited["balance"], "12750.00");
     assert_eq!(edited["note"], "Corrected");
@@ -890,14 +905,14 @@ fn test_csd005_ac_17_8_net_deposits_and_capital_growth_over_ipc() {
     // AC-21.4: edit the net deposits; the growth follows.
     let edited = app.ok(
         "update_investment_statement",
-        json!({ "accountId": id, "period": "2026-09", "balance": "12500.00", "netDeposits": "0.00" }),
+        json!({ "accountId": id, "period": "2026-09", "newPeriod": "2026-09", "balance": "12500.00", "netDeposits": "0.00" }),
     );
     assert_eq!(edited["capital_growth"], "500.00");
 
     // AC-22.1 and AC-22.3: invalid net deposits are rejected and change nothing.
     let error = app.err(
         "update_investment_statement",
-        json!({ "accountId": id, "period": "2026-09", "balance": "12500.00", "netDeposits": "100.999" }),
+        json!({ "accountId": id, "period": "2026-09", "newPeriod": "2026-09", "balance": "12500.00", "netDeposits": "100.999" }),
     );
     assert_eq!(error["code"], "INVESTMENT_NET_DEPOSITS_PRECISION");
     let rows = app.ok("list_investment_statements", json!({}));
@@ -1065,4 +1080,227 @@ fn test_csd007_investment_insights_over_ipc() {
     );
     assert!(years.len() >= 2);
     assert_eq!(years.last().unwrap()["is_partial"], true);
+}
+
+#[test]
+fn test_csd008_the_theme_is_chosen_saved_and_restored_over_ipc() {
+    let config = tempfile::TempDir::new().unwrap();
+    let app = harness_in(config.path());
+
+    // AC-2.1: nothing saved yet means System.
+    assert_eq!(
+        app.ok("get_preferences", json!({})),
+        json!({ "theme": "system" })
+    );
+
+    // AC-3.2: choosing a theme is not an unsaved project change.
+    assert_eq!(
+        app.ok("set_theme", json!({ "theme": "dark" })),
+        json!({ "theme": "dark" })
+    );
+    assert_eq!(app.ok("get_preferences", json!({}))["theme"], "dark");
+    assert_eq!(
+        app.ok("project_status", json!({}))["unsaved_changes"],
+        false
+    );
+
+    // AC-3.3: choosing the current theme changes nothing.
+    app.ok("set_theme", json!({ "theme": "dark" }));
+    assert_eq!(app.ok("get_preferences", json!({}))["theme"], "dark");
+
+    // AC-5.1: a fresh session reads the saved theme.
+    let restarted = harness_in(config.path());
+    assert_eq!(restarted.ok("get_preferences", json!({}))["theme"], "dark");
+
+    // AC-5.2: the theme belongs to the person, not to the project.
+    app.ok("new_project", json!({}));
+    assert_eq!(app.ok("get_preferences", json!({}))["theme"], "dark");
+}
+
+#[test]
+fn test_csd008_ac_9_1_unsupported_themes_are_rejected_over_ipc() {
+    let config = tempfile::TempDir::new().unwrap();
+    let app = harness_in(config.path());
+    app.ok("set_theme", json!({ "theme": "light" }));
+
+    for bad in ["sepia", "Dark", ""] {
+        let error = app.err("set_theme", json!({ "theme": bad }));
+        assert_eq!(error["code"], "PREFERENCES_THEME_UNSUPPORTED", "{bad:?}");
+        assert_eq!(app.ok("get_preferences", json!({}))["theme"], "light");
+    }
+}
+
+#[test]
+fn test_csd008_ac_10_1_a_failed_save_keeps_the_theme_over_ipc() {
+    use std::os::unix::fs::PermissionsExt;
+    let config = tempfile::TempDir::new().unwrap();
+    let app = harness_in(config.path());
+    app.ok("set_theme", json!({ "theme": "light" }));
+
+    std::fs::set_permissions(config.path(), std::fs::Permissions::from_mode(0o500)).unwrap();
+    let error = app.err("set_theme", json!({ "theme": "dark" }));
+    std::fs::set_permissions(config.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+
+    assert_eq!(error["code"], "PREFERENCES_SAVE_FAILED");
+    let message = error["message"].as_str().unwrap();
+    assert!(
+        !message.contains(config.path().to_str().unwrap()),
+        "{message}"
+    );
+    assert_eq!(app.ok("get_preferences", json!({}))["theme"], "light");
+}
+
+#[test]
+fn test_csd001_ac_29_the_month_of_a_paycheck_changes_over_ipc() {
+    let app = harness();
+    let job = app.ok("create_job", json!({ "input": job_input() }));
+    let job_id = job["id"].as_str().unwrap().to_owned();
+    app.ok(
+        "add_paycheck",
+        json!({ "jobId": job_id, "month": "2026-04", "amounts": amounts("3000.00", "", "") }),
+    );
+    app.ok(
+        "add_paycheck",
+        json!({ "jobId": job_id, "month": "2026-05", "amounts": amounts("3500.00", "", "") }),
+    );
+
+    // AC-29.1 and AC-29.2: the paycheck of 2026-05 moves to 2026-03 with an edited amount.
+    let moved = app.ok(
+        "update_paycheck",
+        json!({
+            "jobId": job_id, "month": "2026-05", "newMonth": "2026-03",
+            "amounts": amounts("3500.00", "100.00", "")
+        }),
+    );
+    assert_eq!(moved["period"], "2026-03");
+    assert_eq!(moved["total_gross"], "3600.00");
+    let periods: Vec<Value> = app
+        .ok("list_entries", json!({}))
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|entry| entry["period"].clone())
+        .collect();
+    assert_eq!(periods, [json!("2026-04"), json!("2026-03")]);
+}
+
+#[test]
+fn test_csd001_ac_30_a_rejected_edit_changes_nothing_over_ipc() {
+    let app = harness();
+    let job = app.ok("create_job", json!({ "input": job_input() }));
+    let job_id = job["id"].as_str().unwrap().to_owned();
+    app.ok(
+        "add_paycheck",
+        json!({ "jobId": job_id, "month": "2026-05", "amounts": amounts("3000.00", "", "") }),
+    );
+    let before = app.ok("list_entries", json!({}));
+
+    // AC-30.1: in the future. AC-30.2 is covered in the domain; here the codes cross IPC.
+    let error = app.err(
+        "update_paycheck",
+        json!({
+            "jobId": job_id, "month": "2026-05", "newMonth": "2099-01",
+            "amounts": amounts("3000.00", "", "")
+        }),
+    );
+    assert_eq!(error["code"], "PAYCHECK_MONTH_IN_FUTURE");
+    // AC-30.4: an invalid amount together with a new month rejects the whole edit.
+    let error = app.err(
+        "update_paycheck",
+        json!({
+            "jobId": job_id, "month": "2026-05", "newMonth": "2026-04",
+            "amounts": amounts("-1.00", "", "")
+        }),
+    );
+    assert_eq!(error["code"], "PAYCHECK_AMOUNT_NEGATIVE");
+    assert_eq!(app.ok("list_entries", json!({})), before);
+}
+
+#[test]
+fn test_csd001_ac_29_3_the_year_of_an_annual_statement_changes_over_ipc() {
+    let app = harness();
+    let yearly = app.ok(
+        "create_job",
+        json!({ "input": { "employer": "Example Employer", "title": "", "start_date": "01/03/2024", "end_date": "", "pay_period": "Yearly" } }),
+    );
+    let job_id = yearly["id"].as_str().unwrap().to_owned();
+    app.ok(
+        "add_statement",
+        json!({ "jobId": job_id, "year": "2025", "amounts": amounts("40000.00", "", "") }),
+    );
+    app.ok(
+        "add_statement",
+        json!({ "jobId": job_id, "year": "2024", "amounts": amounts("38000.00", "", "") }),
+    );
+    let moved = app.ok(
+        "update_statement",
+        json!({ "jobId": job_id, "year": "2025", "newYear": "2023", "amounts": amounts("40000.00", "", "") }),
+    );
+    assert_eq!(moved["period"], "2023");
+    let error = app.err(
+        "update_statement",
+        json!({ "jobId": job_id, "year": "2024", "newYear": "2023", "amounts": amounts("38000.00", "", "") }),
+    );
+    assert_eq!(error["code"], "STATEMENT_DUPLICATE_YEAR");
+    let error = app.err(
+        "update_statement",
+        json!({ "jobId": job_id, "year": "2024", "newYear": "2099", "amounts": amounts("38000.00", "", "") }),
+    );
+    assert_eq!(error["code"], "STATEMENT_YEAR_IN_FUTURE");
+}
+
+#[test]
+fn test_csd005_ac_28_the_period_of_a_statement_changes_over_ipc() {
+    let app = harness();
+    let account = app.ok(
+        "create_investment_account",
+        json!({ "input": account_input("Example Brokerage", "Monthly") }),
+    );
+    let id = account["id"].as_str().unwrap().to_owned();
+    for (period, balance) in [("2026-07", "10000.00"), ("2026-08", "10500.00")] {
+        app.ok(
+            "add_investment_statement",
+            json!({ "accountId": id, "period": period, "balance": balance, "netDeposits": "0.00" }),
+        );
+    }
+
+    // AC-29.4: an invalid balance with a new period rejects the whole edit.
+    let error = app.err(
+        "update_investment_statement",
+        json!({ "accountId": id, "period": "2026-08", "newPeriod": "2026-09", "balance": "-1.00" }),
+    );
+    assert_eq!(error["code"], "INVESTMENT_BALANCE_NEGATIVE");
+    // AC-29.1 to AC-29.3: the codes of the add rules cross IPC.
+    for (new_period, code) in [
+        ("2026-12", "INVESTMENT_STATEMENT_IN_FUTURE"),
+        ("2026-07", "INVESTMENT_STATEMENT_DUPLICATE"),
+        ("2026", "INVESTMENT_PERIOD_MISMATCH"),
+    ] {
+        let error = app.err(
+            "update_investment_statement",
+            json!({ "accountId": id, "period": "2026-08", "newPeriod": new_period, "balance": "10500.00" }),
+        );
+        assert_eq!(error["code"], code, "{new_period}");
+    }
+    let rows = app.ok("list_investment_statements", json!({}));
+    assert_eq!(rows[0]["period"], "2026-08");
+    assert_eq!(rows[0]["balance"], "10500.00");
+
+    // AC-24.13: the form calculation does not use the statement being edited.
+    let result = app.ok(
+        "calculate_investment_statement",
+        json!({
+            "accountId": id, "period": "2026-09", "netDeposits": "", "input": "balance",
+            "value": "11000.00", "ignorePeriod": "2026-08"
+        }),
+    );
+    assert_eq!(result["capital_growth"], "1000.00");
+
+    // AC-28.1 and AC-28.4: the statement moves and its growth follows.
+    let moved = app.ok(
+        "update_investment_statement",
+        json!({ "accountId": id, "period": "2026-08", "newPeriod": "2026-09", "balance": "11000.00" }),
+    );
+    assert_eq!(moved["period"], "2026-09");
+    assert_eq!(moved["capital_growth"], "1000.00");
 }

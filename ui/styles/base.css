@@ -46,6 +46,12 @@
   color-scheme: dark;
 }
 
+/* Hidden until main.js has applied the saved theme, so the first page shown has the
+   right theme (CSD-008 REQ-6). The animation reveals the page anyway after a second,
+   in case the script never runs. */
+html:not(.theme-ready) { visibility: hidden; animation: theme-fallback 0s 1s forwards; }
+@keyframes theme-fallback { to { visibility: visible; } }
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body { height: 100%; }

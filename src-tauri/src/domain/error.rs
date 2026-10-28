@@ -18,6 +18,8 @@ pub enum DomainError {
     JobFieldTooLong,
     #[error("Choose EUR, USD or GBP.")]
     ProjectCurrencyUnsupported,
+    #[error("Choose System, Light or Dark.")]
+    PreferencesThemeUnsupported,
     #[error("This job does not exist.")]
     JobNotFound,
     #[error("Choose Monthly or Yearly.")]
@@ -115,6 +117,7 @@ impl DomainError {
             Self::JobDateInvalid => "JOB_DATE_INVALID",
             Self::JobFieldTooLong => "JOB_FIELD_TOO_LONG",
             Self::ProjectCurrencyUnsupported => "PROJECT_CURRENCY_UNSUPPORTED",
+            Self::PreferencesThemeUnsupported => "PREFERENCES_THEME_UNSUPPORTED",
             Self::JobNotFound => "JOB_NOT_FOUND",
             Self::JobPeriodUnsupported => "JOB_PERIOD_UNSUPPORTED",
             Self::JobPeriodLocked => "JOB_PERIOD_LOCKED",

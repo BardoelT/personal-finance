@@ -237,7 +237,10 @@ function updateEarlierNote() {
   const form = $('statement-form');
   const period = form.elements.period.value.trim();
   const accountId = form.elements.account_id.value;
-  const others = statementRows.filter((s) => s.account_id === accountId && s.period !== period);
+  // The statement being edited never counts as an earlier one (CSD-005 REQ-24).
+  const others = statementRows.filter(
+    (s) => s.account_id === accountId && s.period !== period && s.period !== editingStatement?.period,
+  );
   const hasEarlier = periodLooksComplete(period)
     ? others.some((s) => s.period < period)
     : others.length > 0;
@@ -270,6 +273,7 @@ async function recalculate() {
       netDeposits: form.elements.net_deposits.value,
       input: source,
       value,
+      ignorePeriod: editingStatement?.period,
     });
     if (run !== calculationRun) return; // a newer calculation is under way
     if (target === 'growth') {
@@ -301,7 +305,6 @@ function openStatementDialog(statement = null) {
   fillAccountChoices(statement?.account_id);
   form.elements.account_id.disabled = Boolean(statement);
   $('statement-copy').hidden = Boolean(statement);
-  form.elements.period.readOnly = Boolean(statement);
   typedField = 'balance';
   calculationRun += 1; // drop any calculation still under way
   markCalculated(null);
@@ -338,7 +341,12 @@ async function submitStatement(event) {
   };
   try {
     if (editingStatement) {
-      await invoke('update_investment_statement', args);
+      // The statement is found by its current period; the field holds the new one (CSD-005 REQ-28).
+      await invoke('update_investment_statement', {
+        ...args,
+        period: editingStatement.period,
+        newPeriod: args.period,
+      });
     } else {
       await invoke('add_investment_statement', args);
     }

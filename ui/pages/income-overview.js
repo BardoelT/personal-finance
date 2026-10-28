@@ -222,7 +222,6 @@ function openEntryDialog(entry = null) {
   fillJobChoices(entry?.job_id);
   form.elements.job_id.disabled = Boolean(entry);
   $('paycheck-copy').hidden = Boolean(entry);
-  form.elements.period.readOnly = Boolean(entry);
   if (entry) {
     const statement = entry.kind === 'statement';
     $('paycheck-dialog-title').textContent = statement
@@ -253,11 +252,13 @@ async function submitEntry(event) {
   };
   try {
     if (editingEntry) {
+      // The entry is found by its current month or year; the field holds the new one (CSD-001 REQ-29).
       const { job_id: jobId, period } = editingEntry;
+      const newPeriod = form.elements.period.value;
       if (editingEntry.kind === 'statement') {
-        await invoke('update_statement', { jobId, year: period, amounts });
+        await invoke('update_statement', { jobId, year: period, newYear: newPeriod, amounts });
       } else {
-        await invoke('update_paycheck', { jobId, month: period, amounts });
+        await invoke('update_paycheck', { jobId, month: period, newMonth: newPeriod, amounts });
       }
     } else {
       const jobId = form.elements.job_id.value;

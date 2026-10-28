@@ -163,25 +163,51 @@ impl Investments {
         Ok(statement)
     }
 
-    /// Changes the balance, net deposits and note of a statement. The period is
-    /// fixed (REQ-11).
+    /// Changes the balance, net deposits and note of a statement and, when
+    /// `new_period` is a different period, moves it there. The new period
+    /// follows the rules of adding a statement: the kind of the account, not
+    /// after `today` and not taken by another statement of the account. The
+    /// edit is applied as a whole or not at all (REQ-11, REQ-28, REQ-29).
     ///
     /// # Errors
-    /// Returns `InvestmentAccountNotFound` or `InvestmentStatementNotFound`.
+    /// Returns `InvestmentAccountNotFound`, `InvestmentStatementNotFound`,
+    /// `InvestmentPeriodMismatch`, `InvestmentStatementInFuture` or
+    /// `InvestmentStatementDuplicate`.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "add_statement's values, plus the statement's current period and `today`"
+    )]
     pub fn update_statement(
         &mut self,
         account_id: InvestmentAccountId,
         period: Period,
+        new_period: Period,
         balance: Balance,
         net_deposits: NetDeposits,
         note: Note,
+        today: YearMonth,
     ) -> Result<InvestmentStatement, DomainError> {
-        self.account(account_id)?;
+        let kind = self.account(account_id)?.statement_period;
+        if self.statement(account_id, period).is_none() {
+            return Err(DomainError::InvestmentStatementNotFound);
+        }
+        if new_period != period {
+            if kind != new_period.kind() {
+                return Err(DomainError::InvestmentPeriodMismatch);
+            }
+            if new_period.is_after(today) {
+                return Err(DomainError::InvestmentStatementInFuture);
+            }
+            if self.statement(account_id, new_period).is_some() {
+                return Err(DomainError::InvestmentStatementDuplicate);
+            }
+        }
         let statement = self
             .statements
             .iter_mut()
             .find(|s| s.account_id == account_id && s.period == period)
             .ok_or(DomainError::InvestmentStatementNotFound)?;
+        statement.period = new_period;
         statement.balance = balance;
         statement.net_deposits = net_deposits;
         statement.note = note;
@@ -296,11 +322,21 @@ impl Investments {
     }
 
     /// The balance of the statement of the account with the latest period
-    /// before `period`, also when periods in between have none.
-    fn previous_balance(&self, id: InvestmentAccountId, period: Period) -> Option<Decimal> {
+    /// before `period`, also when periods in between have none. The statement
+    /// of `ignore`, the one being edited, never counts (REQ-24).
+    fn previous_balance(
+        &self,
+        id: InvestmentAccountId,
+        period: Period,
+        ignore: Option<Period>,
+    ) -> Option<Decimal> {
         self.statements
             .iter()
-            .filter(|s| s.account_id == id && s.period.sort_key() < period.sort_key())
+            .filter(|s| {
+                s.account_id == id
+                    && s.period.sort_key() < period.sort_key()
+                    && Some(s.period) != ignore
+            })
             .max_by_key(|s| s.period.sort_key())
             .map(|s| s.balance.value())
     }
