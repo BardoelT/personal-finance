@@ -1,7 +1,7 @@
 ---
 id: CSD-012
 title: Debt insights
-status: draft
+status: approved
 owner: Thijs Bardoel
 version: 0.1
 last_updated: 28/10/2026

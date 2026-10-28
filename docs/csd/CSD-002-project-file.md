@@ -1,7 +1,7 @@
 ---
 id: CSD-002
 title: Project file (save, open, new)
-status: draft
+status: approved
 owner: Thijs Bardoel
 version: 0.10
 last_updated: 28/10/2026

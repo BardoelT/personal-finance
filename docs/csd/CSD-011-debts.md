@@ -1,7 +1,7 @@
 ---
 id: CSD-011
 title: Debts
-status: draft
+status: 75d9b8d0-c7c0-4119-900b-2688e1565b9a
 owner: Thijs Bardoel
 version: 0.1
 last_updated: 28/10/2026
