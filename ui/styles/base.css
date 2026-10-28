@@ -1,0 +1,59 @@
+/* Design tokens (light and dark), reset and page chrome. */
+:root {
+  --sidebar-w: 220px;
+  --sidebar-bg: #1e2234;
+  --sidebar-border: rgba(255,255,255,.06);
+  --nav-text: #8892b0;
+  --nav-hover: #ccd6f6;
+  --nav-active-text: #fff;
+  --nav-active-bg: rgba(67,97,238,.14);
+  --nav-active-bar: #4361ee;
+  --bg: #eef1f8;
+  --card-bg: #fff;
+  --card-shadow: 0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
+  --text: #1a1d2e;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --negative: #dc2626;
+  --accent: #4361ee;
+  --series-salary: hsl(228, 58%, 60%); --series-holiday: hsl(174, 40%, 42%); --series-bonus: hsl(36, 60%, 52%);
+  --series-opening: hsl(228, 58%, 60%); --series-deposits: hsl(174, 40%, 42%);
+  --chart-gain: hsl(145, 38%, 44%); --chart-loss: hsl(0, 48%, 58%);
+  --tag-expense-bg: #fee2e2; --tag-expense-fg: #b91c1c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #13162a; --card-bg: #1e2234;
+    --card-shadow: 0 1px 4px rgba(0,0,0,.4);
+    --text: #e2e8f0; --muted: #8892b0; --border: rgba(255,255,255,.08);
+      --tag-expense-bg: rgba(220,38,38,.2); --tag-expense-fg: #f87171;
+    --series-salary: hsl(228, 58%, 72%); --series-holiday: hsl(174, 45%, 55%); --series-bonus: hsl(38, 60%, 62%);
+    --series-opening: hsl(228, 58%, 72%); --series-deposits: hsl(174, 45%, 55%);
+    --chart-gain: hsl(145, 40%, 56%); --chart-loss: hsl(0, 52%, 68%);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #13162a; --card-bg: #1e2234;
+  --card-shadow: 0 1px 4px rgba(0,0,0,.4);
+  --text: #e2e8f0; --muted: #8892b0; --border: rgba(255,255,255,.08);
+  --tag-expense-bg: rgba(220,38,38,.2); --tag-expense-fg: #f87171;
+  --series-salary: hsl(228, 58%, 72%); --series-holiday: hsl(174, 45%, 55%); --series-bonus: hsl(38, 60%, 62%);
+  --series-opening: hsl(228, 58%, 72%); --series-deposits: hsl(174, 45%, 55%);
+  --chart-gain: hsl(145, 40%, 56%); --chart-loss: hsl(0, 52%, 68%);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
