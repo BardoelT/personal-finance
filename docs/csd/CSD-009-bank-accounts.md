@@ -1,7 +1,7 @@
 ---
 id: CSD-009
 title: Bank accounts
-status: draft
+status: approved
 owner: Thijs Bardoel
 version: 0.2
 last_updated: 28/10/2026

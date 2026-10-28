@@ -1,7 +1,7 @@
 ---
 id: CSD-003
 title: Project settings
-status: draft
+status: approved
 owner: Thijs Bardoel
 version: 0.6
 last_updated: 28/10/2026
