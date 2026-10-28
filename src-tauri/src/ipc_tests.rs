@@ -72,7 +72,7 @@ fn income_flow_through_ipc_matches_what_the_frontend_expects() {
         json!({ "unsaved_changes": false, "has_path": false })
     );
 
-    // Create a job exactly as ui/income.js submits it (empty strings for blanks).
+    // Create a job exactly as ui/pages/income-overview.js submits it (empty strings for blanks).
     let job = app.ok("create_job", json!({ "input": job_input() }));
     let job_id = job["id"].as_str().unwrap().to_owned();
     assert_eq!(job["employer"], "Example Employer");
