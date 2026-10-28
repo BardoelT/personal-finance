@@ -1304,3 +1304,230 @@ fn test_csd005_ac_28_the_period_of_a_statement_changes_over_ipc() {
     assert_eq!(moved["period"], "2026-09");
     assert_eq!(moved["capital_growth"], "1000.00");
 }
+
+fn bank_input(name: &str, period: &str) -> Value {
+    json!({ "name": name, "entry_period": period })
+}
+
+#[test]
+fn test_csd009_ac_17_2_bank_accounts_and_the_total_over_ipc() {
+    let app = harness();
+    let empty = app.ok("list_bank_accounts", json!({}));
+    assert_eq!(empty, json!({ "accounts": [], "total": null }));
+
+    let current = app.ok(
+        "create_bank_account",
+        json!({ "input": bank_input("Example Current Account", "Monthly") }),
+    );
+    assert_eq!(current["entry_period"], "Monthly");
+    assert_eq!(current["colour_slot"], 0);
+    let savings = app.ok(
+        "create_bank_account",
+        json!({ "input": bank_input("Example Savings", "Yearly") }),
+    );
+    assert_eq!(savings["colour_slot"], 1);
+    app.ok(
+        "add_bank_entry",
+        json!({ "accountId": current["id"], "period": "2026-09", "balance": "2500.50" }),
+    );
+    app.ok(
+        "add_bank_entry",
+        json!({ "accountId": savings["id"], "period": "2025", "balance": "-400.00", "note": "Overdrawn" }),
+    );
+    let overview = app.ok("list_bank_accounts", json!({}));
+    assert_eq!(overview["total"], "2100.50");
+    assert_eq!(overview["accounts"][0]["latest_balance"], "2500.50");
+    assert_eq!(overview["accounts"][0]["latest_period"], "2026-09");
+    assert_eq!(overview["accounts"][0]["entry_count"], 1);
+    assert_eq!(overview["accounts"][1]["latest_balance"], "-400.00");
+
+    let rows = app.ok("list_bank_entries", json!({}));
+    assert_eq!(rows[0]["account_name"], "Example Current Account");
+    assert_eq!(rows[1]["note"], "Overdrawn");
+    let totals = app.ok("yearly_bank_totals", json!({}));
+    assert_eq!(
+        totals[0],
+        json!({ "year": 2026, "closing_balance": "2500.50", "entry_count": 1 })
+    );
+    assert_eq!(totals[1]["closing_balance"], "-400.00");
+}
+
+#[test]
+fn test_csd009_bank_errors_reach_the_frontend_as_codes() {
+    let app = harness();
+    let account = app.ok(
+        "create_bank_account",
+        json!({ "input": bank_input("Example Current Account", "Monthly") }),
+    );
+    let id = account["id"].clone();
+    for (period, balance, code) in [
+        ("2026-09", "1000.999", "BANK_ENTRY_BALANCE_PRECISION"),
+        ("2026-09", "abc", "BANK_ENTRY_BALANCE_INVALID"),
+        ("2026-09", "1000000000.01", "BANK_ENTRY_BALANCE_TOO_LARGE"),
+        ("2026-13", "1.00", "BANK_ENTRY_PERIOD_INVALID"),
+        ("2025", "1.00", "BANK_ENTRY_PERIOD_MISMATCH"),
+        ("2999-01", "1.00", "BANK_ENTRY_IN_FUTURE"),
+    ] {
+        let error = app.err(
+            "add_bank_entry",
+            json!({ "accountId": id, "period": period, "balance": balance }),
+        );
+        assert_eq!(error["code"], code, "{period} {balance}");
+    }
+    let note = "x".repeat(2001);
+    let error = app.err(
+        "add_bank_entry",
+        json!({ "accountId": id, "period": "2026-09", "balance": "1.00", "note": note }),
+    );
+    assert_eq!(error["code"], "BANK_ENTRY_NOTE_TOO_LONG");
+    app.ok(
+        "add_bank_entry",
+        json!({ "accountId": id, "period": "2026-09", "balance": "1.00" }),
+    );
+    let error = app.err(
+        "add_bank_entry",
+        json!({ "accountId": id, "period": "2026-09", "balance": "2.00" }),
+    );
+    assert_eq!(error["code"], "BANK_ENTRY_DUPLICATE");
+    let error = app.err(
+        "create_bank_account",
+        json!({ "input": bank_input("example current account", "Monthly") }),
+    );
+    assert_eq!(error["code"], "BANK_ACCOUNT_NAME_DUPLICATE");
+    let error = app.err(
+        "update_bank_account",
+        json!({ "accountId": id, "input": bank_input("Example Current Account", "Yearly") }),
+    );
+    assert_eq!(error["code"], "BANK_ACCOUNT_PERIOD_LOCKED");
+    let error = app.err(
+        "delete_bank_account",
+        json!({ "accountId": "671166f4-5827-4794-bcdc-54d7824fb650" }),
+    );
+    assert_eq!(error["code"], "BANK_ACCOUNT_NOT_FOUND");
+}
+
+#[test]
+fn test_csd009_bank_entries_can_be_copied_edited_moved_and_deleted_over_ipc() {
+    let app = harness();
+    let account = app.ok(
+        "create_bank_account",
+        json!({ "input": bank_input("Example Current Account", "Monthly") }),
+    );
+    let id = account["id"].clone();
+    // AC-15.2: nothing to copy yet.
+    assert_eq!(
+        app.ok("copy_previous_bank_entry", json!({ "accountId": id })),
+        json!({ "balance": null })
+    );
+    app.ok(
+        "add_bank_entry",
+        json!({ "accountId": id, "period": "2026-09", "balance": "-150.25", "note": "First" }),
+    );
+    // AC-15.3: a negative balance is copied, the note is not.
+    assert_eq!(
+        app.ok("copy_previous_bank_entry", json!({ "accountId": id })),
+        json!({ "balance": "-150.25" })
+    );
+    // AC-12.3 and AC-12.4: the entry moves and changes together.
+    let moved = app.ok(
+        "update_bank_entry",
+        json!({ "accountId": id, "period": "2026-09", "newPeriod": "2026-08", "balance": "200.00", "note": "Moved" }),
+    );
+    assert_eq!(moved["period"], "2026-08");
+    assert_eq!(moved["balance"], "200.00");
+    // AC-13.1: a later period is rejected and nothing changes.
+    let error = app.err(
+        "update_bank_entry",
+        json!({ "accountId": id, "period": "2026-08", "newPeriod": "2999-01", "balance": "1.00" }),
+    );
+    assert_eq!(error["code"], "BANK_ENTRY_IN_FUTURE");
+    assert_eq!(
+        app.ok("list_bank_entries", json!({}))[0]["balance"],
+        "200.00"
+    );
+    app.ok(
+        "delete_bank_entry",
+        json!({ "accountId": id, "period": "2026-08" }),
+    );
+    assert_eq!(app.ok("list_bank_entries", json!({})), json!([]));
+    let error = app.err(
+        "delete_bank_entry",
+        json!({ "accountId": id, "period": "2026-08" }),
+    );
+    assert_eq!(error["code"], "BANK_ENTRY_NOT_FOUND");
+}
+
+#[test]
+fn test_csd003_ac_5_7_a_bank_entry_counts_for_the_currency_confirmation() {
+    let app = harness();
+    let account = app.ok(
+        "create_bank_account",
+        json!({ "input": bank_input("Example Current Account", "Monthly") }),
+    );
+    // AC-5.8: an account without entries needs no confirmation.
+    assert_eq!(app.ok("get_settings", json!({}))["entry_count"], 0);
+    app.ok(
+        "add_bank_entry",
+        json!({ "accountId": account["id"], "period": "2026-09", "balance": "2500.00" }),
+    );
+    assert_eq!(app.ok("get_settings", json!({}))["entry_count"], 1);
+    // The balance is kept as it is when the currency changes (CSD-003 CON-1).
+    app.ok("set_currency", json!({ "currency": "USD" }));
+    let rows = app.ok("list_bank_entries", json!({}));
+    assert_eq!(rows[0]["balance"], "2500.00");
+}
+
+#[test]
+fn test_csd010_the_insights_reach_the_frontend_with_banks_and_segments() {
+    let app = harness();
+    let empty = app.ok("get_bank_insights", json!({}));
+    assert_eq!(empty, json!({ "banks": [], "years": [] }));
+    let current = app.ok(
+        "create_bank_account",
+        json!({ "input": bank_input("Example Current Account", "Monthly") }),
+    );
+    let overdraft = app.ok(
+        "create_bank_account",
+        json!({ "input": bank_input("Example Overdraft", "Monthly") }),
+    );
+    app.ok(
+        "add_bank_entry",
+        json!({ "accountId": current["id"], "period": "2025-09", "balance": "5000.00" }),
+    );
+    app.ok(
+        "add_bank_entry",
+        json!({ "accountId": overdraft["id"], "period": "2025-09", "balance": "-1000.00" }),
+    );
+    let insights = app.ok("get_bank_insights", json!({}));
+    assert_eq!(insights["banks"][0]["name"], "Example Current Account");
+    assert_eq!(insights["banks"][1]["colour_slot"], 1);
+    let first = &insights["years"][0];
+    assert_eq!(first["year"], 2025);
+    assert_eq!(first["closing_balance"], "4000.00");
+    assert_eq!(first["entry_count"], 2);
+    assert_eq!(first["is_partial"], false);
+    assert_eq!(first["segments"][0]["account_id"], current["id"]);
+    assert_eq!(first["segments"][1]["balance"], "-1000.00");
+    // The current year is in the series even without entries (CSD-010 AC-4.2).
+    let last = insights["years"]
+        .as_array()
+        .unwrap()
+        .last()
+        .unwrap()
+        .clone();
+    assert_eq!(last["is_partial"], true);
+}
+
+#[test]
+fn test_csd009_new_project_clears_the_bank_accounts() {
+    let app = harness();
+    app.ok(
+        "create_bank_account",
+        json!({ "input": bank_input("Example Current Account", "Monthly") }),
+    );
+    app.ok("new_project", json!({}));
+    assert_eq!(
+        app.ok("list_bank_accounts", json!({})),
+        json!({ "accounts": [], "total": null })
+    );
+}

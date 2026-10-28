@@ -9,7 +9,9 @@ mod storage;
 use tauri::{Emitter, Manager, RunEvent, Runtime, WindowEvent};
 use time::UtcOffset;
 
-use commands::{dashboard, income, investments, preferences, project, settings, AppState};
+use commands::{
+    bank_accounts, dashboard, income, investments, preferences, project, settings, AppState,
+};
 
 /// Event the frontend listens for to ask "quit with unsaved changes?".
 const CLOSE_REQUESTED_EVENT: &str = "close-requested";
@@ -60,6 +62,17 @@ fn configure<R: Runtime>(builder: tauri::Builder<R>, utc_offset: UtcOffset) -> t
             investments::calculate_investment_statement,
             investments::yearly_investment_totals,
             investments::get_investment_insights,
+            bank_accounts::list_bank_accounts,
+            bank_accounts::create_bank_account,
+            bank_accounts::update_bank_account,
+            bank_accounts::delete_bank_account,
+            bank_accounts::list_bank_entries,
+            bank_accounts::add_bank_entry,
+            bank_accounts::update_bank_entry,
+            bank_accounts::delete_bank_entry,
+            bank_accounts::copy_previous_bank_entry,
+            bank_accounts::yearly_bank_totals,
+            bank_accounts::get_bank_insights,
             dashboard::get_dashboard,
             settings::get_settings,
             settings::set_currency,
