@@ -1,7 +1,7 @@
 ---
 id: CSD-005
 title: Investments
-status: draft
+status: approved
 owner: Thijs Bardoel
 version: 0.9
 last_updated: 28/10/2026
