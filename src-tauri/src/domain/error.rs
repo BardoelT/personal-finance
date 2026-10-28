@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 /// Validation and lookup failures of the income (CSD-001), investments
-/// (CSD-005) and bank accounts (CSD-009) domains.
+/// (CSD-005), bank accounts (CSD-009) and debts (CSD-011) domains.
 ///
 /// Messages are safe to show to the user: they never contain user data.
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
@@ -136,6 +136,40 @@ pub enum DomainError {
     BankEntryNoteTooLong,
     #[error("The bank account data is not consistent.")]
     BankDataInvalid,
+    #[error("Enter a debt name.")]
+    DebtNameRequired,
+    #[error("The debt name can be at most 100 characters.")]
+    DebtNameTooLong,
+    #[error("A debt with this name already exists.")]
+    DebtNameDuplicate,
+    #[error("This debt does not exist.")]
+    DebtNotFound,
+    #[error("Choose Monthly or Yearly.")]
+    DebtPeriodUnsupported,
+    #[error("The statement period cannot change once the debt has statements.")]
+    DebtPeriodLocked,
+    #[error("A monthly debt has monthly statements and a yearly debt has yearly statements.")]
+    DebtPeriodMismatch,
+    #[error("A statement cannot be for a period that has not started yet.")]
+    DebtStatementInFuture,
+    #[error("Enter the month as YYYY-MM or the year as YYYY.")]
+    DebtStatementPeriodInvalid,
+    #[error("This debt already has a statement for that period.")]
+    DebtStatementDuplicate,
+    #[error("There is no statement for that period.")]
+    DebtStatementNotFound,
+    #[error("Enter the balance as a number such as 150000.00.")]
+    DebtStatementBalanceInvalid,
+    #[error("The balance cannot be negative.")]
+    DebtStatementBalanceNegative,
+    #[error("The balance can have at most 2 decimal places.")]
+    DebtStatementBalancePrecision,
+    #[error("The balance can be at most 1000000000.00.")]
+    DebtStatementBalanceTooLarge,
+    #[error("A note can be at most 2000 characters.")]
+    DebtStatementNoteTooLong,
+    #[error("The debt data is not consistent.")]
+    DebtDataInvalid,
 }
 
 impl DomainError {
@@ -207,6 +241,23 @@ impl DomainError {
             Self::BankEntryBalanceTooLarge => "BANK_ENTRY_BALANCE_TOO_LARGE",
             Self::BankEntryNoteTooLong => "BANK_ENTRY_NOTE_TOO_LONG",
             Self::BankDataInvalid => "BANK_DATA_INVALID",
+            Self::DebtNameRequired => "DEBT_NAME_REQUIRED",
+            Self::DebtNameTooLong => "DEBT_NAME_TOO_LONG",
+            Self::DebtNameDuplicate => "DEBT_NAME_DUPLICATE",
+            Self::DebtNotFound => "DEBT_NOT_FOUND",
+            Self::DebtPeriodUnsupported => "DEBT_PERIOD_UNSUPPORTED",
+            Self::DebtPeriodLocked => "DEBT_PERIOD_LOCKED",
+            Self::DebtPeriodMismatch => "DEBT_PERIOD_MISMATCH",
+            Self::DebtStatementInFuture => "DEBT_STATEMENT_IN_FUTURE",
+            Self::DebtStatementPeriodInvalid => "DEBT_STATEMENT_PERIOD_INVALID",
+            Self::DebtStatementDuplicate => "DEBT_STATEMENT_DUPLICATE",
+            Self::DebtStatementNotFound => "DEBT_STATEMENT_NOT_FOUND",
+            Self::DebtStatementBalanceInvalid => "DEBT_STATEMENT_BALANCE_INVALID",
+            Self::DebtStatementBalanceNegative => "DEBT_STATEMENT_BALANCE_NEGATIVE",
+            Self::DebtStatementBalancePrecision => "DEBT_STATEMENT_BALANCE_PRECISION",
+            Self::DebtStatementBalanceTooLarge => "DEBT_STATEMENT_BALANCE_TOO_LARGE",
+            Self::DebtStatementNoteTooLong => "DEBT_STATEMENT_NOTE_TOO_LONG",
+            Self::DebtDataInvalid => "DEBT_DATA_INVALID",
         }
     }
 }
