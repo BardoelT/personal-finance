@@ -31,20 +31,25 @@ Before saying a task is done: fmt, clippy, and tests must all pass.
 ## Layout
 
 ```
-ui/                   # frontend (UI only — HTML + CSS + JS, no business logic)
+ui/                   # frontend (UI only — HTML + CSS + JS, no business logic, no build step)
   index.html
-  main.js
-  style.css
+  main.js             # entry point: wires the pages and reloads them
+  navigation.js       # left-pane navigation
+  pages/              # one file per page or view, named <page>-<view>.js
+  shared/             # helpers pages share: ipc, dom, format, chart, yearly-chart, tabs
+  styles/             # CSS by area: base, layout, components, pages, charts
 src-tauri/
   src/main.rs         # thin entry point
   src/lib.rs          # app setup, command registration
   src/commands/       # #[tauri::command] handlers: validate input, call domain, map errors
-  src/domain/         # pure business logic (money, income, net worth): no Tauri, no IO
+  src/domain/         # pure business logic (money, income, investments): no Tauri, no IO
   src/storage/        # project file persistence (JSON, atomic write)
   src/error.rs        # app error type
   capabilities/       # Tauri permission files
   tauri.conf.json
-docs/                 # architecture notes and ADRs                                           (not yet created)
+docs/
+  architecture.md     # how the code is organised and the conventions it follows
+  csd/                # capability specifications
 ```
 
 Rule: `domain/` is pure and unit-tested. Commands stay thin. The frontend never computes financial figures; it only displays what Rust returns.
@@ -120,8 +125,8 @@ This app handles personal financial data and the repo is public.
 - Don't delete or weaken existing tests to make a change pass.
 
 ## Git and PRs
-- Work on a branch; never push to `main`. All changes go through a PR.
-- Small, focused PRs with Conventional Commit messages (`feat:`, `fix:`, `refactor:`, `chore:`).
+- Work on the `development` branch, not one branch per change; never push to `main`. All changes reach `main` through a PR from `development`.
+- Small, focused commits (one concern each) with Conventional Commit messages (`feat:`, `fix:`, `refactor:`, `chore:`).
 - PR description: what changed, why, and how it was tested.
 - CI (GitHub Actions, `macos-latest`) must be green: fmt, clippy, tests, `cargo deny`.
 
