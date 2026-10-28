@@ -68,6 +68,14 @@
           Bank accounts
         </button>
 
+        <button class="nav-item" data-section="debts">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 17l6-6 4 4 8-8"/>
+            <path d="M15 15v6h6"/>
+          </svg>
+          Debts
+        </button>
+
         <div class="nav-section-label">Insights</div>
 
         <button class="nav-item" data-section="reports">
@@ -397,6 +405,94 @@
         </div>
       </section>
 
+      <!-- Debts -->
+      <section class="section" id="debts" aria-labelledby="debts-title">
+        <div class="section-header">
+          <h1 class="section-title" id="debts-title">Debts</h1>
+        </div>
+
+        <div class="placeholder" id="debts-empty" hidden>
+          <p>No debts yet. Add your first debt to start tracking what you owe.</p>
+          <button type="button" class="btn primary" id="debt-add-first">Add your first debt</button>
+        </div>
+
+        <div id="debts-content" hidden>
+          <div class="tabs" role="tablist" aria-label="Debt views">
+            <button type="button" class="tab" role="tab" id="debts-tab-overview" aria-controls="debts-overview" aria-selected="true">Overview</button>
+            <button type="button" class="tab" role="tab" id="debts-tab-insights" aria-controls="debts-insights" aria-selected="false" tabindex="-1">Insights</button>
+          </div>
+
+          <div id="debts-overview" role="tabpanel" aria-labelledby="debts-tab-overview">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Debts</span>
+              <button type="button" class="btn primary" id="debt-add">Add debt</button>
+            </div>
+            <ul class="job-list" id="debt-list"></ul>
+            <div class="job-row account-total" id="debt-total" hidden>
+              <span class="job-name">Total debt</span>
+              <span class="job-meta"></span>
+              <span class="account-balance" id="debt-total-value"></span>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">Yearly totals</span></div>
+            <p class="empty-note" id="debt-totals-empty" hidden>No totals yet. Totals appear once there is a statement.</p>
+            <div class="table-wrap">
+              <table class="data-table" id="debt-totals-table" hidden>
+                <thead>
+                  <tr>
+                    <th scope="col">Year</th>
+                    <th scope="col" class="num">Closing balance</th>
+                    <th scope="col" class="num">Repaid</th>
+                    <th scope="col" class="num">Statements</th>
+                  </tr>
+                </thead>
+                <tbody id="debt-totals-rows"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Statements</span>
+              <button type="button" class="btn primary" id="debt-statement-add">Add statement</button>
+            </div>
+            <p class="empty-note" id="debt-statements-empty" hidden>No statements yet.</p>
+            <div class="table-wrap">
+              <table class="data-table" id="debt-statements-table" hidden>
+                <thead>
+                  <tr>
+                    <th scope="col">Period</th>
+                    <th scope="col">Debt</th>
+                    <th scope="col" class="num">Balance</th>
+                    <th scope="col" class="num">Change</th>
+                    <th scope="col">Note</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody id="debt-statements-rows"></tbody>
+              </table>
+            </div>
+          </div>
+          </div>
+
+          <div id="debts-insights" role="tabpanel" aria-labelledby="debts-tab-insights" hidden>
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title">Debts per year</span>
+                <ul class="legend" id="debts-insights-legend" aria-label="Legend"></ul>
+              </div>
+              <p class="empty-note" id="debts-insights-empty" hidden>No statements yet. The chart appears once there is a statement.</p>
+              <div class="chart-scroll" id="debts-insights-scroll" hidden>
+                <div class="chart-inner" id="debts-insights-chart"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Settings -->
       <section class="section" id="settings" aria-labelledby="settings-title">
         <div class="section-header">
@@ -608,6 +704,54 @@
       <div class="dialog-actions">
         <button type="button" class="btn" data-cancel>Cancel</button>
         <button type="submit" class="btn primary">Save entry</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="debt-dialog" aria-labelledby="debt-dialog-title">
+    <form method="dialog" id="debt-form" novalidate>
+      <h2 id="debt-dialog-title">Add debt</h2>
+      <label class="field">Debt name
+        <input type="text" name="name" maxlength="100" autocomplete="off" required>
+      </label>
+      <label class="field">Statement period
+        <select name="statement_period">
+          <option value="Monthly">Monthly</option>
+          <option value="Yearly">Yearly</option>
+        </select>
+        <span class="field-hint" id="debt-period-hint" hidden>The statement period cannot change once the debt has statements.</span>
+      </label>
+      <p class="form-error" id="debt-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn" data-cancel>Cancel</button>
+        <button type="submit" class="btn primary">Save debt</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="debt-statement-dialog" aria-labelledby="debt-statement-dialog-title">
+    <form method="dialog" id="debt-statement-form" novalidate>
+      <h2 id="debt-statement-dialog-title">Add statement</h2>
+      <label class="field">Debt
+        <select name="debt_id"></select>
+      </label>
+      <div class="field-action">
+        <button type="button" class="btn" id="debt-statement-copy">Copy previous month</button>
+      </div>
+      <label class="field"><span id="debt-statement-period-label">Month (YYYY-MM)</span>
+        <input type="text" name="period" inputmode="numeric" placeholder="2026-09" maxlength="7" autocomplete="off" required>
+      </label>
+      <label class="field">Balance
+        <input type="text" name="balance" inputmode="decimal" placeholder="0.00" autocomplete="off" required>
+      </label>
+      <label class="field">Note (optional)
+        <textarea name="note" rows="4" autocomplete="off"></textarea>
+      </label>
+      <p class="field-hint">Use a dot for decimals, for example 150000.00. The balance is what you still owe at the end of the period, so it cannot be negative. A note can be up to 2000 characters.</p>
+      <p class="form-error" id="debt-statement-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn" data-cancel>Cancel</button>
+        <button type="submit" class="btn primary">Save statement</button>
       </div>
     </form>
   </dialog>

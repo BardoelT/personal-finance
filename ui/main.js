@@ -1,4 +1,4 @@
-// Entry point: wires the project controls, the income, investments and bank accounts views (each with an insights chart), the settings and the dashboard.
+// Entry point: wires the project controls, the income, investments, bank accounts and debts views (each with an insights chart), the settings and the dashboard.
 import { errorText, listen } from './shared/ipc.js';
 import { showToast } from './shared/dom.js';
 import { initProject, refreshProjectStatus } from './pages/project.js';
@@ -8,6 +8,8 @@ import { initInvestmentsInsights, reloadInvestmentsInsightsIfOpen } from './page
 import { initInvestmentsOverview, reloadInvestmentsOverview } from './pages/investments-overview.js';
 import { initBankInsights, reloadBankInsightsIfOpen } from './pages/bank-insights.js';
 import { initBankOverview, reloadBankOverview } from './pages/bank-overview.js';
+import { initDebtsInsights, reloadDebtsInsightsIfOpen } from './pages/debts-insights.js';
+import { initDebtsOverview, reloadDebtsOverview } from './pages/debts-overview.js';
 import { initSettings, loadPreferences, reloadSettings } from './pages/settings.js';
 import { reloadDashboard } from './pages/dashboard.js';
 
@@ -52,6 +54,14 @@ async function start() {
       await reloadSettings();
     },
   });
+  initDebtsInsights();
+  // Debt statements count for the currency confirmation of the settings page (CSD-011 REQ-24).
+  initDebtsOverview({
+    onChanged: async () => {
+      await refreshProjectStatus();
+      await reloadSettings();
+    },
+  });
   initSettings({
     onChanged: async () => {
       await refreshProjectStatus();
@@ -66,6 +76,8 @@ async function start() {
       await reloadInvestmentsInsightsIfOpen();
       await reloadBankOverview();
       await reloadBankInsightsIfOpen();
+      await reloadDebtsOverview();
+      await reloadDebtsInsightsIfOpen();
       await reloadDashboard();
     },
   });
@@ -86,6 +98,7 @@ async function start() {
   await reloadIncomeOverview();
   await reloadInvestmentsOverview();
   await reloadBankOverview();
+  await reloadDebtsOverview();
   await reloadDashboard();
 }
 
