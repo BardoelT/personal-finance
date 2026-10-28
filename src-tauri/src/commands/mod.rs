@@ -2,6 +2,7 @@
 
 pub mod bank_accounts;
 pub mod dashboard;
+pub mod debts;
 pub mod income;
 pub mod investments;
 pub mod preferences;

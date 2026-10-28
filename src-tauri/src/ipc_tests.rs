@@ -1531,3 +1531,251 @@ fn test_csd009_new_project_clears_the_bank_accounts() {
         json!({ "accounts": [], "total": null })
     );
 }
+
+fn debt_input(name: &str, period: &str) -> Value {
+    json!({ "name": name, "statement_period": period })
+}
+
+#[test]
+fn test_csd011_ac_17_2_debts_and_the_total_over_ipc() {
+    let app = harness();
+    assert_eq!(
+        app.ok("list_debts", json!({})),
+        json!({ "debts": [], "total": null })
+    );
+    let mortgage = app.ok(
+        "create_debt",
+        json!({ "input": debt_input("Example Mortgage", "Monthly") }),
+    );
+    assert_eq!(mortgage["statement_period"], "Monthly");
+    assert_eq!(mortgage["colour_slot"], 0);
+    let loan = app.ok(
+        "create_debt",
+        json!({ "input": debt_input("Example Student Loan", "Yearly") }),
+    );
+    assert_eq!(loan["colour_slot"], 1);
+    app.ok(
+        "add_debt_statement",
+        json!({ "debtId": mortgage["id"], "period": "2025-12", "balance": "150000.00" }),
+    );
+    app.ok(
+        "add_debt_statement",
+        json!({ "debtId": mortgage["id"], "period": "2026-09", "balance": "149000.50", "note": "Paid extra" }),
+    );
+    app.ok(
+        "add_debt_statement",
+        json!({ "debtId": loan["id"], "period": "2025", "balance": "8000.00" }),
+    );
+    let overview = app.ok("list_debts", json!({}));
+    assert_eq!(overview["total"], "157000.50");
+    assert_eq!(overview["debts"][0]["latest_balance"], "149000.50");
+    assert_eq!(overview["debts"][0]["latest_period"], "2026-09");
+    assert_eq!(overview["debts"][0]["statement_count"], 2);
+
+    // AC-25.1 and AC-20.3: the change reaches the frontend, null for a first statement.
+    let rows = app.ok("list_debt_statements", json!({}));
+    assert_eq!(rows[0]["debt_name"], "Example Mortgage");
+    assert_eq!(rows[0]["change"], "999.50");
+    assert_eq!(rows[0]["note"], "Paid extra");
+    assert_eq!(rows[2]["change"], Value::Null);
+
+    // AC-19.1: closing balance and repaid, null when no debt has an opening balance.
+    let totals = app.ok("yearly_debt_totals", json!({}));
+    assert_eq!(
+        totals[0],
+        json!({ "year": 2026, "closing_balance": "149000.50", "repaid": "999.50", "statement_count": 1 })
+    );
+    assert_eq!(totals[1]["repaid"], Value::Null);
+}
+
+#[test]
+fn test_csd011_debt_errors_reach_the_frontend_as_codes() {
+    let app = harness();
+    let debt = app.ok(
+        "create_debt",
+        json!({ "input": debt_input("Example Mortgage", "Monthly") }),
+    );
+    let id = debt["id"].clone();
+    for (period, balance, code) in [
+        ("2026-09", "-1.00", "DEBT_STATEMENT_BALANCE_NEGATIVE"),
+        ("2026-09", "1000.999", "DEBT_STATEMENT_BALANCE_PRECISION"),
+        ("2026-09", "abc", "DEBT_STATEMENT_BALANCE_INVALID"),
+        (
+            "2026-09",
+            "1000000000.01",
+            "DEBT_STATEMENT_BALANCE_TOO_LARGE",
+        ),
+        ("2026-13", "1.00", "DEBT_STATEMENT_PERIOD_INVALID"),
+        ("2025", "1.00", "DEBT_PERIOD_MISMATCH"),
+        ("2999-01", "1.00", "DEBT_STATEMENT_IN_FUTURE"),
+    ] {
+        let error = app.err(
+            "add_debt_statement",
+            json!({ "debtId": id, "period": period, "balance": balance }),
+        );
+        assert_eq!(error["code"], code, "{period} {balance}");
+    }
+    let error = app.err(
+        "add_debt_statement",
+        json!({ "debtId": id, "period": "2026-09", "balance": "1.00", "note": "x".repeat(2001) }),
+    );
+    assert_eq!(error["code"], "DEBT_STATEMENT_NOTE_TOO_LONG");
+    app.ok(
+        "add_debt_statement",
+        json!({ "debtId": id, "period": "2026-09", "balance": "0.00" }),
+    );
+    let error = app.err(
+        "add_debt_statement",
+        json!({ "debtId": id, "period": "2026-09", "balance": "2.00" }),
+    );
+    assert_eq!(error["code"], "DEBT_STATEMENT_DUPLICATE");
+    let error = app.err(
+        "create_debt",
+        json!({ "input": debt_input("example mortgage", "Monthly") }),
+    );
+    assert_eq!(error["code"], "DEBT_NAME_DUPLICATE");
+    let error = app.err(
+        "update_debt",
+        json!({ "debtId": id, "input": debt_input("Example Mortgage", "Yearly") }),
+    );
+    assert_eq!(error["code"], "DEBT_PERIOD_LOCKED");
+    let error = app.err(
+        "delete_debt",
+        json!({ "debtId": "671166f4-5827-4794-bcdc-54d7824fb650" }),
+    );
+    assert_eq!(error["code"], "DEBT_NOT_FOUND");
+}
+
+#[test]
+fn test_csd011_debt_statements_can_be_copied_edited_moved_and_deleted_over_ipc() {
+    let app = harness();
+    let debt = app.ok(
+        "create_debt",
+        json!({ "input": debt_input("Example Mortgage", "Monthly") }),
+    );
+    let id = debt["id"].clone();
+    // AC-15.2: nothing to copy yet.
+    assert_eq!(
+        app.ok("copy_previous_debt_statement", json!({ "debtId": id })),
+        json!({ "balance": null })
+    );
+    app.ok(
+        "add_debt_statement",
+        json!({ "debtId": id, "period": "2026-09", "balance": "150000.00", "note": "First" }),
+    );
+    // AC-15.1: the balance is copied, the note is not.
+    assert_eq!(
+        app.ok("copy_previous_debt_statement", json!({ "debtId": id })),
+        json!({ "balance": "150000.00" })
+    );
+    // AC-12.3 and AC-12.4: the statement moves and changes together.
+    let moved = app.ok(
+        "update_debt_statement",
+        json!({ "debtId": id, "period": "2026-09", "newPeriod": "2026-08", "balance": "149000.00", "note": "Moved" }),
+    );
+    assert_eq!(moved["period"], "2026-08");
+    assert_eq!(moved["balance"], "149000.00");
+    // AC-13.1: a later period is rejected and nothing changes.
+    let error = app.err(
+        "update_debt_statement",
+        json!({ "debtId": id, "period": "2026-08", "newPeriod": "2999-01", "balance": "1.00" }),
+    );
+    assert_eq!(error["code"], "DEBT_STATEMENT_IN_FUTURE");
+    assert_eq!(
+        app.ok("list_debt_statements", json!({}))[0]["balance"],
+        "149000.00"
+    );
+    app.ok(
+        "delete_debt_statement",
+        json!({ "debtId": id, "period": "2026-08" }),
+    );
+    assert_eq!(app.ok("list_debt_statements", json!({})), json!([]));
+    let error = app.err(
+        "delete_debt_statement",
+        json!({ "debtId": id, "period": "2026-08" }),
+    );
+    assert_eq!(error["code"], "DEBT_STATEMENT_NOT_FOUND");
+}
+
+#[test]
+fn test_csd003_ac_5_9_a_debt_statement_counts_for_the_currency_confirmation() {
+    let app = harness();
+    let debt = app.ok(
+        "create_debt",
+        json!({ "input": debt_input("Example Mortgage", "Monthly") }),
+    );
+    // AC-5.10: a debt without statements needs no confirmation.
+    assert_eq!(app.ok("get_settings", json!({}))["entry_count"], 0);
+    app.ok(
+        "add_debt_statement",
+        json!({ "debtId": debt["id"], "period": "2026-09", "balance": "150000.00" }),
+    );
+    assert_eq!(app.ok("get_settings", json!({}))["entry_count"], 1);
+    // The balance is kept as it is when the currency changes (CSD-003 CON-1).
+    app.ok("set_currency", json!({ "currency": "USD" }));
+    let rows = app.ok("list_debt_statements", json!({}));
+    assert_eq!(rows[0]["balance"], "150000.00");
+}
+
+#[test]
+fn test_csd012_the_debt_insights_reach_the_frontend_with_segments_and_repaid() {
+    let app = harness();
+    assert_eq!(
+        app.ok("get_debt_insights", json!({})),
+        json!({ "debts": [], "years": [] })
+    );
+    let mortgage = app.ok(
+        "create_debt",
+        json!({ "input": debt_input("Example Mortgage", "Monthly") }),
+    );
+    let car = app.ok(
+        "create_debt",
+        json!({ "input": debt_input("Example Car Loan", "Monthly") }),
+    );
+    for (period, balance) in [("2024-12", "10000.00"), ("2025-12", "9000.00")] {
+        app.ok(
+            "add_debt_statement",
+            json!({ "debtId": mortgage["id"], "period": period, "balance": balance }),
+        );
+    }
+    app.ok(
+        "add_debt_statement",
+        json!({ "debtId": car["id"], "period": "2025-12", "balance": "0.00" }),
+    );
+    let insights = app.ok("get_debt_insights", json!({}));
+    assert_eq!(insights["debts"][0]["name"], "Example Mortgage");
+    assert_eq!(insights["debts"][1]["colour_slot"], 1);
+    let first = &insights["years"][0];
+    assert_eq!(first["year"], 2024);
+    assert_eq!(first["repaid"], Value::Null);
+    let second = &insights["years"][1];
+    assert_eq!(second["year"], 2025);
+    assert_eq!(second["closing_balance"], "9000.00");
+    assert_eq!(second["repaid"], "1000.00");
+    assert_eq!(second["statement_count"], 2);
+    assert_eq!(second["is_partial"], false);
+    assert_eq!(second["segments"][0]["debt_id"], mortgage["id"]);
+    assert_eq!(second["segments"][1]["balance"], "0.00");
+    // The current year is in the series even without statements (CSD-012 AC-4.2).
+    let last = insights["years"]
+        .as_array()
+        .unwrap()
+        .last()
+        .unwrap()
+        .clone();
+    assert_eq!(last["is_partial"], true);
+}
+
+#[test]
+fn test_csd011_new_project_clears_the_debts() {
+    let app = harness();
+    app.ok(
+        "create_debt",
+        json!({ "input": debt_input("Example Mortgage", "Monthly") }),
+    );
+    app.ok("new_project", json!({}));
+    assert_eq!(
+        app.ok("list_debts", json!({})),
+        json!({ "debts": [], "total": null })
+    );
+}
