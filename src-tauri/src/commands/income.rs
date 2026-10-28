@@ -184,15 +184,18 @@ pub fn update_paycheck(
     state: State<'_, AppState>,
     job_id: String,
     month: String,
+    new_month: String,
     amounts: AmountsInput,
 ) -> Result<EntryView, AppError> {
+    let today = state.today();
     let job_id = JobId::parse(&job_id)?;
     let month = YearMonth::parse(&month)?;
+    let new_month = YearMonth::parse(&new_month)?;
     let amounts = amounts.parse()?;
     let mut project = state.project()?;
     let paycheck = project
         .income_mut()
-        .update_paycheck(job_id, month, amounts)?;
+        .update_paycheck(job_id, month, new_month, amounts, today)?;
     EntryView::of(project.income(), Entry::Paycheck(&paycheck))
 }
 
@@ -201,15 +204,18 @@ pub fn update_statement(
     state: State<'_, AppState>,
     job_id: String,
     year: String,
+    new_year: String,
     amounts: AmountsInput,
 ) -> Result<EntryView, AppError> {
+    let today = state.today();
     let job_id = JobId::parse(&job_id)?;
     let year = Year::parse(&year)?;
+    let new_year = Year::parse(&new_year)?;
     let amounts = amounts.parse()?;
     let mut project = state.project()?;
     let statement = project
         .income_mut()
-        .update_statement(job_id, year, amounts)?;
+        .update_statement(job_id, year, new_year, amounts, today)?;
     EntryView::of(project.income(), Entry::AnnualStatement(&statement))
 }
 
