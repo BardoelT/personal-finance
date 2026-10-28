@@ -26,6 +26,7 @@ Two rules shape everything:
 |---|---|
 | `domain/income/` | Jobs, paychecks, annual statements, yearly totals, dashboard overview, insights |
 | `domain/investments/` | Accounts, statements, net deposits, capital growth, yearly totals, insights |
+| `domain/bank_accounts/` | Bank accounts, entries with signed balances, colour slots, yearly totals, insights per bank. Reuses the investments' `Period` and `Note` |
 | `domain/money.rs`, `settings.rs`, `error.rs`, `project_data.rs` | Amounts and currency, project settings, the domain error enum, the project's data sections |
 | `commands/` | `#[tauri::command]` handlers, one file per area. Thin: parse and bound the input, call `domain`, map errors |
 | `storage/` | Reading and writing the project file (atomic write), remembering the last project |
@@ -51,7 +52,7 @@ shared/             helpers pages share
 styles/             CSS by area
 ```
 
-**`pages/`** files are named `<page>-<view>.js`: `income-overview.js`, `income-insights.js`, `investments-overview.js`, `investments-insights.js`. Each exports `init<Page><View>()` (wire the events once) and `reload<Page><View>()` (fetch from Rust and render). `dashboard.js`, `settings.js` and `project.js` are pages without views.
+**`pages/`** files are named `<page>-<view>.js`: `income-overview.js`, `income-insights.js`, `investments-overview.js`, `investments-insights.js`, `bank-overview.js`, `bank-insights.js`. Each exports `init<Page><View>()` (wire the events once) and `reload<Page><View>()` (fetch from Rust and render). `dashboard.js`, `settings.js` and `project.js` are pages without views.
 
 **Element ids** follow `<page>-<view>-<part>`: `income-insights-chart`, `investments-insights-legend`, `investments-tab-insights`. The shared chart code finds its parts from the one id it is given.
 
