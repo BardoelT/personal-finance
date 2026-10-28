@@ -9,8 +9,8 @@ use tauri::State;
 
 use super::AppState;
 use crate::domain::{
-    Amounts, Entry, Income, InsightsYear, Job, JobId, JobInput, PaycheckPrefill, Year, YearMonth,
-    YearlyTotal,
+    Amounts, Entry, Income, IncomeInsightsYear, IncomeYearlyTotal, Job, JobId, JobInput,
+    PaycheckPrefill, Year, YearMonth,
 };
 use crate::error::AppError;
 
@@ -176,7 +176,7 @@ pub fn add_statement(
     let statement = project
         .income_mut()
         .add_statement(job_id, year, amounts, today)?;
-    EntryView::of(project.income(), Entry::Statement(&statement))
+    EntryView::of(project.income(), Entry::AnnualStatement(&statement))
 }
 
 #[tauri::command]
@@ -210,7 +210,7 @@ pub fn update_statement(
     let statement = project
         .income_mut()
         .update_statement(job_id, year, amounts)?;
-    EntryView::of(project.income(), Entry::Statement(&statement))
+    EntryView::of(project.income(), Entry::AnnualStatement(&statement))
 }
 
 #[tauri::command]
@@ -253,7 +253,7 @@ pub fn copy_previous_entry(
 
 /// Yearly totals summed over all jobs (CSD-001 REQ-11).
 #[tauri::command]
-pub fn yearly_totals(state: State<'_, AppState>) -> Result<Vec<YearlyTotal>, AppError> {
+pub fn yearly_totals(state: State<'_, AppState>) -> Result<Vec<IncomeYearlyTotal>, AppError> {
     let project = state.project()?;
     Ok(project.income().yearly_totals())
 }
@@ -272,5 +272,5 @@ pub fn get_income_insights(state: State<'_, AppState>) -> Result<IncomeInsights,
 /// Payload of `get_income_insights` (CSD-006 section 5).
 #[derive(Serialize)]
 pub struct IncomeInsights {
-    years: Vec<InsightsYear>,
+    years: Vec<IncomeInsightsYear>,
 }

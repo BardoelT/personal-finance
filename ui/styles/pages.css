@@ -1,0 +1,42 @@
+/* Page-specific rules: settings and dashboard. */
+/* ── Settings ── */
+
+.sidebar-settings { padding: 6px 0; border-top: 1px solid var(--sidebar-border); }
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 16px 20px;
+}
+.setting-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.setting-help { margin-top: 3px; font-size: 12.5px; color: var(--muted); max-width: 46ch; }
+.setting-row select {
+  min-width: 110px;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.setting-row select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* ── Dashboard ── */
+
+.block-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -.2px;
+  color: var(--text);
+  margin: 4px 0 12px;
+}
+.block-note {
+  background: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+  margin-bottom: 26px;
+}
+#dashboard-content .cards { margin-bottom: 26px; }
+.card.primary .card-value { color: var(--accent); }

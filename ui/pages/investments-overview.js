@@ -1,5 +1,7 @@
 // Investments: accounts with a monthly or yearly statement, each a balance, net deposits and a note (CSD-005).
-import { invoke, errorText, h, iconButton, formatAmount, confirmAction, showToast } from './api.js';
+import { invoke, errorText } from '../shared/ipc.js';
+import { h, iconButton, confirmAction, showToast, showError } from '../shared/dom.js';
+import { formatAmount, currentYear, currentMonth } from '../shared/format.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -11,15 +13,6 @@ let onChanged = async () => {};
 function statementCount(account) {
   if (account.statement_count === 0) return 'No statements yet';
   return `${account.statement_count} statement${account.statement_count === 1 ? '' : 's'}`;
-}
-
-function currentYear() {
-  return String(new Date().getFullYear());
-}
-
-function currentMonth() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
 /** The first line of a note, with an ellipsis when there is more (CSD-005 REQ-17). */
@@ -67,6 +60,25 @@ function renderAccounts(overview) {
   $('account-total-value').textContent = overview.total === null ? '—' : formatAmount(overview.total);
 }
 
+/** Yearly totals over all accounts, as returned by Rust (CSD-005 REQ-26). */
+function renderTotals(totals) {
+  $('investment-totals-empty').hidden = totals.length > 0;
+  $('investment-totals-table').hidden = totals.length === 0;
+  $('investment-totals-rows').replaceChildren(
+    ...totals.map((t) =>
+      h(
+        'tr',
+        {},
+        h('th', { scope: 'row' }, String(t.year)),
+        h('td', { class: 'num' }, formatAmount(t.closing_balance)),
+        h('td', { class: 'num' }, formatAmount(t.net_deposits)),
+        h('td', { class: 'num' }, formatAmount(t.capital_growth)),
+        h('td', { class: 'num' }, String(t.statement_count)),
+      ),
+    ),
+  );
+}
+
 function renderStatements(statements) {
   statementRows = statements;
   $('statements-empty').hidden = statements.length > 0;
@@ -80,7 +92,7 @@ function renderStatements(statements) {
         h('td', { class: 'wrap' }, s.account_name),
         h('td', { class: 'num' }, formatAmount(s.balance)),
         h('td', { class: 'num' }, formatAmount(s.net_deposits)),
-        h('td', { class: 'num' }, s.capital_growth === null ? '—' : formatAmount(s.capital_growth)),
+        h('td', { class: 'num' }, formatAmount(s.capital_growth)),
         h('td', { class: 'note-cell' }, noteSummary(s.note)),
         h(
           'td',
@@ -94,25 +106,24 @@ function renderStatements(statements) {
 }
 
 /** Reloads everything from Rust. */
-export async function reloadInvestments() {
+export async function reloadInvestmentsOverview() {
   const overview = await invoke('list_investment_accounts');
   renderAccounts(overview);
   if (overview.accounts.length === 0) {
     statementRows = [];
     return;
   }
-  renderStatements(await invoke('list_investment_statements'));
+  const [totals, statements] = await Promise.all([
+    invoke('yearly_investment_totals'),
+    invoke('list_investment_statements'),
+  ]);
+  renderTotals(totals);
+  renderStatements(statements);
 }
 
 async function changed() {
-  await reloadInvestments();
+  await reloadInvestmentsOverview();
   await onChanged();
-}
-
-function showError(id, error) {
-  const box = $(id);
-  box.textContent = errorText(error);
-  box.hidden = false;
 }
 
 // ---- Account dialog ----
@@ -218,10 +229,11 @@ function periodLooksComplete(period) {
 }
 
 /**
- * The growth field is disabled while there is no earlier statement (REQ-24).
- * This only switches the field off; Rust calculates every figure.
+ * Shows the note while the account has no statement before the chosen period:
+ * it is taken to start at 0.00 (CSD-005 REQ-27). The note is only a hint;
+ * Rust calculates every figure.
  */
-function applyGrowthAvailability() {
+function updateEarlierNote() {
   const form = $('statement-form');
   const period = form.elements.period.value.trim();
   const accountId = form.elements.account_id.value;
@@ -229,13 +241,7 @@ function applyGrowthAvailability() {
   const hasEarlier = periodLooksComplete(period)
     ? others.some((s) => s.period < period)
     : others.length > 0;
-  form.elements.growth.disabled = !hasEarlier;
   $('statement-growth-hint').hidden = hasEarlier;
-  if (!hasEarlier) {
-    form.elements.growth.value = '';
-    $('growth-calculated').hidden = true;
-  }
-  return hasEarlier;
 }
 
 function markCalculated(field) {
@@ -247,14 +253,13 @@ function markCalculated(field) {
 async function recalculate() {
   const form = $('statement-form');
   const run = ++calculationRun;
-  const hasEarlier = applyGrowthAvailability();
-  const source = hasEarlier ? typedField : 'balance';
+  updateEarlierNote();
+  const source = typedField;
   const target = source === 'balance' ? 'growth' : 'balance';
   const value = form.elements[source].value;
   $('statement-error').hidden = true;
-  if (!hasEarlier && source === 'balance') markCalculated(null);
   if (!periodLooksComplete(form.elements.period.value.trim()) || value.trim() === '') {
-    if (hasEarlier || target === 'balance') form.elements[target].value = '';
+    form.elements[target].value = '';
     markCalculated(null);
     return;
   }
@@ -268,11 +273,11 @@ async function recalculate() {
     });
     if (run !== calculationRun) return; // a newer calculation is under way
     if (target === 'growth') {
-      form.elements.growth.value = result.capital_growth ?? '';
+      form.elements.growth.value = result.capital_growth;
     } else {
       form.elements.balance.value = result.balance;
     }
-    markCalculated(target === 'growth' && !hasEarlier ? null : target);
+    markCalculated(target);
   } catch (error) {
     if (run !== calculationRun) return;
     form.elements[target].value = '';
@@ -379,7 +384,7 @@ async function deleteStatement(statement) {
   }
 }
 
-export function initInvestments({ onChanged: callback }) {
+export function initInvestmentsOverview({ onChanged: callback }) {
   onChanged = callback;
   $('account-add').addEventListener('click', () => openAccountDialog(null));
   $('account-add-first').addEventListener('click', () => openAccountDialog(null));

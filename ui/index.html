@@ -4,7 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Varde</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/layout.css">
+  <link rel="stylesheet" href="styles/components.css">
+  <link rel="stylesheet" href="styles/pages.css">
+  <link rel="stylesheet" href="styles/charts.css">
 </head>
 <body>
   <div class="layout">
@@ -187,15 +191,15 @@
             <div class="panel">
               <div class="panel-header">
                 <span class="panel-title">Income per year</span>
-                <ul class="legend" id="insights-legend" aria-label="Legend">
-                  <li><span class="swatch salary"></span>Gross salary</li>
-                  <li><span class="swatch holiday"></span>Holiday pay</li>
-                  <li><span class="swatch bonus"></span>Bonus</li>
+                <ul class="legend" id="income-insights-legend" aria-label="Legend">
+                  <li data-legend="salary"><span class="swatch salary"></span><span class="legend-label" data-text="Gross salary">Gross salary</span></li>
+                  <li data-legend="holiday"><span class="swatch holiday"></span><span class="legend-label" data-text="Holiday pay">Holiday pay</span></li>
+                  <li data-legend="bonus"><span class="swatch bonus"></span><span class="legend-label" data-text="Bonus">Bonus</span></li>
                 </ul>
               </div>
-              <p class="empty-note" id="insights-empty" hidden>No income yet. The chart appears once there is a paycheck or an annual statement.</p>
-              <div class="chart-scroll" id="insights-scroll" hidden>
-                <div class="chart-inner" id="insights-chart"></div>
+              <p class="empty-note" id="income-insights-empty" hidden>No income yet. The chart appears once there is a paycheck or an annual statement.</p>
+              <div class="chart-scroll" id="income-insights-scroll" hidden>
+                <div class="chart-inner" id="income-insights-chart"></div>
               </div>
             </div>
           </div>
@@ -214,6 +218,12 @@
         </div>
 
         <div id="investments-content" hidden>
+          <div class="tabs" role="tablist" aria-label="Investment views">
+            <button type="button" class="tab" role="tab" id="investments-tab-overview" aria-controls="investments-overview" aria-selected="true">Overview</button>
+            <button type="button" class="tab" role="tab" id="investments-tab-insights" aria-controls="investments-insights" aria-selected="false" tabindex="-1">Insights</button>
+          </div>
+
+          <div id="investments-overview" role="tabpanel" aria-labelledby="investments-tab-overview">
           <div class="panel">
             <div class="panel-header">
               <span class="panel-title">Accounts</span>
@@ -224,6 +234,25 @@
               <span class="job-name">Total of latest balances</span>
               <span class="job-meta"></span>
               <span class="account-balance" id="account-total-value"></span>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">Yearly totals</span></div>
+            <p class="empty-note" id="investment-totals-empty" hidden>No totals yet. Totals appear once there is a statement.</p>
+            <div class="table-wrap">
+              <table class="data-table" id="investment-totals-table" hidden>
+                <thead>
+                  <tr>
+                    <th scope="col">Year</th>
+                    <th scope="col" class="num">Closing balance</th>
+                    <th scope="col" class="num">Net deposits</th>
+                    <th scope="col" class="num">Capital growth</th>
+                    <th scope="col" class="num">Statements</th>
+                  </tr>
+                </thead>
+                <tbody id="investment-totals-rows"></tbody>
+              </table>
             </div>
           </div>
 
@@ -248,6 +277,26 @@
                 </thead>
                 <tbody id="statements-rows"></tbody>
               </table>
+            </div>
+          </div>
+          </div>
+
+          <div id="investments-insights" role="tabpanel" aria-labelledby="investments-tab-insights" hidden>
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title">Investments per year</span>
+                <ul class="legend" id="investments-insights-legend" aria-label="Legend">
+                  <li data-legend="opening"><span class="swatch opening"></span><span class="legend-label" data-text="Opening balance">Opening balance</span></li>
+                  <li data-legend="deposits"><span class="swatch deposits"></span><span class="legend-label" data-text="Net deposits">Net deposits</span></li>
+                  <li data-legend="growth-up"><span class="swatch growth-up"></span><span class="legend-label" data-text="Capital growth (gain)">Capital growth (gain)</span></li>
+                  <li data-legend="growth-down"><span class="swatch growth-down"></span><span class="legend-label" data-text="Capital growth (loss)">Capital growth (loss)</span></li>
+                  <li data-legend="marker"><span class="swatch marker"></span><span class="legend-label" data-text="Closing balance">Closing balance</span></li>
+                </ul>
+              </div>
+              <p class="empty-note" id="investments-insights-empty" hidden>No statements yet. The chart appears once there is a statement.</p>
+              <div class="chart-scroll" id="investments-insights-scroll" hidden>
+                <div class="chart-inner" id="investments-insights-chart"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -393,7 +442,7 @@
           <input type="text" name="growth" inputmode="decimal" placeholder="0.00" autocomplete="off">
         </label>
       </div>
-      <p class="field-hint" id="statement-growth-hint" hidden>This is the first statement of the account, so there is no capital growth.</p>
+      <p class="field-hint" id="statement-growth-hint" hidden>No earlier statement, so the account is taken to start at 0.00. Enter money that was already in the account as net deposits.</p>
       <label class="field">Note (optional)
         <textarea name="note" rows="4" autocomplete="off"></textarea>
       </label>
@@ -419,7 +468,7 @@
 
   <div class="toast" id="toast" role="alert" hidden></div>
 
-  <script src="main.js"></script>
-  <script type="module" src="app.js"></script>
+  <script src="navigation.js"></script>
+  <script type="module" src="main.js"></script>
 </body>
 </html>

@@ -1,5 +1,6 @@
 // Project settings page (CSD-003): the first setting is the currency of the whole project.
-import { invoke, errorText, showToast, confirmAction } from './api.js';
+import { invoke, errorText } from '../shared/ipc.js';
+import { showToast, confirmAction } from '../shared/dom.js';
 
 const select = () => document.getElementById('setting-currency');
 

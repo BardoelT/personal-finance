@@ -10,8 +10,8 @@ use tauri::State;
 use super::AppState;
 use crate::domain::{
     AccountInput, Balance, CalculationInput, InvestmentAccount, InvestmentAccountId,
-    InvestmentStatement, Investments, InvestmentsOverview, NetDeposits, Note, Period,
-    StatementCalculation, StatementPrefill,
+    InvestmentInsightsYear, InvestmentStatement, InvestmentYearlyTotal, Investments,
+    InvestmentsOverview, NetDeposits, Note, Period, StatementCalculation, StatementPrefill,
 };
 use crate::error::AppError;
 
@@ -25,9 +25,9 @@ pub struct StatementView {
     period: String,
     balance: Decimal,
     net_deposits: Decimal,
-    /// Derived from the previous statement; `None` for the first statement
-    /// of an account (REQ-23).
-    capital_growth: Option<Decimal>,
+    /// Derived from the previous statement, or from 0.00 for the first
+    /// statement of an account (REQ-23).
+    capital_growth: Decimal,
     note: String,
 }
 
@@ -182,6 +182,32 @@ pub fn copy_previous_investment_statement(
     Ok(project
         .investments()
         .prefill_from_latest(InvestmentAccountId::parse(&account_id)?)?)
+}
+
+/// Yearly totals over all accounts, newest year first (REQ-26).
+#[tauri::command]
+pub fn yearly_investment_totals(
+    state: State<'_, AppState>,
+) -> Result<Vec<InvestmentYearlyTotal>, AppError> {
+    let project = state.project()?;
+    Ok(project.investments().yearly_totals())
+}
+
+/// The yearly series of the Insights chart, computed from the project as it is
+/// now, saved or not (CSD-007 REQ-13).
+#[tauri::command]
+pub fn get_investment_insights(state: State<'_, AppState>) -> Result<InvestmentInsights, AppError> {
+    let today = state.today();
+    let project = state.project()?;
+    Ok(InvestmentInsights {
+        years: project.investments().insights(today),
+    })
+}
+
+/// Payload of `get_investment_insights` (CSD-007 section 5).
+#[derive(Serialize)]
+pub struct InvestmentInsights {
+    years: Vec<InvestmentInsightsYear>,
 }
 
 /// Calculates the balance or the capital growth for the statement form

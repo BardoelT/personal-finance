@@ -1,7 +1,9 @@
 // Dashboard: income this year to date and last month, over all jobs (CSD-004).
 // Entries are paychecks and annual statements.
 // The figures come from Rust; this file only displays them.
-import { invoke, h, formatAmount } from './api.js';
+import { invoke } from '../shared/ipc.js';
+import { h } from '../shared/dom.js';
+import { formatAmount } from '../shared/format.js';
 
 const $ = (id) => document.getElementById(id);
 

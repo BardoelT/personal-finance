@@ -72,7 +72,7 @@ fn income_flow_through_ipc_matches_what_the_frontend_expects() {
         json!({ "unsaved_changes": false, "has_path": false })
     );
 
-    // Create a job exactly as ui/income.js submits it (empty strings for blanks).
+    // Create a job exactly as ui/pages/income-overview.js submits it (empty strings for blanks).
     let job = app.ok("create_job", json!({ "input": job_input() }));
     let job_id = job["id"].as_str().unwrap().to_owned();
     assert_eq!(job["employer"], "Example Employer");
@@ -885,7 +885,7 @@ fn test_csd005_ac_17_8_net_deposits_and_capital_growth_over_ipc() {
     assert_eq!(rows[0]["capital_growth"], "200.00");
     assert_eq!(rows[1]["period"], "2026-08");
     assert_eq!(rows[1]["net_deposits"], "0.00");
-    assert_eq!(rows[1]["capital_growth"], Value::Null);
+    assert_eq!(rows[1]["capital_growth"], "12000.00");
 
     // AC-21.4: edit the net deposits; the growth follows.
     let edited = app.ok(
@@ -993,5 +993,76 @@ fn test_csd006_income_insights_over_ipc() {
     assert_eq!(years[0]["entry_count"], 1);
     assert_eq!(years[0]["is_partial"], false);
     assert_eq!(years[0]["growth_percent"], Value::Null);
+    assert_eq!(years.last().unwrap()["is_partial"], true);
+}
+
+#[test]
+fn test_csd005_ac_26_yearly_totals_over_ipc() {
+    let app = harness();
+    // AC-26.2: nothing yet.
+    assert_eq!(app.ok("yearly_investment_totals", json!({})), json!([]));
+    let account = app.ok(
+        "create_investment_account",
+        json!({ "input": account_input("Example Brokerage", "Monthly") }),
+    );
+    let id = account["id"].as_str().unwrap();
+    app.ok(
+        "add_investment_statement",
+        json!({ "accountId": id, "period": "2025-12", "balance": "11500.00", "netDeposits": "11500.00" }),
+    );
+    app.ok(
+        "add_investment_statement",
+        json!({ "accountId": id, "period": "2026-05", "balance": "12500.00", "netDeposits": "300.00" }),
+    );
+    // AC-26.1 and AC-26.10: one row per year, newest first, amounts as strings.
+    assert_eq!(
+        app.ok("yearly_investment_totals", json!({})),
+        json!([
+            { "year": 2026, "closing_balance": "12500.00", "net_deposits": "300.00",
+              "capital_growth": "700.00", "statement_count": 1 },
+            { "year": 2025, "closing_balance": "11500.00", "net_deposits": "11500.00",
+              "capital_growth": "0.00", "statement_count": 1 },
+        ])
+    );
+}
+
+#[test]
+fn test_csd007_investment_insights_over_ipc() {
+    let app = harness();
+    // AC-2.3: no statements, no series.
+    assert_eq!(
+        app.ok("get_investment_insights", json!({})),
+        json!({ "years": [] })
+    );
+    let account = app.ok(
+        "create_investment_account",
+        json!({ "input": account_input("Example Brokerage", "Monthly") }),
+    );
+    let id = account["id"].as_str().unwrap();
+    app.ok(
+        "add_investment_statement",
+        json!({ "accountId": id, "period": "2025-11", "balance": "11000.00", "netDeposits": "11000.00" }),
+    );
+    app.ok(
+        "add_investment_statement",
+        json!({ "accountId": id, "period": "2025-12", "balance": "11500.00", "netDeposits": "200.00" }),
+    );
+    let insights = app.ok("get_investment_insights", json!({}));
+    let years = insights["years"].as_array().unwrap();
+    // The series runs up to the real current year, so look at 2025 only.
+    assert_eq!(
+        years[0],
+        json!({
+            "year": 2025,
+            "opening_balance": "0.00",
+            "net_deposits": "11200.00",
+            "capital_growth": "300.00",
+            "growth_percent": null,
+            "closing_balance": "11500.00",
+            "statement_count": 2,
+            "is_partial": false
+        })
+    );
+    assert!(years.len() >= 2);
     assert_eq!(years.last().unwrap()["is_partial"], true);
 }
