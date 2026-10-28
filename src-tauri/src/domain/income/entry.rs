@@ -18,7 +18,7 @@ pub struct Paycheck {
 
 /// The yearly pay record of one job (CSD-001 REQ-25).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Statement {
+pub struct AnnualStatement {
     pub job_id: JobId,
     pub year: Year,
     #[serde(flatten)]
@@ -29,7 +29,7 @@ pub struct Statement {
 #[derive(Clone, Copy, Debug)]
 pub enum Entry<'a> {
     Paycheck(&'a Paycheck),
-    Statement(&'a Statement),
+    AnnualStatement(&'a AnnualStatement),
 }
 
 impl<'a> Entry<'a> {
@@ -38,7 +38,7 @@ impl<'a> Entry<'a> {
     pub fn job_id(&self) -> JobId {
         match self {
             Self::Paycheck(paycheck) => paycheck.job_id,
-            Self::Statement(statement) => statement.job_id,
+            Self::AnnualStatement(statement) => statement.job_id,
         }
     }
 
@@ -47,7 +47,7 @@ impl<'a> Entry<'a> {
     pub fn amounts(&self) -> &'a Amounts {
         match self {
             Self::Paycheck(paycheck) => &paycheck.amounts,
-            Self::Statement(statement) => &statement.amounts,
+            Self::AnnualStatement(statement) => &statement.amounts,
         }
     }
 
@@ -56,7 +56,7 @@ impl<'a> Entry<'a> {
     pub fn period(&self) -> String {
         match self {
             Self::Paycheck(paycheck) => paycheck.month.to_string(),
-            Self::Statement(statement) => statement.year.to_string(),
+            Self::AnnualStatement(statement) => statement.year.to_string(),
         }
     }
 
@@ -65,14 +65,14 @@ impl<'a> Entry<'a> {
     pub fn year(&self) -> i32 {
         match self {
             Self::Paycheck(paycheck) => paycheck.month.year(),
-            Self::Statement(statement) => statement.year.value(),
+            Self::AnnualStatement(statement) => statement.year.value(),
         }
     }
 
     /// Whether this is an annual statement.
     #[must_use]
     pub fn is_statement(&self) -> bool {
-        matches!(self, Self::Statement(_))
+        matches!(self, Self::AnnualStatement(_))
     }
 
     /// Newest first ordering: an annual statement counts as December of its year
@@ -80,7 +80,7 @@ impl<'a> Entry<'a> {
     pub(super) fn sort_key(&self) -> (i32, u8) {
         match self {
             Self::Paycheck(paycheck) => (paycheck.month.year(), paycheck.month.month()),
-            Self::Statement(statement) => (statement.year.value(), 12),
+            Self::AnnualStatement(statement) => (statement.year.value(), 12),
         }
     }
 }

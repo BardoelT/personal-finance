@@ -7,7 +7,7 @@ use serde::Serialize;
 
 use crate::domain::money::zero;
 
-use super::{Income, YearMonth, YearlyTotal};
+use super::{Income, IncomeYearlyTotal, YearMonth};
 
 /// Growth in percent from `previous` to `current`, to one decimal with
 /// banker's rounding (CSD-006 REQ-5). `None` when `previous` is zero.
@@ -27,7 +27,7 @@ fn growth(previous: Decimal, current: Decimal) -> Option<Decimal> {
 /// One year of the insights chart: sums over all jobs, whether the year is
 /// still running, and its growth against the year before (CSD-006).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-pub struct InsightsYear {
+pub struct IncomeInsightsYear {
     pub year: i32,
     pub gross_salary: Decimal,
     pub holiday_pay: Decimal,
@@ -46,8 +46,8 @@ impl Income {
     /// entries or after one, has no growth. Entries after the current year,
     /// which only a project file can contain, are not shown.
     #[must_use]
-    pub fn insights(&self, today: YearMonth) -> Vec<InsightsYear> {
-        let totals: BTreeMap<i32, YearlyTotal> = self
+    pub fn insights(&self, today: YearMonth) -> Vec<IncomeInsightsYear> {
+        let totals: BTreeMap<i32, IncomeYearlyTotal> = self
             .yearly_totals()
             .into_iter()
             .map(|total| (total.year, total))
@@ -55,7 +55,7 @@ impl Income {
         let Some(&first) = totals.keys().next() else {
             return Vec::new();
         };
-        let mut series: Vec<InsightsYear> = Vec::new();
+        let mut series: Vec<IncomeInsightsYear> = Vec::new();
         for year in first..=today.year() {
             let (gross_salary, holiday_pay, bonus, total_gross, entry_count) =
                 totals.get(&year).map_or_else(
@@ -77,7 +77,7 @@ impl Income {
                 }
                 _ => None,
             };
-            series.push(InsightsYear {
+            series.push(IncomeInsightsYear {
                 year,
                 gross_salary,
                 holiday_pay,

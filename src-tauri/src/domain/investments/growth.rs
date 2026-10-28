@@ -7,7 +7,7 @@ use crate::domain::error::DomainError;
 use crate::domain::money::{with_two_decimals, zero};
 
 use super::amounts::parse_growth;
-use super::{Balance, InvestmentAccountId, Investments, NetDeposits, Period, Statement};
+use super::{Balance, InvestmentAccountId, InvestmentStatement, Investments, NetDeposits, Period};
 
 /// Which of balance and capital growth the user typed in the statement form
 /// (CSD-005 REQ-24).
@@ -32,7 +32,7 @@ impl Investments {
     /// taken to start at 0.00, so its first statement has no previous balance to
     /// subtract (CSD-005 REQ-23).
     #[must_use]
-    pub fn capital_growth(&self, statement: &Statement) -> Decimal {
+    pub fn capital_growth(&self, statement: &InvestmentStatement) -> Decimal {
         let previous = self
             .previous_balance(statement.account_id, statement.period)
             .unwrap_or_else(zero);

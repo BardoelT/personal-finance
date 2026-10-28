@@ -10,8 +10,8 @@ use crate::domain::money::{zero, Amounts};
 use super::{Entry, Income, Job, YearMonth};
 
 /// The sums of some entries, or `None` if there are none.
-fn totals_of<'a>(amounts: impl Iterator<Item = &'a Amounts>) -> Option<PeriodTotals> {
-    let mut totals = PeriodTotals {
+fn totals_of<'a>(amounts: impl Iterator<Item = &'a Amounts>) -> Option<IncomePeriodTotals> {
+    let mut totals = IncomePeriodTotals {
         gross_salary: zero(),
         holiday_pay: zero(),
         bonus: zero(),
@@ -30,7 +30,7 @@ fn totals_of<'a>(amounts: impl Iterator<Item = &'a Amounts>) -> Option<PeriodTot
 
 /// Totals over all jobs for one calendar year (CSD-001 REQ-11).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-pub struct YearlyTotal {
+pub struct IncomeYearlyTotal {
     pub year: i32,
     pub gross_salary: Decimal,
     pub holiday_pay: Decimal,
@@ -41,7 +41,7 @@ pub struct YearlyTotal {
 
 /// Sums of a set of entries over all jobs (CSD-004).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-pub struct PeriodTotals {
+pub struct IncomePeriodTotals {
     pub gross_salary: Decimal,
     pub holiday_pay: Decimal,
     pub bonus: Decimal,
@@ -54,9 +54,9 @@ pub struct PeriodTotals {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct IncomeOverview {
     pub year: i32,
-    pub year_to_date: Option<PeriodTotals>,
+    pub year_to_date: Option<IncomePeriodTotals>,
     pub last_month: Option<YearMonth>,
-    pub last_month_totals: Option<PeriodTotals>,
+    pub last_month_totals: Option<IncomePeriodTotals>,
 }
 
 impl Income {
@@ -118,12 +118,12 @@ impl Income {
     /// extrapolating partial years (REQ-11). An annual statement counts in its
     /// own year only.
     #[must_use]
-    pub fn yearly_totals(&self) -> Vec<YearlyTotal> {
-        let mut by_year: BTreeMap<i32, YearlyTotal> = BTreeMap::new();
+    pub fn yearly_totals(&self) -> Vec<IncomeYearlyTotal> {
+        let mut by_year: BTreeMap<i32, IncomeYearlyTotal> = BTreeMap::new();
         for entry in self.entries() {
             let year = entry.year();
             let amounts = entry.amounts();
-            let total = by_year.entry(year).or_insert_with(|| YearlyTotal {
+            let total = by_year.entry(year).or_insert_with(|| IncomeYearlyTotal {
                 year,
                 gross_salary: zero(),
                 holiday_pay: zero(),

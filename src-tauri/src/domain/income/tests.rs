@@ -829,7 +829,7 @@ fn yearly_job(income: &mut Income) -> JobId {
         .id
 }
 
-fn statement(income: &mut Income, job: JobId, y: &str, gross: &str) -> Statement {
+fn statement(income: &mut Income, job: JobId, y: &str, gross: &str) -> AnnualStatement {
     income
         .add_statement(job, year(y), amounts(gross, "", ""), today())
         .unwrap()
@@ -1430,11 +1430,11 @@ fn add_statement_of(income: &mut Income, job: JobId, y: &str, parts: [&str; 3]) 
         .unwrap();
 }
 
-fn years_of(series: &[InsightsYear]) -> Vec<i32> {
+fn years_of(series: &[IncomeInsightsYear]) -> Vec<i32> {
     series.iter().map(|y| y.year).collect()
 }
 
-fn growth_of(series: &[InsightsYear], y: i32) -> Option<String> {
+fn growth_of(series: &[IncomeInsightsYear], y: i32) -> Option<String> {
     series
         .iter()
         .find(|row| row.year == y)

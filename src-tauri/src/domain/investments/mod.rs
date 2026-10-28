@@ -23,7 +23,7 @@ pub use growth::{CalculationInput, StatementCalculation};
 pub use insights::InvestmentInsightsYear;
 pub use overview::InvestmentsOverview;
 pub use period::Period;
-pub use statement::{Statement, StatementPrefill};
+pub use statement::{InvestmentStatement, StatementPrefill};
 pub use totals::InvestmentYearlyTotal;
 
 use std::collections::HashSet;
@@ -42,7 +42,7 @@ pub struct Investments {
     #[serde(default)]
     accounts: Vec<InvestmentAccount>,
     #[serde(default)]
-    statements: Vec<Statement>,
+    statements: Vec<InvestmentStatement>,
 }
 
 impl Investments {
@@ -142,7 +142,7 @@ impl Investments {
         net_deposits: NetDeposits,
         note: Note,
         today: YearMonth,
-    ) -> Result<Statement, DomainError> {
+    ) -> Result<InvestmentStatement, DomainError> {
         if self.account(account_id)?.statement_period != period.kind() {
             return Err(DomainError::InvestmentPeriodMismatch);
         }
@@ -152,7 +152,7 @@ impl Investments {
         if self.statement(account_id, period).is_some() {
             return Err(DomainError::InvestmentStatementDuplicate);
         }
-        let statement = Statement {
+        let statement = InvestmentStatement {
             account_id,
             period,
             balance,
@@ -175,7 +175,7 @@ impl Investments {
         balance: Balance,
         net_deposits: NetDeposits,
         note: Note,
-    ) -> Result<Statement, DomainError> {
+    ) -> Result<InvestmentStatement, DomainError> {
         self.account(account_id)?;
         let statement = self
             .statements
@@ -212,8 +212,8 @@ impl Investments {
     /// counts as December of its year; within a period the order is that of the
     /// accounts (REQ-16).
     #[must_use]
-    pub fn all_statements(&self) -> Vec<(&InvestmentAccount, &Statement)> {
-        let mut rows: Vec<(&InvestmentAccount, &Statement)> = self
+    pub fn all_statements(&self) -> Vec<(&InvestmentAccount, &InvestmentStatement)> {
+        let mut rows: Vec<(&InvestmentAccount, &InvestmentStatement)> = self
             .statements
             .iter()
             .filter_map(|statement| {
@@ -285,7 +285,11 @@ impl Investments {
             .ok_or(DomainError::InvestmentAccountNotFound)
     }
 
-    fn statement(&self, account_id: InvestmentAccountId, period: Period) -> Option<&Statement> {
+    fn statement(
+        &self,
+        account_id: InvestmentAccountId,
+        period: Period,
+    ) -> Option<&InvestmentStatement> {
         self.statements
             .iter()
             .find(|s| s.account_id == account_id && s.period == period)
@@ -302,7 +306,7 @@ impl Investments {
     }
 
     /// The statement with the most recent period of an account.
-    fn latest(&self, id: InvestmentAccountId) -> Option<&Statement> {
+    fn latest(&self, id: InvestmentAccountId) -> Option<&InvestmentStatement> {
         self.statements
             .iter()
             .filter(|statement| statement.account_id == id)

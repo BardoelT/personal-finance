@@ -7,7 +7,7 @@ use serde::Serialize;
 
 use crate::domain::money::zero;
 
-use super::{InvestmentAccountId, Investments, Statement};
+use super::{InvestmentAccountId, InvestmentStatement, Investments};
 
 /// The totals of one calendar year over all accounts (CSD-005 REQ-26).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -27,7 +27,7 @@ impl Investments {
     /// statement counts in the year of its own period only.
     #[must_use]
     pub fn yearly_totals(&self) -> Vec<InvestmentYearlyTotal> {
-        let mut by_year: BTreeMap<i32, Vec<&Statement>> = BTreeMap::new();
+        let mut by_year: BTreeMap<i32, Vec<&InvestmentStatement>> = BTreeMap::new();
         for statement in &self.statements {
             by_year
                 .entry(statement.period.year())
@@ -41,8 +41,8 @@ impl Investments {
             .collect()
     }
 
-    fn year_total(&self, year: i32, statements: &[&Statement]) -> InvestmentYearlyTotal {
-        let mut latest: HashMap<InvestmentAccountId, &Statement> = HashMap::new();
+    fn year_total(&self, year: i32, statements: &[&InvestmentStatement]) -> InvestmentYearlyTotal {
+        let mut latest: HashMap<InvestmentAccountId, &InvestmentStatement> = HashMap::new();
         let mut net_deposits = zero();
         let mut capital_growth = zero();
         for statement in statements {

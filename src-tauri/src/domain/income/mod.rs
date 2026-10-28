@@ -15,10 +15,10 @@ mod totals;
 mod tests;
 
 pub use dates::{Year, YearMonth};
-pub use entry::{Entry, Paycheck, PaycheckPrefill, Statement};
-pub use insights::InsightsYear;
+pub use entry::{AnnualStatement, Entry, Paycheck, PaycheckPrefill};
+pub use insights::IncomeInsightsYear;
 pub use job::{Job, JobId, JobInput, PayPeriod};
-pub use totals::{IncomeOverview, YearlyTotal};
+pub use totals::{IncomeOverview, IncomeYearlyTotal};
 
 use serde::{Deserialize, Serialize};
 
@@ -32,7 +32,7 @@ pub struct Income {
     paychecks: Vec<Paycheck>,
     /// A file without annual statements (an older one) has none.
     #[serde(default)]
-    statements: Vec<Statement>,
+    statements: Vec<AnnualStatement>,
 }
 
 impl Income {
@@ -186,7 +186,7 @@ impl Income {
         year: Year,
         amounts: Amounts,
         today: YearMonth,
-    ) -> Result<Statement, DomainError> {
+    ) -> Result<AnnualStatement, DomainError> {
         if self.job(job_id)?.pay_period != PayPeriod::Yearly {
             return Err(DomainError::JobPeriodMismatch);
         }
@@ -196,7 +196,7 @@ impl Income {
         if self.statement(job_id, year).is_some() {
             return Err(DomainError::StatementDuplicateYear);
         }
-        let statement = Statement {
+        let statement = AnnualStatement {
             job_id,
             year,
             amounts,
@@ -215,7 +215,7 @@ impl Income {
         job_id: JobId,
         year: Year,
         amounts: Amounts,
-    ) -> Result<Statement, DomainError> {
+    ) -> Result<AnnualStatement, DomainError> {
         self.job(job_id)?;
         let statement = self
             .statements
@@ -247,9 +247,9 @@ impl Income {
     /// # Errors
     /// Returns `JobNotFound`.
     #[cfg(test)]
-    pub fn statements(&self, job_id: JobId) -> Result<Vec<&Statement>, DomainError> {
+    pub fn statements(&self, job_id: JobId) -> Result<Vec<&AnnualStatement>, DomainError> {
         self.job(job_id)?;
-        let mut statements: Vec<&Statement> = self
+        let mut statements: Vec<&AnnualStatement> = self
             .statements
             .iter()
             .filter(|s| s.job_id == job_id)
@@ -305,7 +305,7 @@ impl Income {
         self.paychecks
             .iter()
             .map(Entry::Paycheck)
-            .chain(self.statements.iter().map(Entry::Statement))
+            .chain(self.statements.iter().map(Entry::AnnualStatement))
     }
 
     /// Checks the invariants of data that came from outside, such as a file.
@@ -378,7 +378,7 @@ impl Income {
             .find(|p| p.job_id == job_id && p.month == month)
     }
 
-    fn statement(&self, job_id: JobId, year: Year) -> Option<&Statement> {
+    fn statement(&self, job_id: JobId, year: Year) -> Option<&AnnualStatement> {
         self.statements
             .iter()
             .find(|s| s.job_id == job_id && s.year == year)

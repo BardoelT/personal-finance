@@ -9,13 +9,13 @@ pub mod settings;
 
 pub use error::DomainError;
 pub use income::{
-    Entry, Income, IncomeOverview, InsightsYear, Job, JobId, JobInput, PaycheckPrefill, Year,
-    YearMonth, YearlyTotal,
+    Entry, Income, IncomeInsightsYear, IncomeOverview, IncomeYearlyTotal, Job, JobId, JobInput,
+    PaycheckPrefill, Year, YearMonth,
 };
 pub use investments::{
     AccountInput, Balance, CalculationInput, InvestmentAccount, InvestmentAccountId,
-    InvestmentInsightsYear, InvestmentYearlyTotal, Investments, InvestmentsOverview, NetDeposits,
-    Note, Period, Statement as InvestmentStatement, StatementCalculation, StatementPrefill,
+    InvestmentInsightsYear, InvestmentStatement, InvestmentYearlyTotal, Investments,
+    InvestmentsOverview, NetDeposits, Note, Period, StatementCalculation, StatementPrefill,
 };
 pub use money::{Amounts, Currency};
 pub use project_data::ProjectData;
