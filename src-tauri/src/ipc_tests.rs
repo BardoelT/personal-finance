@@ -9,6 +9,7 @@ use tauri::{ipc::InvokeBody, App, Manager, WebviewWindow, WebviewWindowBuilder};
 use time::UtcOffset;
 
 use crate::configure;
+use crate::storage::Preferences;
 
 struct Harness {
     window: WebviewWindow<MockRuntime>,
@@ -19,6 +20,20 @@ fn harness() -> Harness {
     let app = configure(mock_builder(), UtcOffset::UTC)
         .build(mock_context(noop_assets()))
         .unwrap();
+    let window = WebviewWindowBuilder::new(&app, "main", tauri::WebviewUrl::default())
+        .build()
+        .unwrap();
+    Harness { window, _app: app }
+}
+
+/// An app whose preference file lives in `config_dir`, as `run` sets it up.
+fn harness_in(config_dir: &std::path::Path) -> Harness {
+    let app = configure(
+        mock_builder().manage(Preferences::in_dir(config_dir)),
+        UtcOffset::UTC,
+    )
+    .build(mock_context(noop_assets()))
+    .unwrap();
     let window = WebviewWindowBuilder::new(&app, "main", tauri::WebviewUrl::default())
         .build()
         .unwrap();
@@ -1065,4 +1080,72 @@ fn test_csd007_investment_insights_over_ipc() {
     );
     assert!(years.len() >= 2);
     assert_eq!(years.last().unwrap()["is_partial"], true);
+}
+
+#[test]
+fn test_csd008_the_theme_is_chosen_saved_and_restored_over_ipc() {
+    let config = tempfile::TempDir::new().unwrap();
+    let app = harness_in(config.path());
+
+    // AC-2.1: nothing saved yet means System.
+    assert_eq!(
+        app.ok("get_preferences", json!({})),
+        json!({ "theme": "system" })
+    );
+
+    // AC-3.2: choosing a theme is not an unsaved project change.
+    assert_eq!(
+        app.ok("set_theme", json!({ "theme": "dark" })),
+        json!({ "theme": "dark" })
+    );
+    assert_eq!(app.ok("get_preferences", json!({}))["theme"], "dark");
+    assert_eq!(
+        app.ok("project_status", json!({}))["unsaved_changes"],
+        false
+    );
+
+    // AC-3.3: choosing the current theme changes nothing.
+    app.ok("set_theme", json!({ "theme": "dark" }));
+    assert_eq!(app.ok("get_preferences", json!({}))["theme"], "dark");
+
+    // AC-5.1: a fresh session reads the saved theme.
+    let restarted = harness_in(config.path());
+    assert_eq!(restarted.ok("get_preferences", json!({}))["theme"], "dark");
+
+    // AC-5.2: the theme belongs to the person, not to the project.
+    app.ok("new_project", json!({}));
+    assert_eq!(app.ok("get_preferences", json!({}))["theme"], "dark");
+}
+
+#[test]
+fn test_csd008_ac_9_1_unsupported_themes_are_rejected_over_ipc() {
+    let config = tempfile::TempDir::new().unwrap();
+    let app = harness_in(config.path());
+    app.ok("set_theme", json!({ "theme": "light" }));
+
+    for bad in ["sepia", "Dark", ""] {
+        let error = app.err("set_theme", json!({ "theme": bad }));
+        assert_eq!(error["code"], "PREFERENCES_THEME_UNSUPPORTED", "{bad:?}");
+        assert_eq!(app.ok("get_preferences", json!({}))["theme"], "light");
+    }
+}
+
+#[test]
+fn test_csd008_ac_10_1_a_failed_save_keeps_the_theme_over_ipc() {
+    use std::os::unix::fs::PermissionsExt;
+    let config = tempfile::TempDir::new().unwrap();
+    let app = harness_in(config.path());
+    app.ok("set_theme", json!({ "theme": "light" }));
+
+    std::fs::set_permissions(config.path(), std::fs::Permissions::from_mode(0o500)).unwrap();
+    let error = app.err("set_theme", json!({ "theme": "dark" }));
+    std::fs::set_permissions(config.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+
+    assert_eq!(error["code"], "PREFERENCES_SAVE_FAILED");
+    let message = error["message"].as_str().unwrap();
+    assert!(
+        !message.contains(config.path().to_str().unwrap()),
+        "{message}"
+    );
+    assert_eq!(app.ok("get_preferences", json!({}))["theme"], "light");
 }
