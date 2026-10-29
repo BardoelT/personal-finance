@@ -3,7 +3,7 @@ id: CSD-005
 title: Investments
 status: approved
 owner: Thijs Bardoel
-version: 0.10
+version: 0.11
 last_updated: 29/10/2026
 related: [CSD-000, CSD-001, CSD-002, CSD-003, CSD-007]
 ---
@@ -642,14 +642,14 @@ Scenario: Same period is ordered by account
 ```
 
 **REQ-17: Investments view layout** *(ubiquitous)*
-The app shall offer Investments as its own item in the left pane next to Employment, and shall show the view as the sections Accounts, Yearly totals and Statements in that order, with the statement period (and no statement count), the latest balance with its period and the icon buttons Edit (pencil) and Delete (trash) (flush right) on each account row, the button "Add account" in the header of the Accounts section, the icon buttons Edit (pencil) and Delete (trash) flush right on each statement row, the total in a footer row of the Accounts section, the columns Year, Closing balance, Net deposits, Capital growth and no actions in the Yearly totals section, the columns Period, Account, Balance, Net deposits, Capital growth and Note in the Statements section, and no account selection that changes what the sections show. A note longer than one line is cut to one line in the table and shown in full when the statement is edited. The app shall display no count of statements anywhere on the page: not in the yearly totals, on the account rows, in a confirmation, in a chart tooltip or in the screen-reader description of a chart.
+The app shall offer Investments as its own item in the left pane (CSD-004 REQ-1), and shall show the view as the sections Accounts, Yearly totals and Statements in that order, with the statement period (and no statement count), the latest balance with its period and the icon buttons Edit (pencil) and Delete (trash) (flush right) on each account row, the button "Add account" in the header of the Accounts section, the icon buttons Edit (pencil) and Delete (trash) flush right on each statement row, the total in a footer row of the Accounts section, the columns Year, Closing balance, Net deposits, Capital growth and no actions in the Yearly totals section, the columns Period, Account, Balance, Net deposits, Capital growth and Note in the Statements section, and no account selection that changes what the sections show. A note longer than one line is cut to one line in the table and shown in full when the statement is edited. The app shall display no count of statements anywhere on the page: not in the yearly totals, on the account rows, in a confirmation, in a chart tooltip or in the screen-reader description of a chart.
 
 ```gherkin
 @AC-17.1
 Scenario: Sections in order
   Given an account with a statement
   Then the sections appear in the order Accounts, Yearly totals, Statements
-  And Investments is an item in the left pane next to Employment
+  And Investments is an item in the left pane (CSD-004 REQ-1)
 
 @AC-17.2
 Scenario: Account rows carry their period, latest balance and actions
@@ -1224,6 +1224,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 - OQ-3: (resolved in v0.2) Deleting a statement asks for a confirmation, unlike CSD-001 REQ-8, on purpose: the note of a statement cannot be recreated by copying the previous period (REQ-13). CSD-001 is unchanged.
 
 ## 9. Changelog
+- 0.11 (29/10/2026): The position in the left pane is stated in CSD-004 REQ-1 and no longer repeated here (GitHub issue 21).
 - 0.10 (29/10/2026): Statement counts are no longer displayed. REQ-17 drops the count from the account rows and the Statements column from the yearly totals (AC-17.2, AC-17.9 amended) and says no count is shown anywhere, REQ-5 gets a fixed delete confirmation text without a number (AC-5.3 added), AC-18.2 amended, REQ-26 and the definitions say the count is still returned over IPC (used for the period lock and empty-year detection) but not shown. Verification marks AC-5.3 and the amended ACs as manual checklist items.
 - 0.9 (28/10/2026): The period of a statement can be changed when editing (GitHub issue 12). REQ-11 no longer forbids it, AC-11.3 is removed, new REQ-28 (AC-28.1 to AC-28.8) and REQ-29 (AC-29.1 to AC-29.5) reuse the add rules and error codes, REQ-24 ignores the statement being edited as a previous statement (AC-24.13, AC-24.14), NG-11 and NG-12 added, `update_investment_statement` takes a new period and `calculate_investment_statement` an optional `ignore_period`. Back to `draft` until the owner approves.
 - 0.8 (27/10/2026): The first statement of an account has a capital growth. The account is taken to start at 0.00 before its first statement, so growth = balance − net deposits (REQ-23: AC-23.3 rewritten, AC-23.7 amended, AC-23.9 and AC-23.10 added). The growth field of the form is no longer disabled (REQ-24: AC-24.7, AC-24.8, AC-24.12 rewritten), a note explains the convention (new REQ-27, AC-27.1 to AC-27.4), the yearly totals add the growth of first statements (REQ-26: AC-26.1, 26.3, 26.5, 26.7, 26.9 amended, AC-26.11 added) and AC-17.8 shows a growth instead of a dash. `INVESTMENT_GROWTH_UNAVAILABLE` is removed. Approved by the owner.

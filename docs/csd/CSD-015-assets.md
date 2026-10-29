@@ -3,7 +3,7 @@ id: CSD-015
 title: Assets
 status: approved
 owner: Thijs Bardoel
-version: 0.2
+version: 0.3
 last_updated: 29/10/2026
 related: [CSD-000, CSD-002, CSD-003, CSD-009, CSD-011, CSD-016]
 ---
@@ -804,14 +804,14 @@ Scenario: Newest year first
 ```
 
 **REQ-21: Assets view layout** *(ubiquitous)*
-The app shall offer Assets as its own item in the left pane with a house icon at the position of REQ-26, and shall show the Overview tab as the sections Assets, Yearly values and Valuations in that order, with the valuation period, the latest value with its period in smaller muted text beside it (as on the Debts rows) and the icon buttons Edit (pencil) and Delete (trash) (flush right) on each asset row, the button "Add asset" in the header of the Assets section, the button "Add valuation" in the header of the Valuations section, the icon buttons Edit (pencil) and Delete (trash) flush right on each valuation row, the total value in a footer row of the Assets section labelled "Total value", the columns Year, Closing value and Change and no actions in the Yearly values section, no count of valuations anywhere in the view, the columns Period, Asset, Value, Change and Note in the Valuations section, and no asset selection that changes what the sections show. A note longer than one line is cut to one line in the table and shown in full when the valuation is edited. A change of none is shown as a dash. The page shall use the same layout, components and styles as the Debts page.
+The app shall offer Assets as its own item in the left pane with a house icon (position: CSD-004 REQ-1), and shall show the Overview tab as the sections Assets, Yearly values and Valuations in that order, with the valuation period, the latest value with its period in smaller muted text beside it (as on the Debts rows) and the icon buttons Edit (pencil) and Delete (trash) (flush right) on each asset row, the button "Add asset" in the header of the Assets section, the button "Add valuation" in the header of the Valuations section, the icon buttons Edit (pencil) and Delete (trash) flush right on each valuation row, the total value in a footer row of the Assets section labelled "Total value", the columns Year, Closing value and Change and no actions in the Yearly values section, no count of valuations anywhere in the view, the columns Period, Asset, Value, Change and Note in the Valuations section, and no asset selection that changes what the sections show. A note longer than one line is cut to one line in the table and shown in full when the valuation is edited. A change of none is shown as a dash. The page shall use the same layout, components and styles as the Debts page.
 
 ```gherkin
 @AC-21.1
 Scenario: Sections in order
   Given an asset with a valuation
   Then the sections appear in the order Assets, Yearly values, Valuations
-  And Assets is an item with a house icon in the left pane at the position of REQ-26
+  And Assets is an item with a house icon in the left pane (CSD-004 REQ-1)
 
 @AC-21.2
 Scenario: Asset rows carry their period, latest value and actions
@@ -957,12 +957,12 @@ Scenario: An asset without valuations needs no confirmation
 ```
 
 **REQ-26: Position in the left pane** *(ubiquitous)*
-The app shall show the Assets item in the left pane directly under Bank accounts and directly above Debts, so that what the user owns comes before what the user owes.
+The app shall show the Assets item in the left pane as CSD-004 REQ-1 orders it: in the group Wealth, after Bank accounts and Investments, and apart from Debts, which sits in the group Liabilities.
 
 ```gherkin
 @AC-26.1
 Scenario: Order of the left pane
-  Then the left pane lists Dashboard, Income, Investments, Bank accounts, Assets, Debts, Expenses, Reports and Settings in that order
+  Then Assets is the last item of the group "Wealth", after "Bank accounts" and "Investments"
 ```
 
 ## 5. Interfaces and contracts
@@ -1020,8 +1020,9 @@ All ACs are proven by `cargo test`, with domain logic tested in `domain/`. Tests
 Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 
 ## 8. Open questions
-None. (OQ-1, the position in the left pane, was resolved on 29/10/2026: directly under Bank accounts and above Debts, REQ-26.)
+None. (OQ-1, the position in the left pane, is settled by REQ-26 and CSD-004 REQ-1.)
 
 ## 9. Changelog
+- 0.3 (29/10/2026): The position in the left pane follows CSD-004 REQ-1: Assets is in the group Wealth, after Bank accounts and Investments (REQ-26, AC-26.1; GitHub issue 21).
 - 0.1 (29/10/2026): initial draft, from GitHub issue 17 and the grill-me interview. It follows CSD-011 (assets, colour slot, period lock, valuations, changing the period, copy previous, yearly values, layout), with a value of 0.00 or more, a change per valuation (REQ-19) counted as growth, and a yearly change in the yearly values. The Insights tab is CSD-016.
 - 0.2 (29/10/2026): No counts are displayed any more: the yearly values have the columns Year, Closing value and Change (REQ-20, REQ-21, AC-12.6, AC-20.x, AC-21.2, AC-21.8), asset rows show only the period and the latest value with its period in smaller muted text (REQ-21, AC-21.2), the "No valuations yet." note stays in the Valuations section only (REQ-22, AC-22.2), and the delete confirmation states no count (REQ-6, new AC-6.4, manual checklist). The count fields stay in IPC but are not displayed (section 5).

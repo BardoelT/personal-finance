@@ -3,7 +3,7 @@ id: CSD-009
 title: Bank accounts
 status: approved
 owner: Thijs Bardoel
-version: 0.3
+version: 0.4
 last_updated: 29/10/2026
 related: [CSD-000, CSD-002, CSD-003, CSD-005, CSD-010]
 ---
@@ -731,14 +731,14 @@ Scenario: Newest year first
 ```
 
 **REQ-20: Bank accounts view layout** *(ubiquitous)*
-The app shall offer Bank accounts as its own item in the left pane next to Investments, and shall show the Overview tab as the sections Accounts, Yearly totals and Entries in that order, with the entry period (and no entry count), the latest balance with its period and the icon buttons Edit (pencil) and Delete (trash) (flush right) on each account row, the button "Add account" in the header of the Accounts section, the button "Add entry" in the header of the Entries section, the icon buttons Edit (pencil) and Delete (trash) flush right on each entry row, the total in a footer row of the Accounts section, the column Year and the column Closing balance, and no entries column and no actions, in the Yearly totals section, the columns Period, Account, Balance and Note in the Entries section, and no account selection that changes what the sections show. A note longer than one line is cut to one line in the table and shown in full when the entry is edited, and a negative balance is shown with a minus sign. The app shall display no count of entries anywhere on the page: not in the yearly totals, on the account rows, in a confirmation, in a chart tooltip or in the screen-reader description of a chart.
+The app shall offer Bank accounts as its own item in the left pane (CSD-004 REQ-1), and shall show the Overview tab as the sections Accounts, Yearly totals and Entries in that order, with the entry period (and no entry count), the latest balance with its period and the icon buttons Edit (pencil) and Delete (trash) (flush right) on each account row, the button "Add account" in the header of the Accounts section, the button "Add entry" in the header of the Entries section, the icon buttons Edit (pencil) and Delete (trash) flush right on each entry row, the total in a footer row of the Accounts section, the column Year and the column Closing balance, and no entries column and no actions, in the Yearly totals section, the columns Period, Account, Balance and Note in the Entries section, and no account selection that changes what the sections show. A note longer than one line is cut to one line in the table and shown in full when the entry is edited, and a negative balance is shown with a minus sign. The app shall display no count of entries anywhere on the page: not in the yearly totals, on the account rows, in a confirmation, in a chart tooltip or in the screen-reader description of a chart.
 
 ```gherkin
 @AC-20.1
 Scenario: Sections in order
   Given an account with an entry
   Then the sections appear in the order Accounts, Yearly totals, Entries
-  And Bank accounts is an item in the left pane next to Investments
+  And Bank accounts is an item in the left pane (CSD-004 REQ-1)
 
 @AC-20.2
 Scenario: Account rows carry their period, latest balance and actions
@@ -937,6 +937,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 - OQ-2: Whether `docs/architecture.md` and the layout line of `CLAUDE.md` ("money, income, investments") get a bank accounts mention when this CSD is implemented. Owner: Thijs. Blocks: none.
 
 ## 9. Changelog
+- 0.4 (29/10/2026): The position in the left pane is stated in CSD-004 REQ-1 and no longer repeated here (GitHub issue 21).
 - 0.3 (29/10/2026): Entry counts are no longer displayed. REQ-20 drops the count from the account rows and the Entries column from the yearly totals (AC-20.2, AC-20.8 amended) and says no count is shown anywhere, REQ-6 gets a fixed delete confirmation text without a number (AC-6.3 added), AC-21.2 amended, REQ-19 and the definitions say the count is still returned over IPC (used for the period lock and empty-year detection) but not shown. Verification marks AC-6.3 and the amended ACs as manual checklist items.
 - 0.2 (28/10/2026): Resolved OQ-1: CSD-003 0.6 covers bank entries in the currency confirmation. REQ-24 and its verification row point to CSD-003 AC-5.7 and AC-5.8.
 - 0.1 (28/10/2026): initial draft, from GitHub issue 13 and the grill-me interview. It follows CSD-005 (accounts, period lock, entries, changing the period, copy previous, yearly totals, layout), with signed balances, no net deposits or growth, and a stored colour slot per account for the insights chart of CSD-010.

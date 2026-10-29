@@ -3,7 +3,7 @@ id: CSD-013
 title: Expenses
 status: approved
 owner: Thijs Bardoel
-version: 0.3
+version: 0.4
 last_updated: 29/10/2026
 related: [CSD-000, CSD-002, CSD-003, CSD-009, CSD-011, CSD-014]
 ---
@@ -470,12 +470,12 @@ Scenario: The 1900 and the current year
 ```
 
 **REQ-13: Expenses view layout** *(ubiquitous)*
-The app shall offer "Expenses" as its own item in the left pane directly under Debts with a receipt icon, and shall show the Overview tab as the sections Yearly totals and Expenses in that order, with the columns Year, Total and Largest and no actions in the Yearly totals section, only the button "Add expense" in the header of the Expenses section (no filters), all expenses in the Expenses section, the columns Date, Name, Category, Amount and Note and the icon buttons Edit (pencil) and Delete (trash) flush right on each row in the Expenses section, and the total of the listed expenses in a footer row labelled "Total". A note longer than one line is cut to one line in the table and shown in full when the expense is edited. Dates are shown as `dd/mm/yyyy`. The page offers the tabs "Overview" and "Insights" (CSD-014), with Overview shown first.
+The app shall offer "Expenses" as its own item in the left pane with a receipt icon (position: CSD-004 REQ-1), and shall show the Overview tab as the sections Yearly totals and Expenses in that order, with the columns Year, Total and Largest and no actions in the Yearly totals section, only the button "Add expense" in the header of the Expenses section (no filters), all expenses in the Expenses section, the columns Date, Name, Category, Amount and Note and the icon buttons Edit (pencil) and Delete (trash) flush right on each row in the Expenses section, and the total of the listed expenses in a footer row labelled "Total". A note longer than one line is cut to one line in the table and shown in full when the expense is edited. Dates are shown as `dd/mm/yyyy`. The page offers the tabs "Overview" and "Insights" (CSD-014), with Overview shown first.
 
 ```gherkin
 @AC-13.1
 Scenario: Left pane item
-  Then "Expenses" is an item in the left pane directly under "Debts"
+  Then "Expenses" is an item in the left pane (CSD-004 REQ-1)
   And it shows a receipt icon
 
 @AC-13.2
@@ -671,6 +671,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.4 (29/10/2026): The position in the left pane is stated in CSD-004 REQ-1 and no longer repeated here (GitHub issue 21).
 - 0.3 (29/10/2026): The year and month filter is removed. The overview always lists all expenses, newest first, with their total. REQ-11 is now "List and total" (AC-11.1 and AC-11.2 rewritten, AC-11.3 to AC-11.9 removed), AC-12.3 and AC-14.2 removed, the Filter definition, the filter wording in NG-11, REQ-7, REQ-12, REQ-13, REQ-14, the flow, CON-2 and CON-9 removed or reworded. `list_expenses()` takes no arguments and returns `{ expenses, total }` (no `years`). The number of expenses is no longer displayed (the Expenses column of the yearly totals is gone, REQ-12, REQ-13, AC-12.1, AC-12.6, AC-7.3); `expense_count` stays in the IPC data.
 - 0.2 (29/10/2026): Renamed from "Major expenses" to "Expenses": title, file name, page and navigation labels, and wording. No behaviour change. NG-4 is reworded: there is no minimum amount.
 - 0.1 (29/10/2026): initial draft, from GitHub issue 16 and the grill-me interview. It follows CSD-011 (layout, validation, copy previous, yearly totals, project file, currency confirmation), with a dated expense that has no parent item, a fixed category list, a year and month filter and no future dates.

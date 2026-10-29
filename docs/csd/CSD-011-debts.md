@@ -3,7 +3,7 @@ id: CSD-011
 title: Debts
 status: approved
 owner: Thijs Bardoel
-version: 0.2
+version: 0.3
 last_updated: 29/10/2026
 related: [CSD-000, CSD-002, CSD-003, CSD-005, CSD-009, CSD-012]
 ---
@@ -805,14 +805,14 @@ Scenario: Newest year first
 ```
 
 **REQ-20: Debts view layout** *(ubiquitous)*
-The app shall offer Debts as its own item in the left pane next to Bank accounts, and shall show the Overview tab as the sections Debts, Yearly totals and Statements in that order, with the statement period, the latest balance with its period and the icon buttons Edit (pencil) and Delete (trash) (flush right) on each debt row, the button "Add debt" in the header of the Debts section, the button "Add statement" in the header of the Statements section, the icon buttons Edit (pencil) and Delete (trash) flush right on each statement row, the total debt in a footer row of the Debts section labelled "Total debt", the columns Year, Closing balance and Repaid and no actions in the Yearly totals section, and no count of statements anywhere in the view, the columns Period, Debt, Balance, Change and Note in the Statements section, and no debt selection that changes what the sections show. A note longer than one line is cut to one line in the table and shown in full when the statement is edited. A change of none and a repaid of none are shown as a dash.
+The app shall offer Debts as its own item in the left pane (CSD-004 REQ-1), and shall show the Overview tab as the sections Debts, Yearly totals and Statements in that order, with the statement period, the latest balance with its period and the icon buttons Edit (pencil) and Delete (trash) (flush right) on each debt row, the button "Add debt" in the header of the Debts section, the button "Add statement" in the header of the Statements section, the icon buttons Edit (pencil) and Delete (trash) flush right on each statement row, the total debt in a footer row of the Debts section labelled "Total debt", the columns Year, Closing balance and Repaid and no actions in the Yearly totals section, and no count of statements anywhere in the view, the columns Period, Debt, Balance, Change and Note in the Statements section, and no debt selection that changes what the sections show. A note longer than one line is cut to one line in the table and shown in full when the statement is edited. A change of none and a repaid of none are shown as a dash.
 
 ```gherkin
 @AC-20.1
 Scenario: Sections in order
   Given a debt with a statement
   Then the sections appear in the order Debts, Yearly totals, Statements
-  And Debts is an item in the left pane next to Bank accounts
+  And Debts is an item in the left pane (CSD-004 REQ-1)
 
 @AC-20.2
 Scenario: Debt rows carry their period, latest balance and actions
@@ -1014,5 +1014,6 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.3 (29/10/2026): The position in the left pane is stated in CSD-004 REQ-1 and no longer repeated here (GitHub issue 21).
 - 0.1 (28/10/2026): initial draft, from GitHub issue 15 and the grill-me interview. It follows CSD-009 (debts, colour slot, period lock, statements, changing the period, copy previous, yearly totals, layout), with a balance of 0.00 or more, a change per statement (REQ-25) and an amount repaid in the yearly totals.
 - 0.2 (29/10/2026): No counts are displayed any more: the yearly totals have the columns Year, Closing balance and Repaid (REQ-19, REQ-20, AC-12.6, AC-19.x, AC-20.2, AC-20.8), debt rows show only the period (REQ-20, REQ-21, AC-21.2), and the delete confirmation states no count (REQ-6, new AC-6.4). The count fields stay in IPC but are not displayed (section 5). The Statements section keeps its "No statements yet." note.
