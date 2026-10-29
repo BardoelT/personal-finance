@@ -4,7 +4,7 @@ A private, local-only desktop app for tracking personal wealth: what comes in, w
 
 ## What it does today
 
-The left pane groups the pages as **Overview**, **Finance**, **Wealth**, **Liabilities** and **Insights** (the Net worth page), with Settings and the project status at the bottom.
+The left pane groups the pages as **Overview**, **Finance**, **Wealth**, **Liabilities** and **Insights** (the Net worth and Ratios pages), with Settings and the project status at the bottom.
 
 - **Dashboard:** your income this year to date and last month (total gross, gross salary, holiday pay and bonus), summed over all jobs. An annual statement counts in full in this year and not in last month.
 - **Income:** any number of jobs. A monthly job has one paycheck per month, a yearly job has one annual statement per year, both with gross salary, holiday pay and bonus. Yearly totals and a list of all paychecks and annual statements sit next to the jobs. Insights charts income per year with the year-over-year growth.
@@ -14,6 +14,7 @@ The left pane groups the pages as **Overview**, **Finance**, **Wealth**, **Liabi
 - **Assets:** things you own (a house, a car), each valued monthly or yearly, with the change since the previous valuation and yearly values. Insights charts the value per asset per year.
 - **Debts:** what you owe, each recorded monthly or yearly as a remaining balance, with the amount repaid per year. Insights charts the debt per debt per year.
 - **Net worth:** one chart of your overall financial state: a stacked bar per year with assets, investments and cash above the zero line and debts below it, and a marker at the net worth. Every figure is the one the chart of its own area shows.
+- **Ratios:** one table with the years as columns: total income, how much of it became wealth (bank increase, investment net deposits and debt repaid), the growth of the investments and of the total wealth, and the disposable income with its share of the income.
 - **Settings:** the currency (EUR, USD or GBP) of the whole project, and the theme (System, Light or Dark). Changing the currency does not convert any amount.
 - **Project file:** everything is saved in one file you choose, and the app reopens the last one you used.
 
@@ -89,7 +90,7 @@ src-tauri/
   src/lib.rs        app setup, command registration
   src/menu.rs       native macOS menu bar (File menu, Settings…)
   src/commands/     thin #[tauri::command] handlers
-  src/domain/       pure business logic (money, income, expenses, bank accounts, investments, assets, debts, net worth, settings), unit-tested
+  src/domain/       pure business logic (money, income, expenses, bank accounts, investments, assets, debts, net worth, ratios, settings), unit-tested
   src/storage/      project file persistence (JSON, atomic write)
   src/error.rs      app error type
   capabilities/     Tauri permission files
@@ -121,6 +122,7 @@ Behaviour is defined in Capability Specification Documents in [`docs/csd/`](docs
 | [CSD-015](docs/csd/CSD-015-assets.md) | Assets |
 | [CSD-016](docs/csd/CSD-016-asset-insights.md) | Asset insights chart |
 | [CSD-017](docs/csd/CSD-017-net-worth-insights.md) | Net worth insights (the Net worth page) |
+| [CSD-018](docs/csd/CSD-018-ratios.md) | Ratios (the Ratios page) |
 
 Only specs with `status: approved` are implemented; check a spec's status before relying on it. Tests reference acceptance criteria in their names, for example `test_csd002_ac_1_1_...`.
 
