@@ -1,7 +1,7 @@
 ---
 id: CSD-014
 title: Major expense insights
-status: draft
+status: approved
 owner: Thijs Bardoel
 version: 0.1
 last_updated: 29/10/2026
