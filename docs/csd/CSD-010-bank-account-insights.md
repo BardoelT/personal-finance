@@ -3,7 +3,7 @@ id: CSD-010
 title: Bank account insights
 status: approved
 owner: Thijs Bardoel
-version: 0.4
+version: 0.5
 last_updated: 29/10/2026
 related: [CSD-007, CSD-009]
 ---
@@ -24,7 +24,7 @@ The Bank accounts page lists accounts, entries and a table of yearly totals, but
 - NG-2: A filter, a selection or a hiding of banks.
 - NG-3: Growth, a percentage, a year-over-year change, a forecast, or any other figure than the balances and the closing balance. The number of entries is never displayed.
 - NG-4: Click-through, zooming, or exporting the chart.
-- NG-5: Charts on the Dashboard or on the Reports page.
+- NG-5: Charts on the Dashboard or on the Net worth page, which has its own chart (CSD-017).
 - NG-6: A chart library or any other new dependency.
 - NG-7: Estimating balances for years without an entry (CSD-009 NG-8), and carrying a balance forward into a year in which a bank has no entry.
 - NG-8: Letting the user choose the colour of a bank.
@@ -588,6 +588,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 - OQ-1: (resolved in v0.2) The legend lists only banks that have at least one entry (REQ-9), because a bank without entries has no segment to identify.
 
 ## 9. Changelog
+- 0.5 (29/10/2026): The Reports page is replaced by the Net worth page of CSD-017 (NG-5; GitHub issue 24). No other change.
 - 0.4 (29/10/2026): The plot of every yearly chart is 390 px high (was 260 px), 50% taller. No other behaviour change.
 - 0.3 (29/10/2026): Entry counts are no longer displayed: REQ-10 (AC-10.1, AC-10.3 amended) drops the count from the tooltip and the screen-reader description, an empty year shows "No entries" (AC-10.6), NG-3 and REQ-5 say the count is returned but never shown. REQ-10 orders the tooltip rows as the bar shows them, top to bottom, segments below the zero line last (AC-10.7, AC-10.8 added). REQ-13 sets the shared chart size (plot height 260 px, slot at least 64 px) and an always-drawn zero line (AC-13.5, AC-13.6 added). The legend hover and focus highlight of REQ-11 is unchanged. New ACs are manual checklist items.
 - 0.2 (28/10/2026): Resolved OQ-1: the legend lists only banks with at least one entry, as REQ-9 says.

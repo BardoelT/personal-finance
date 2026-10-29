@@ -3,7 +3,7 @@ id: CSD-007
 title: Investment insights
 status: approved
 owner: Thijs Bardoel
-version: 0.6
+version: 0.7
 last_updated: 29/10/2026
 related: [CSD-003, CSD-005, CSD-006]
 ---
@@ -24,7 +24,7 @@ The Investments page lists accounts, statements and a table of yearly totals, bu
 - NG-2: A filter or a breakdown per account.
 - NG-3: Any return figure other than the growth percentage of REQ-6: annualised returns, time-weighted returns, a percentage in the Yearly totals table or anywhere else, and forecasts.
 - NG-4: Click-through, zooming, or exporting the chart.
-- NG-5: Charts on the Dashboard or on the Reports page.
+- NG-5: Charts on the Dashboard or on the Net worth page, which has its own chart (CSD-017).
 - NG-6: A chart library or any other new dependency.
 - NG-7: Estimating balances for years without a statement (CSD-005 NG-7).
 
@@ -687,6 +687,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.7 (29/10/2026): The Reports page is replaced by the Net worth page of CSD-017 (NG-5; GitHub issue 24). No other change.
 - 0.6 (29/10/2026): The plot of every yearly chart is 390 px high (was 260 px), 50% taller. No other behaviour change.
 - 0.5 (29/10/2026): Statement counts are no longer displayed: REQ-11 (AC-11.1, AC-11.3) and REQ-14 (AC-14.1, AC-14.6) drop the count from the tooltip and the screen-reader description, an empty year shows "No statements"; the count stays in the data (REQ-2, section 5). REQ-14 orders the tooltip rows as the bar shows them, top to bottom (AC-14.9 added). REQ-8 (AC-8.1) and REQ-15 (AC-15.1 to AC-15.3 amended, AC-15.8 to AC-15.10 added): the legend has one hoverable and focusable item per piece, and hovering or focusing a legend item, or hovering a segment, highlights that series in every year. REQ-18 sets the shared chart size, an always-drawn zero line and the colour roles (AC-18.6, AC-18.7 added). New ACs are manual checklist items.
 - 0.4 (27/10/2026): Quieter and more refined charts. REQ-8 (AC-8.3) and REQ-9: the hatch becomes a lighter tint with a dashed outline and the marker a 2 px muted line. REQ-15 (AC-15.1, AC-15.2, AC-15.6) replaces the chip and outline by a full-colour segment, eased dimming of the rest and a heavier legend label. New REQ-16 motion, REQ-17 reduced motion, REQ-18 refined look (AC-16.1 to AC-18.5), CON-9. The tooltip placement of REQ-14 is unchanged. Approved by the owner. Same change for the income chart in CSD-006 0.3.

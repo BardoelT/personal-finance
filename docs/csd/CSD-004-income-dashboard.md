@@ -3,7 +3,7 @@ id: CSD-004
 title: Income dashboard
 status: approved
 owner: Thijs Bardoel
-version: 0.5
+version: 0.6
 last_updated: 29/10/2026
 related: [CSD-001, CSD-003]
 ---
@@ -24,7 +24,7 @@ The dashboard is the first page of the app, and today it shows example data that
 - NG-2: Charts and other visualisations (as CSD-001 NG-6).
 - NG-3: A breakdown per job.
 - NG-4: Forecasts and net pay (CSD-001 NG-1, NG-4).
-- NG-5: The Reports page: it stays the existing placeholder.
+- NG-5: Any page in the Insights group other than the Net worth page of CSD-017.
 
 ## 3. Definitions
 | Term | Meaning |
@@ -53,14 +53,14 @@ sequenceDiagram
 ```
 
 **REQ-1: Structure of the left pane** *(ubiquitous)*
-The app shall group the pages in the left pane under plain, non-collapsible headings, in this order: Overview (Dashboard), Finance (Income, Expenses), Wealth (Bank accounts, Investments, Assets), Liabilities (Debts) and Insights (Reports), with Settings and the project status pinned at the bottom (CSD-003), and shall not offer Accounts, Transactions or Budget. This requirement is the one place that states the order; the capabilities that add a page do not repeat it. The app opens on the Dashboard.
+The app shall group the pages in the left pane under plain, non-collapsible headings, in this order: Overview (Dashboard), Finance (Income, Expenses), Wealth (Bank accounts, Investments, Assets), Liabilities (Debts) and Insights (Net worth), with Settings and the project status pinned at the bottom (CSD-003), and shall not offer Accounts, Transactions or Budget. This requirement is the one place that states the order; the capabilities that add a page do not repeat it. The app opens on the Dashboard.
 
 ```gherkin
 @AC-1.1
 Scenario: Only working pages are offered
   Given the app has started
   Then the left pane shows the headings "Overview", "Finance", "Wealth", "Liabilities" and "Insights" in that order
-  And "Overview" holds "Dashboard", "Finance" holds "Income" and "Expenses", "Wealth" holds "Bank accounts", "Investments" and "Assets", "Liabilities" holds "Debts" and "Insights" holds "Reports", each in that order
+  And "Overview" holds "Dashboard", "Finance" holds "Income" and "Expenses", "Wealth" holds "Bank accounts", "Investments" and "Assets", "Liabilities" holds "Debts" and "Insights" holds "Net worth", each in that order
   And "Settings" and the project status are pinned at the bottom
   And there is no "Accounts", "Transactions" or "Budget"
 
@@ -244,6 +244,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.6 (29/10/2026): The Insights group holds the Net worth page of CSD-017 in place of the Reports placeholder (REQ-1, AC-1.1, NG-5; GitHub issue 24).
 - 0.5 (29/10/2026): The left pane is grouped under Overview, Finance, Wealth, Liabilities and Insights (REQ-1, AC-1.1), and REQ-1 is the one place that states the order (GitHub issue 21).
 - 0.4 (29/10/2026): Entry counts are no longer displayed: the "Entries" card is removed (REQ-2) and the counts are removed from AC-2.1 to AC-2.4, AC-3.1 and AC-3.2. `entry_count` stays in the payload.
 - 0.3 (26/10/2026): REQ-6 reversed: the dashboard names no currency (AC-6.1 rewritten). `get_dashboard()` no longer returns `currency`.

@@ -3,7 +3,7 @@ id: CSD-017
 title: Net worth insights
 status: approved
 owner: Thijs Bardoel
-version: 0.1
+version: 0.2
 last_updated: 29/10/2026
 related: [CSD-000, CSD-004, CSD-007, CSD-010, CSD-012, CSD-016]
 ---
@@ -221,14 +221,14 @@ Scenario: Leave
 ```
 
 **REQ-10: Details of a year** *(event-driven)*
-When the user hovers over or focuses a year, the app shall show a tooltip with the year as its title and the rows in the order the bar shows them, from top to bottom: Assets, Investments, Cash, Debts (with a minus sign) and Net worth, with no count of records. A year in which no area has a record shows the note "No records".
+When the user hovers over or focuses a year, the app shall show a tooltip with the year as its title and the rows in the order the bar shows them, from top to bottom: Cash, Investments, Assets, Debts (with a minus sign) and Net worth, with no count of records. A year in which no area has a record shows the note "No records".
 
 ```gherkin
 @AC-10.1
 Scenario: Rows read like the bar
   Given 2025 has assets 300000.00, investments 20000.00, cash 5000.00 and debts 9000.00
   When the user hovers over the 2025 bar
-  Then the tooltip lists Assets 300000.00, Investments 20000.00, Cash 5000.00, Debts -9000.00 and Net worth 316000.00 in that order
+  Then the tooltip lists Cash 5000.00, Investments 20000.00, Assets 300000.00, Debts -9000.00 and Net worth 316000.00 in that order
 
 @AC-10.2
 Scenario: A year without records
@@ -322,4 +322,5 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.2 (29/10/2026): The tooltip rows (REQ-10, AC-10.1) read Cash, Investments, Assets, Debts, Net worth, so they follow the bar from top to bottom as AC-6.1 stacks it; 0.1 listed them in the opposite order, which contradicted AC-6.1.
 - 0.1 (29/10/2026): initial draft, from GitHub issue 24 and the grill-me interview. It follows CSD-010 and CSD-016 (yearly series, partial year, marker, tooltip, highlight, look and size), with four fixed series, Debts below the zero line and a net worth marker. Approving it also changes CSD-004 REQ-1 (the "Reports" placeholder becomes "Net worth") and the combined-chart non-goals of CSD-012 NG-5 and CSD-016 NG-5.

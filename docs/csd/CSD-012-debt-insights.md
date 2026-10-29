@@ -3,7 +3,7 @@ id: CSD-012
 title: Debt insights
 status: approved
 owner: Thijs Bardoel
-version: 0.3
+version: 0.4
 last_updated: 29/10/2026
 related: [CSD-010, CSD-011]
 ---
@@ -24,7 +24,7 @@ The Debts page lists debts, statements and a table of yearly totals, but a table
 - NG-2: A filter, a selection or a hiding of debts.
 - NG-3: A percentage of the debt repaid, a payoff forecast, and any figure other than the balances, the total debt, the amount repaid.
 - NG-4: Click-through, zooming, or exporting the chart.
-- NG-5: Charts on the Dashboard or on the Reports page.
+- NG-5: Charts on the Dashboard or on the Net worth page, which has its own chart (CSD-017).
 - NG-6: A chart library or any other new dependency.
 - NG-7: Estimating balances for years without a statement (CSD-011 NG-11), and carrying a balance forward into a year in which a debt has no statement.
 - NG-8: Letting the user choose the colour of a debt.
@@ -581,6 +581,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.4 (29/10/2026): The Reports page is replaced by the Net worth page of CSD-017 (NG-5; GitHub issue 24). No other change.
 - 0.3 (29/10/2026): The plot of every yearly chart is 390 px high (was 260 px), 50% taller. No other behaviour change.
 - 0.1 (28/10/2026): initial draft, from GitHub issue 15 and the grill-me interview. It follows CSD-010 (tabs, year series, partial year, marker, tooltip, highlight, motion, look), with one segment per debt, no negative values, and the amount repaid in the tooltip.
 - 0.2 (29/10/2026): No statement count is displayed any more (NG-3, REQ-10, AC-10.1, AC-10.3, AC-10.7, AC-5.1, AC-5.3, AC-5.5; the count stays in IPC, section 5). The tooltip lists its rows in the order the bar shows them, top to bottom (REQ-10, new AC-10.8 and AC-10.9, manual checklist), and an empty year shows the note "No statements". The chart has the size of the bank accounts chart: plot height 260 px, minimum slot width 64 px (REQ-13, new AC-13.5, manual checklist).

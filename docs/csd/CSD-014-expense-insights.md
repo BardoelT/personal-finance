@@ -3,7 +3,7 @@ id: CSD-014
 title: Expense insights
 status: approved
 owner: Thijs Bardoel
-version: 0.4
+version: 0.5
 last_updated: 29/10/2026
 related: [CSD-010, CSD-012, CSD-013]
 ---
@@ -25,7 +25,7 @@ The Expenses page lists expenses and a table of yearly totals, but a table does 
 - NG-3: Any figure other than the amount per category and the total of a year (the number of expenses is not displayed): no average, no percentage, no comparison with income and no forecast.
 - NG-4: A list of the largest expenses, and a view of single expenses.
 - NG-5: Click-through, zooming, or exporting the chart.
-- NG-6: Charts on the Dashboard or on the Reports page.
+- NG-6: Charts on the Dashboard or on the Net worth page, which has its own chart (CSD-017).
 - NG-7: A chart library or any other new dependency.
 - NG-8: Spreading an expense over several periods, and estimating spending for a year without expenses.
 - NG-9: Letting the user choose the colour of a category.
@@ -549,6 +549,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.5 (29/10/2026): The Reports page is replaced by the Net worth page of CSD-017 (NG-5; GitHub issue 24). No other change.
 - 0.4 (29/10/2026): The plot of every yearly chart is 390 px high (was 260 px), 50% taller. No other behaviour change.
 - 0.3 (29/10/2026): The yearly charts share one size and behaviour with the bank accounts chart (CSD-010): new REQ-14 (plot height 260 px, minimum slot width 64 px, zero line; AC-14.1, AC-14.2), REQ-5 refers to it. REQ-8: the tooltip lists the rows in the order of the bar (highest segment first, then Total, AC-8.1, AC-8.8), shows no number of expenses and shows the note "No expenses" without a Total row for an empty year (AC-8.3, AC-8.6, AC-8.7 amended). AC-13.4 removed (the Overview filter is gone, CSD-013 0.3); NG-2 and NG-3 reworded. `expense_count` stays in the payload but is not displayed. The legend highlight of REQ-9 is unchanged.
 - 0.2 (29/10/2026): Renamed from "Major expenses" to "Expenses": title, file name, page and navigation labels, and wording. No behaviour change. The file is now `CSD-014-expense-insights.md`.

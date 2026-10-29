@@ -3,7 +3,7 @@ id: CSD-016
 title: Asset insights
 status: approved
 owner: Thijs Bardoel
-version: 0.3
+version: 0.4
 last_updated: 29/10/2026
 related: [CSD-010, CSD-012, CSD-015]
 ---
@@ -24,7 +24,7 @@ The Assets page lists assets, valuations and a table of yearly values, but a tab
 - NG-2: A filter, a selection or a hiding of assets.
 - NG-3: A percentage of growth, a value forecast, and any figure other than the values, the total value and the change.
 - NG-4: Click-through, zooming, or exporting the chart.
-- NG-5: Charts on the Dashboard or on the Reports page, and a combined chart of assets and debts.
+- NG-5: Charts on the Dashboard or on the Net worth page, and a combined chart of assets and debts on this page. The Net worth page has its own combined chart (CSD-017).
 - NG-6: Letting the user choose the colour of an asset.
 - NG-7: A chart library or any other new dependency.
 - NG-8: Estimating values for years without a valuation (CSD-015 NG-9), and carrying a value forward into a year in which an asset has no valuation.
@@ -581,6 +581,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.4 (29/10/2026): The Reports page is replaced by the Net worth page of CSD-017 (NG-5; GitHub issue 24). No other change.
 - 0.3 (29/10/2026): The plot of every yearly chart is 390 px high (was 260 px), 50% taller. No other behaviour change.
 - 0.1 (29/10/2026): initial draft, from GitHub issue 17 and the grill-me interview. It follows CSD-012 (tabs, year series, partial year, marker, tooltip, highlight, motion, look), with one segment per asset, no negative values, and the change in the tooltip.
 - 0.2 (29/10/2026): No valuation count is displayed any more (NG-3, REQ-10, AC-10.1, AC-10.3, AC-10.7, AC-5.x; the count stays in IPC, section 5). The tooltip lists its rows in the order the bar shows them, top to bottom (REQ-10, new AC-10.8 and AC-10.9, manual checklist), and an empty year shows the note "No valuations". The chart has the size of the bank accounts chart: plot height 260 px, minimum slot width 64 px (REQ-13, new AC-13.5, manual checklist).
