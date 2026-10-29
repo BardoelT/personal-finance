@@ -3,9 +3,9 @@ id: CSD-017
 title: Net worth insights
 status: approved
 owner: Thijs Bardoel
-version: 0.3
+version: 0.4
 last_updated: 29/10/2026
-related: [CSD-000, CSD-004, CSD-007, CSD-010, CSD-012, CSD-016]
+related: [CSD-000, CSD-004, CSD-007, CSD-010, CSD-012, CSD-016, CSD-019]
 ---
 
 # CSD-017: Net worth insights
@@ -35,7 +35,7 @@ Each area of the app (assets, investments, bank accounts, debts) has its own yea
 |---|---|
 | **Year** | A calendar year. |
 | **Current year** | The calendar year of today, in local time. Its figures run up to the latest record so far and are therefore partial. |
-| **Assets** | The total value of a year of CSD-016 (the closing value of CSD-015 REQ-20). |
+| **Assets** | The total value of a year of CSD-016 (the closing value of CSD-015 REQ-20, counting assets held at the end of the year, CSD-019 REQ-11). |
 | **Investments** | The closing balance of a year of CSD-007 (CSD-005 REQ-26). |
 | **Cash** | The closing balance of a year over all bank accounts of CSD-010 (CSD-009 REQ-19). It is the sum of the latest balances of the banks, so an overdrawn bank reduces it. |
 | **Debts** | The total debt of a year of CSD-012 (the closing balance of CSD-011 REQ-19), never negative. |
@@ -322,6 +322,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.4 (29/10/2026): The Assets figure counts assets held at the end of the year, so a sold asset drops out from its sale year (definition of Assets, CSD-019 REQ-11; GitHub issue 27). No other change.
 - 0.3 (29/10/2026): The plot height scales with the height of the window instead of being a fixed 390 px: with the page scrolled to the top the chart ends at the bottom of the window, and the plot is never lower than 260 px. It is recomputed when the window is resized.
 - 0.2 (29/10/2026): The tooltip rows (REQ-10, AC-10.1) read Cash, Investments, Assets, Debts, Net worth, so they follow the bar from top to bottom as AC-6.1 stacks it; 0.1 listed them in the opposite order, which contradicted AC-6.1.
 - 0.1 (29/10/2026): initial draft, from GitHub issue 24 and the grill-me interview. It follows CSD-010 and CSD-016 (yearly series, partial year, marker, tooltip, highlight, look and size), with four fixed series, Debts below the zero line and a net worth marker. Approving it also changes CSD-004 REQ-1 (the "Reports" placeholder becomes "Net worth") and the combined-chart non-goals of CSD-012 NG-5 and CSD-016 NG-5.

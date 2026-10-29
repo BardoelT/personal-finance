@@ -3,9 +3,9 @@ id: CSD-016
 title: Asset insights
 status: approved
 owner: Thijs Bardoel
-version: 0.5
+version: 0.6
 last_updated: 29/10/2026
-related: [CSD-010, CSD-012, CSD-015]
+related: [CSD-010, CSD-012, CSD-015, CSD-019]
 ---
 
 # CSD-016: Asset insights
@@ -144,7 +144,7 @@ Scenario: Current year without valuations is still in the series and marked
 ```
 
 **REQ-5: Segments are the latest values per asset** *(ubiquitous)*
-The app shall give each year one segment per asset that has a valuation in that year, equal to the value of that asset's latest valuation in that year, ordered by the creation of the assets, and the segments shall add up to the total value, which equals the closing value of the yearly values of CSD-015 REQ-20, and the change shall equal that of the yearly values.
+The app shall give each year one segment per asset that has a valuation in that year and was held at the end of that year (CSD-019 REQ-11), equal to the value of that asset's latest valuation in that year, ordered by the creation of the assets, and the segments shall add up to the total value, which equals the closing value of the yearly values of CSD-015 REQ-20, and the change shall equal that of the yearly values.
 
 ```gherkin
 @AC-5.1
@@ -581,6 +581,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.6 (29/10/2026): Segments only count assets held at the end of the year, so a sold asset drops out from its sale year (REQ-2, CSD-019 REQ-11; GitHub issue 27).
 - 0.5 (29/10/2026): The plot height scales with the height of the window instead of being a fixed 390 px: with the page scrolled to the top the chart ends at the bottom of the window, and the plot is never lower than 260 px. It is recomputed when the window is resized.
 - 0.4 (29/10/2026): The Reports page is replaced by the Net worth page of CSD-017 (NG-5; GitHub issue 24). No other change.
 - 0.3 (29/10/2026): The plot of every yearly chart is 390 px high (was 260 px), 50% taller. No other behaviour change.

@@ -3,9 +3,9 @@ id: CSD-018
 title: Ratios
 status: approved
 owner: Thijs Bardoel
-version: 0.1
+version: 0.2
 last_updated: 29/10/2026
-related: [CSD-000, CSD-001, CSD-004, CSD-005, CSD-007, CSD-009, CSD-011, CSD-013, CSD-017]
+related: [CSD-000, CSD-001, CSD-004, CSD-005, CSD-007, CSD-009, CSD-011, CSD-013, CSD-017, CSD-019]
 ---
 
 # CSD-018: Ratios
@@ -347,4 +347,5 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.2 (29/10/2026): Wealth growth follows the net worth, which no longer counts a sold asset from its sale year (CSD-017, CSD-019 REQ-11; GitHub issue 27). No requirement changes.
 - 0.1 (29/10/2026): initial draft, from GitHub issue 25 and the grill-me interview. Beyond the interview, a year in which no bank account has an increase, no investment account has a statement and no debt has a repaid amount has no wealth accumulation (REQ-5, AC-5.5), and the growth of total wealth is none when the year itself has no records (REQ-8). Approving it also changes CSD-004 REQ-1 (the Insights group holds Net worth and Ratios).

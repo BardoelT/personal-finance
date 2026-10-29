@@ -3,15 +3,15 @@ id: CSD-015
 title: Assets
 status: approved
 owner: Thijs Bardoel
-version: 0.3
+version: 0.4
 last_updated: 29/10/2026
-related: [CSD-000, CSD-002, CSD-003, CSD-009, CSD-011, CSD-016]
+related: [CSD-000, CSD-002, CSD-003, CSD-009, CSD-011, CSD-016, CSD-019]
 ---
 
 # CSD-015: Assets
 
 ## 1. Intent
-The app tracks bank accounts, investments and debts, but has no view of what the user owns apart from those: a home, land, a car. This capability lets the user record assets and, per asset, one value per month or per year, with an optional note. From these the app derives, per valuation, how much the value changed since the previous one and, per calendar year, the yearly values with the closing value and the change. It is for a single person keeping a private, local history of what their assets are worth. It records values as the user estimates or reads them, such as a valuation report. It does not model the asset: no purchase price, no depreciation, no address. The result is a value history per asset, which the Insights chart of CSD-016 and later features (net-worth linkage) can build on. It follows the structure of Debts (CSD-011), with a value that cannot be negative and with the change counted as growth.
+The app tracks bank accounts, investments and debts, but has no view of what the user owns apart from those: a home, land, a car. This capability lets the user record assets and, per asset, one value per month or per year, with an optional note. From these the app derives, per valuation, how much the value changed since the previous one and, per calendar year, the yearly values with the closing value and the change. It is for a single person keeping a private, local history of what their assets are worth. It records values as the user estimates or reads them, such as a valuation report. It does not model the asset: no depreciation, no address. The purchase and the sale of an asset are CSD-019. The result is a value history per asset, which the Insights chart of CSD-016 and later features (net-worth linkage) can build on. It follows the structure of Debts (CSD-011), with a value that cannot be negative and with the change counted as growth.
 
 ## 2. Scope
 ### 2.1 In scope
@@ -25,14 +25,14 @@ The app tracks bank accounts, investments and debts, but has no view of what the
 - Asset data is part of the project file (CSD-002). Valuations count for the currency confirmation of CSD-003 (REQ-25).
 
 ### 2.2 Non-goals
-- NG-1: Purchase price, depreciation, appreciation rates and any forecast of a value.
+- NG-1: Depreciation, appreciation rates and any forecast of a value. (The purchase price is part of the purchase of CSD-019.)
 - NG-2: An asset type (home, car, land), an address and other details of the asset: a name is the only identifier. A home is an asset like any other.
 - NG-3: A debt linked to an asset, such as a mortgage on a home (CSD-011 NG-3).
 - NG-4: Netting the assets against debts, bank accounts and investments, and integration with net worth and the dashboard (CSD-004).
 - NG-5: Data fetched from a valuation service, and import of valuations (CSV, PDF).
-- NG-6: Archiving or marking an asset as sold. An asset at 0.00 stays a normal row.
+- NG-6: Archiving an asset. An asset at 0.00 stays a normal row, and a sold asset stays listed (CSD-019).
 - NG-7: A currency per asset. All amounts are in the project currency (CSD-003).
-- NG-8: Individual transactions (purchase, sale, renovation costs), a stored original value, and negative values.
+- NG-8: Individual transactions other than the one purchase and one sale of CSD-019 (renovation costs, partial sales), and negative values.
 - NG-9: Aligning the latest values of different assets to one date, or estimating a value for a period without a valuation.
 - NG-10: Moving a valuation to another asset. Only the period of a valuation can change (REQ-12).
 - NG-11: Changing the periods of several valuations at once.
@@ -59,6 +59,8 @@ The app tracks bank accounts, investments and debts, but has no view of what the
 | **Project file** | The single user-chosen file holding all app data (CSD-002). Assets are one of its sections. |
 
 ## 4. Requirements
+
+> CSD-019 extends REQ-1 and REQ-4 (purchase and sale fields), REQ-7 and REQ-13 (valuations lie in the holding window), REQ-17 (the total counts held assets only), REQ-20 (yearly figures count assets held at year end) and REQ-24 (purchase and sale in the project file). Where they differ, CSD-019 applies.
 
 ### 4.0 Overview flow
 ```mermaid
@@ -1023,6 +1025,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None. (OQ-1, the position in the left pane, is settled by REQ-26 and CSD-004 REQ-1.)
 
 ## 9. Changelog
+- 0.4 (29/10/2026): CSD-019 adds a purchase and a sale to every asset (GitHub issue 27). NG-1, NG-6 and NG-8 no longer exclude them, the Intent says so, and a note in section 4 lists the requirements CSD-019 extends.
 - 0.3 (29/10/2026): The position in the left pane follows CSD-004 REQ-1: Assets is in the group Wealth, after Bank accounts and Investments (REQ-26, AC-26.1; GitHub issue 21).
 - 0.1 (29/10/2026): initial draft, from GitHub issue 17 and the grill-me interview. It follows CSD-011 (assets, colour slot, period lock, valuations, changing the period, copy previous, yearly values, layout), with a value of 0.00 or more, a change per valuation (REQ-19) counted as growth, and a yearly change in the yearly values. The Insights tab is CSD-016.
 - 0.2 (29/10/2026): No counts are displayed any more: the yearly values have the columns Year, Closing value and Change (REQ-20, REQ-21, AC-12.6, AC-20.x, AC-21.2, AC-21.8), asset rows show only the period and the latest value with its period in smaller muted text (REQ-21, AC-21.2), the "No valuations yet." note stays in the Valuations section only (REQ-22, AC-22.2), and the delete confirmation states no count (REQ-6, new AC-6.4, manual checklist). The count fields stay in IPC but are not displayed (section 5).
