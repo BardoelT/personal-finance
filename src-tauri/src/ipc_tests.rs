@@ -1779,3 +1779,251 @@ fn test_csd011_new_project_clears_the_debts() {
         json!({ "debts": [], "total": null })
     );
 }
+
+fn asset_input(name: &str, period: &str) -> Value {
+    json!({ "name": name, "valuation_period": period })
+}
+
+#[test]
+fn test_csd015_ac_17_2_assets_and_the_total_over_ipc() {
+    let app = harness();
+    assert_eq!(
+        app.ok("list_assets", json!({})),
+        json!({ "assets": [], "total": null })
+    );
+    let mortgage = app.ok(
+        "create_asset",
+        json!({ "input": asset_input("Example House", "Monthly") }),
+    );
+    assert_eq!(mortgage["valuation_period"], "Monthly");
+    assert_eq!(mortgage["colour_slot"], 0);
+    let loan = app.ok(
+        "create_asset",
+        json!({ "input": asset_input("Example Land", "Yearly") }),
+    );
+    assert_eq!(loan["colour_slot"], 1);
+    app.ok(
+        "add_asset_valuation",
+        json!({ "assetId": mortgage["id"], "period": "2025-12", "value": "150000.00" }),
+    );
+    app.ok(
+        "add_asset_valuation",
+        json!({ "assetId": mortgage["id"], "period": "2026-09", "value": "149000.50", "note": "Paid extra" }),
+    );
+    app.ok(
+        "add_asset_valuation",
+        json!({ "assetId": loan["id"], "period": "2025", "value": "8000.00" }),
+    );
+    let overview = app.ok("list_assets", json!({}));
+    assert_eq!(overview["total"], "157000.50");
+    assert_eq!(overview["assets"][0]["latest_value"], "149000.50");
+    assert_eq!(overview["assets"][0]["latest_period"], "2026-09");
+    assert_eq!(overview["assets"][0]["valuation_count"], 2);
+
+    // AC-25.1 and AC-20.3: the change reaches the frontend, null for a first valuation.
+    let rows = app.ok("list_asset_valuations", json!({}));
+    assert_eq!(rows[0]["asset_name"], "Example House");
+    assert_eq!(rows[0]["change"], "-999.50");
+    assert_eq!(rows[0]["note"], "Paid extra");
+    assert_eq!(rows[2]["change"], Value::Null);
+
+    // AC-19.1: closing value and change, null when no asset has an opening value.
+    let totals = app.ok("yearly_asset_values", json!({}));
+    assert_eq!(
+        totals[0],
+        json!({ "year": 2026, "closing_value": "149000.50", "change": "-999.50", "valuation_count": 1 })
+    );
+    assert_eq!(totals[1]["change"], Value::Null);
+}
+
+#[test]
+fn test_csd015_asset_errors_reach_the_frontend_as_codes() {
+    let app = harness();
+    let asset = app.ok(
+        "create_asset",
+        json!({ "input": asset_input("Example House", "Monthly") }),
+    );
+    let id = asset["id"].clone();
+    for (period, value, code) in [
+        ("2026-09", "-1.00", "ASSET_VALUATION_VALUE_NEGATIVE"),
+        ("2026-09", "1000.999", "ASSET_VALUATION_VALUE_PRECISION"),
+        ("2026-09", "abc", "ASSET_VALUATION_VALUE_INVALID"),
+        (
+            "2026-09",
+            "1000000000.01",
+            "ASSET_VALUATION_VALUE_TOO_LARGE",
+        ),
+        ("2026-13", "1.00", "ASSET_VALUATION_PERIOD_INVALID"),
+        ("2025", "1.00", "ASSET_PERIOD_MISMATCH"),
+        ("2999-01", "1.00", "ASSET_VALUATION_IN_FUTURE"),
+    ] {
+        let error = app.err(
+            "add_asset_valuation",
+            json!({ "assetId": id, "period": period, "value": value }),
+        );
+        assert_eq!(error["code"], code, "{period} {value}");
+    }
+    let error = app.err(
+        "add_asset_valuation",
+        json!({ "assetId": id, "period": "2026-09", "value": "1.00", "note": "x".repeat(2001) }),
+    );
+    assert_eq!(error["code"], "ASSET_VALUATION_NOTE_TOO_LONG");
+    app.ok(
+        "add_asset_valuation",
+        json!({ "assetId": id, "period": "2026-09", "value": "0.00" }),
+    );
+    let error = app.err(
+        "add_asset_valuation",
+        json!({ "assetId": id, "period": "2026-09", "value": "2.00" }),
+    );
+    assert_eq!(error["code"], "ASSET_VALUATION_DUPLICATE");
+    let error = app.err(
+        "create_asset",
+        json!({ "input": asset_input("example house", "Monthly") }),
+    );
+    assert_eq!(error["code"], "ASSET_NAME_DUPLICATE");
+    let error = app.err(
+        "update_asset",
+        json!({ "assetId": id, "input": asset_input("Example House", "Yearly") }),
+    );
+    assert_eq!(error["code"], "ASSET_PERIOD_LOCKED");
+    let error = app.err(
+        "delete_asset",
+        json!({ "assetId": "671166f4-5827-4794-bcdc-54d7824fb650" }),
+    );
+    assert_eq!(error["code"], "ASSET_NOT_FOUND");
+}
+
+#[test]
+fn test_csd015_asset_valuations_can_be_copied_edited_moved_and_deleted_over_ipc() {
+    let app = harness();
+    let asset = app.ok(
+        "create_asset",
+        json!({ "input": asset_input("Example House", "Monthly") }),
+    );
+    let id = asset["id"].clone();
+    // AC-15.2: nothing to copy yet.
+    assert_eq!(
+        app.ok("copy_previous_asset_valuation", json!({ "assetId": id })),
+        json!({ "value": null })
+    );
+    app.ok(
+        "add_asset_valuation",
+        json!({ "assetId": id, "period": "2026-09", "value": "150000.00", "note": "First" }),
+    );
+    // AC-15.1: the value is copied, the note is not.
+    assert_eq!(
+        app.ok("copy_previous_asset_valuation", json!({ "assetId": id })),
+        json!({ "value": "150000.00" })
+    );
+    // AC-12.3 and AC-12.4: the valuation moves and changes together.
+    let moved = app.ok(
+        "update_asset_valuation",
+        json!({ "assetId": id, "period": "2026-09", "newPeriod": "2026-08", "value": "149000.00", "note": "Moved" }),
+    );
+    assert_eq!(moved["period"], "2026-08");
+    assert_eq!(moved["value"], "149000.00");
+    // AC-13.1: a later period is rejected and nothing changes.
+    let error = app.err(
+        "update_asset_valuation",
+        json!({ "assetId": id, "period": "2026-08", "newPeriod": "2999-01", "value": "1.00" }),
+    );
+    assert_eq!(error["code"], "ASSET_VALUATION_IN_FUTURE");
+    assert_eq!(
+        app.ok("list_asset_valuations", json!({}))[0]["value"],
+        "149000.00"
+    );
+    app.ok(
+        "delete_asset_valuation",
+        json!({ "assetId": id, "period": "2026-08" }),
+    );
+    assert_eq!(app.ok("list_asset_valuations", json!({})), json!([]));
+    let error = app.err(
+        "delete_asset_valuation",
+        json!({ "assetId": id, "period": "2026-08" }),
+    );
+    assert_eq!(error["code"], "ASSET_VALUATION_NOT_FOUND");
+}
+
+#[test]
+fn test_csd003_ac_5_13_an_asset_valuation_counts_for_the_currency_confirmation() {
+    let app = harness();
+    let asset = app.ok(
+        "create_asset",
+        json!({ "input": asset_input("Example House", "Monthly") }),
+    );
+    // AC-5.14: an asset without valuations needs no confirmation.
+    assert_eq!(app.ok("get_settings", json!({}))["entry_count"], 0);
+    app.ok(
+        "add_asset_valuation",
+        json!({ "assetId": asset["id"], "period": "2026-09", "value": "150000.00" }),
+    );
+    assert_eq!(app.ok("get_settings", json!({}))["entry_count"], 1);
+    // The value is kept as it is when the currency changes (CSD-003 CON-1).
+    app.ok("set_currency", json!({ "currency": "USD" }));
+    let rows = app.ok("list_asset_valuations", json!({}));
+    assert_eq!(rows[0]["value"], "150000.00");
+}
+
+#[test]
+fn test_csd016_the_asset_insights_reach_the_frontend_with_segments_and_change() {
+    let app = harness();
+    assert_eq!(
+        app.ok("get_asset_insights", json!({})),
+        json!({ "assets": [], "years": [] })
+    );
+    let mortgage = app.ok(
+        "create_asset",
+        json!({ "input": asset_input("Example House", "Monthly") }),
+    );
+    let car = app.ok(
+        "create_asset",
+        json!({ "input": asset_input("Example Car", "Monthly") }),
+    );
+    for (period, value) in [("2024-12", "10000.00"), ("2025-12", "9000.00")] {
+        app.ok(
+            "add_asset_valuation",
+            json!({ "assetId": mortgage["id"], "period": period, "value": value }),
+        );
+    }
+    app.ok(
+        "add_asset_valuation",
+        json!({ "assetId": car["id"], "period": "2025-12", "value": "0.00" }),
+    );
+    let insights = app.ok("get_asset_insights", json!({}));
+    assert_eq!(insights["assets"][0]["name"], "Example House");
+    assert_eq!(insights["assets"][1]["colour_slot"], 1);
+    let first = &insights["years"][0];
+    assert_eq!(first["year"], 2024);
+    assert_eq!(first["change"], Value::Null);
+    let second = &insights["years"][1];
+    assert_eq!(second["year"], 2025);
+    assert_eq!(second["closing_value"], "9000.00");
+    assert_eq!(second["change"], "-1000.00");
+    assert_eq!(second["valuation_count"], 2);
+    assert_eq!(second["is_partial"], false);
+    assert_eq!(second["segments"][0]["asset_id"], mortgage["id"]);
+    assert_eq!(second["segments"][1]["value"], "0.00");
+    // The current year is in the series even without valuations (CSD-016 AC-4.2).
+    let last = insights["years"]
+        .as_array()
+        .unwrap()
+        .last()
+        .unwrap()
+        .clone();
+    assert_eq!(last["is_partial"], true);
+}
+
+#[test]
+fn test_csd015_new_project_clears_the_assets() {
+    let app = harness();
+    app.ok(
+        "create_asset",
+        json!({ "input": asset_input("Example House", "Monthly") }),
+    );
+    app.ok("new_project", json!({}));
+    assert_eq!(
+        app.ok("list_assets", json!({})),
+        json!({ "assets": [], "total": null })
+    );
+}

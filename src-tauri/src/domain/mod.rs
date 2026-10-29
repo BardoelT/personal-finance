@@ -1,5 +1,6 @@
 //! Pure business logic: no Tauri, no IO.
 
+pub mod assets;
 pub mod bank_accounts;
 pub mod debts;
 pub mod error;
@@ -11,6 +12,10 @@ pub mod preferences;
 pub mod project_data;
 pub mod settings;
 
+pub use assets::{
+    Asset, AssetId, AssetInsights, AssetValuation, AssetYearlyValue, Assets, AssetsOverview,
+    ValuationPrefill as AssetValuationPrefill,
+};
 pub use bank_accounts::{
     BankAccount, BankAccountId, BankAccounts, BankBalance, BankEntry, BankInsights, BankOverview,
     BankYearlyTotal, EntryPrefill,

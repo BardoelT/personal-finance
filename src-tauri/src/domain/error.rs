@@ -171,6 +171,40 @@ pub enum DomainError {
     DebtStatementNoteTooLong,
     #[error("The debt data is not consistent.")]
     DebtDataInvalid,
+    #[error("Enter an asset name.")]
+    AssetNameRequired,
+    #[error("The asset name can be at most 100 characters.")]
+    AssetNameTooLong,
+    #[error("An asset with this name already exists.")]
+    AssetNameDuplicate,
+    #[error("This asset does not exist.")]
+    AssetNotFound,
+    #[error("Choose Monthly or Yearly.")]
+    AssetPeriodUnsupported,
+    #[error("The valuation period cannot change once the asset has valuations.")]
+    AssetPeriodLocked,
+    #[error("A monthly asset has monthly valuations and a yearly asset has yearly valuations.")]
+    AssetPeriodMismatch,
+    #[error("A valuation cannot be for a period that has not started yet.")]
+    AssetValuationInFuture,
+    #[error("Enter the month as YYYY-MM or the year as YYYY.")]
+    AssetValuationPeriodInvalid,
+    #[error("This asset already has a valuation for that period.")]
+    AssetValuationDuplicate,
+    #[error("There is no valuation for that period.")]
+    AssetValuationNotFound,
+    #[error("Enter the value as a number such as 300000.00.")]
+    AssetValuationValueInvalid,
+    #[error("The value cannot be negative.")]
+    AssetValuationValueNegative,
+    #[error("The value can have at most 2 decimal places.")]
+    AssetValuationValuePrecision,
+    #[error("The value can be at most 1000000000.00.")]
+    AssetValuationValueTooLarge,
+    #[error("A note can be at most 2000 characters.")]
+    AssetValuationNoteTooLong,
+    #[error("The asset data is not consistent.")]
+    AssetDataInvalid,
     #[error("Enter a name for the expense.")]
     ExpenseNameRequired,
     #[error("The expense name can be at most 100 characters.")]
@@ -200,6 +234,10 @@ pub enum DomainError {
 impl DomainError {
     /// Stable machine-readable code for the frontend.
     #[must_use]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "one flat match from error to code, one arm per error"
+    )]
     pub fn code(&self) -> &'static str {
         match self {
             Self::JobEmployerRequired => "JOB_EMPLOYER_REQUIRED",
@@ -283,6 +321,23 @@ impl DomainError {
             Self::DebtStatementBalanceTooLarge => "DEBT_STATEMENT_BALANCE_TOO_LARGE",
             Self::DebtStatementNoteTooLong => "DEBT_STATEMENT_NOTE_TOO_LONG",
             Self::DebtDataInvalid => "DEBT_DATA_INVALID",
+            Self::AssetNameRequired => "ASSET_NAME_REQUIRED",
+            Self::AssetNameTooLong => "ASSET_NAME_TOO_LONG",
+            Self::AssetNameDuplicate => "ASSET_NAME_DUPLICATE",
+            Self::AssetNotFound => "ASSET_NOT_FOUND",
+            Self::AssetPeriodUnsupported => "ASSET_PERIOD_UNSUPPORTED",
+            Self::AssetPeriodLocked => "ASSET_PERIOD_LOCKED",
+            Self::AssetPeriodMismatch => "ASSET_PERIOD_MISMATCH",
+            Self::AssetValuationInFuture => "ASSET_VALUATION_IN_FUTURE",
+            Self::AssetValuationPeriodInvalid => "ASSET_VALUATION_PERIOD_INVALID",
+            Self::AssetValuationDuplicate => "ASSET_VALUATION_DUPLICATE",
+            Self::AssetValuationNotFound => "ASSET_VALUATION_NOT_FOUND",
+            Self::AssetValuationValueInvalid => "ASSET_VALUATION_VALUE_INVALID",
+            Self::AssetValuationValueNegative => "ASSET_VALUATION_VALUE_NEGATIVE",
+            Self::AssetValuationValuePrecision => "ASSET_VALUATION_VALUE_PRECISION",
+            Self::AssetValuationValueTooLarge => "ASSET_VALUATION_VALUE_TOO_LARGE",
+            Self::AssetValuationNoteTooLong => "ASSET_VALUATION_NOTE_TOO_LONG",
+            Self::AssetDataInvalid => "ASSET_DATA_INVALID",
             Self::ExpenseNameRequired => "EXPENSE_NAME_REQUIRED",
             Self::ExpenseNameTooLong => "EXPENSE_NAME_TOO_LONG",
             Self::ExpenseCategoryUnsupported => "EXPENSE_CATEGORY_UNSUPPORTED",

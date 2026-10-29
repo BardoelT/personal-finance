@@ -3,7 +3,9 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 
 use super::{file, LastProject, StorageError};
-use crate::domain::{BankAccounts, Debts, Expenses, Income, Investments, ProjectData, Settings};
+use crate::domain::{
+    Assets, BankAccounts, Debts, Expenses, Income, Investments, ProjectData, Settings,
+};
 
 /// The extension of project files.
 const EXTENSION: &str = "wealth";
@@ -97,6 +99,18 @@ impl Project {
     /// [`Project::status`] by comparison with the last saved state.
     pub fn debts_mut(&mut self) -> &mut Debts {
         &mut self.data.debts
+    }
+
+    /// The assets and their valuations (CSD-015).
+    #[must_use]
+    pub fn assets(&self) -> &Assets {
+        &self.data.assets
+    }
+
+    /// Mutable assets. Like the income data, changes show up in
+    /// [`Project::status`] by comparison with the last saved state.
+    pub fn assets_mut(&mut self) -> &mut Assets {
+        &mut self.data.assets
     }
 
     /// The expenses (CSD-013).
@@ -1690,6 +1704,159 @@ mod expenses_tests {
             .unwrap();
         assert!(!project.status().unsaved_changes);
         add(&mut project, "Example Bike", "900.00", "10/09/2026", "");
+        assert!(project.status().unsaved_changes);
+    }
+}
+
+#[cfg(test)]
+mod assets_tests {
+    use std::fs;
+
+    use tempfile::TempDir;
+
+    use super::*;
+    use crate::domain::assets::{asset_note, parse_period, AssetInput, AssetValue};
+    use crate::domain::{AssetId, YearMonth};
+
+    fn asset(project: &mut Project, name: &str, period: &str) -> AssetId {
+        project
+            .assets_mut()
+            .create_asset(&AssetInput {
+                name: name.to_owned(),
+                valuation_period: Some(period.to_owned()),
+            })
+            .unwrap()
+            .id
+    }
+
+    #[test]
+    fn test_csd015_ac_24_1_assets_survive_save_and_open_including_notes_and_slots() {
+        let dir = TempDir::new().unwrap();
+        let mut project = Project::new();
+        asset(&mut project, "Example House", "Monthly");
+        let id = asset(&mut project, "Example Land", "Yearly");
+        project
+            .assets_mut()
+            .add_valuation(
+                id,
+                parse_period("2025").unwrap(),
+                AssetValue::parse("8000.00").unwrap(),
+                asset_note("Line one\nLine two").unwrap(),
+                YearMonth::parse("2026-10").unwrap(),
+            )
+            .unwrap();
+        let path = dir.path().join("example-a.wealth");
+        project.save_as(path.clone()).unwrap();
+
+        let mut fresh = Project::new();
+        fresh.open(&path).unwrap();
+        assert_eq!(fresh.assets(), project.assets());
+        let rows = fresh.assets().all_valuations();
+        assert_eq!(rows[0].1.note.as_str(), "Line one\nLine two");
+        assert_eq!(rows[0].0.colour_slot, 1);
+        assert!(!fresh.status().unsaved_changes);
+
+        // The section sits next to the others; the version stays 1.
+        let value: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(value["format_version"], 1);
+        assert_eq!(value["assets"]["assets"][1]["name"], "Example Land");
+        assert_eq!(value["assets"]["assets"][1]["colour_slot"], 1);
+        assert_eq!(value["assets"]["valuations"][0]["value"], "8000.00");
+    }
+
+    #[test]
+    fn test_csd015_ac_24_2_a_file_without_the_section_opens_without_assets() {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("example-a.wealth");
+        fs::write(
+            &path,
+            r#"{"format_version":1,"income":{"jobs":[],"paychecks":[]}}"#,
+        )
+        .unwrap();
+        let mut project = Project::new();
+        project.open(&path).unwrap();
+        assert_eq!(project.assets().assets().len(), 0);
+        assert!(!project.status().unsaved_changes);
+    }
+
+    #[test]
+    fn test_csd015_ac_24_3_a_zero_value_survives_the_round_trip() {
+        let dir = TempDir::new().unwrap();
+        let mut project = Project::new();
+        let id = asset(&mut project, "Example House", "Monthly");
+        project
+            .assets_mut()
+            .add_valuation(
+                id,
+                parse_period("2026-09").unwrap(),
+                AssetValue::parse("0.00").unwrap(),
+                asset_note("").unwrap(),
+                YearMonth::parse("2026-10").unwrap(),
+            )
+            .unwrap();
+        let path = dir.path().join("example-a.wealth");
+        project.save_as(path.clone()).unwrap();
+        let mut fresh = Project::new();
+        fresh.open(&path).unwrap();
+        let rows = fresh.assets().all_valuations();
+        assert_eq!(rows[0].1.value.value().to_string(), "0.00");
+    }
+
+    #[test]
+    fn test_csd015_ac_24_4_the_other_sections_are_untouched() {
+        let dir = TempDir::new().unwrap();
+        let mut project = Project::new();
+        asset(&mut project, "Example House", "Monthly");
+        project
+            .bank_accounts_mut()
+            .create_account(&crate::domain::bank_accounts::AccountInput {
+                name: "Example Current Account".to_owned(),
+                entry_period: None,
+            })
+            .unwrap();
+        project
+            .investments_mut()
+            .create_account(&crate::domain::AccountInput {
+                name: "Example Brokerage".to_owned(),
+                statement_period: None,
+            })
+            .unwrap();
+        let path = dir.path().join("example-a.wealth");
+        project.save_as(path.clone()).unwrap();
+        let mut fresh = Project::new();
+        fresh.open(&path).unwrap();
+        assert_eq!(fresh.assets(), project.assets());
+        assert_eq!(fresh.bank_accounts(), project.bank_accounts());
+        assert_eq!(fresh.investments(), project.investments());
+    }
+
+    #[test]
+    fn test_csd015_ac_24_5_a_damaged_section_is_an_invalid_file() {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("example-a.wealth");
+        // A valuation of an asset that does not exist.
+        fs::write(
+            &path,
+            r#"{"format_version":1,"income":{"jobs":[],"paychecks":[]},
+                "assets":{"assets":[],"valuations":[
+                {"asset_id":"671166f4-5827-4794-bcdc-54d7824fb650","period":"2026-09","value":"1.00"}]}}"#,
+        )
+        .unwrap();
+        let mut project = Project::new();
+        let error = project.open(&path).unwrap_err();
+        assert_eq!(error.code(), "PROJECT_INVALID_FILE");
+    }
+
+    #[test]
+    fn test_csd015_an_asset_change_is_an_unsaved_change() {
+        let dir = TempDir::new().unwrap();
+        let mut project = Project::new();
+        project
+            .save_as(dir.path().join("example-a.wealth"))
+            .unwrap();
+        assert!(!project.status().unsaved_changes);
+        asset(&mut project, "Example House", "Monthly");
         assert!(project.status().unsaved_changes);
     }
 }
