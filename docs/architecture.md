@@ -66,15 +66,15 @@ styles/             CSS by area
 | `ipc.js` | `invoke`, `listen`, `errorText`: the only place that talks to Tauri |
 | `dom.js` | `h` (element builder), icons, toast, the confirm dialog, `showError` |
 | `format.js` | Display formatting and today's year or month. No figures are computed |
-| `chart.js` | Chart building blocks: SVG helper, bar segments, the tooltip, the legend highlight |
-| `yearly-chart.js` | The frame both insights charts share: axis, bars, tooltip, loading, resize |
+| `chart.js` | Chart building blocks: SVG helper, bar segments, tooltip rows (listed top to bottom like the bar), legend items, the highlight |
+| `yearly-chart.js` | The frame every insights chart shares: one size (`CHART_SIZE`), axis, bars, closing-balance marker, tooltip, loading, resize |
 | `tabs.js` | Tabs such as Overview and Insights |
 
-**Composition, not inheritance.** The two insights charts differ only in their data, so `createYearlyChart(strategy)` takes a small object (the stacked pieces, tooltip rows, extra marks, labels under the axis) and draws the rest. The CRUD dialogs of the two overview pages stay separate on purpose: their forms differ (the statement form calculates balance and growth), and one generic dialog would be harder to read than two plain files.
+**Composition, not inheritance.** The insights charts differ only in their data, so `createYearlyChart(strategy)` takes a small object (the stacked pieces, tooltip rows, extra marks, labels under the axis) and draws the rest. The CRUD dialogs of the two overview pages stay separate on purpose: their forms differ (the statement form calculates balance and growth), and one generic dialog would be harder to read than two plain files.
 
 **Styles** are loaded in order by `<link>` tags: `base` (tokens, light and dark), `layout`, `components`, `pages`, `charts`. Colours come from CSS variables so both modes work. Motion uses CSS transitions of 140 ms and is switched off under `prefers-reduced-motion`.
 
-**Charts, in short.** Items in a legend, a tooltip row and a bar segment share a `data-legend` key, which is how hovering a segment can highlight its legend item without any lookup table.
+**Charts, in short.** Items in a legend, a tooltip row and a bar segment share a `data-legend` key. Hovering a legend item or a segment highlights that series in every year of every chart, and a tooltip lists its rows in the order the bar shows them, top to bottom.
 
 ## How to add...
 
