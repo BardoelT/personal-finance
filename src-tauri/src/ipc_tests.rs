@@ -2027,3 +2027,45 @@ fn test_csd015_new_project_clears_the_assets() {
         json!({ "assets": [], "total": null })
     );
 }
+
+#[test]
+fn test_csd017_the_net_worth_insights_reach_the_frontend_and_follow_the_project() {
+    let app = harness();
+    assert_eq!(
+        app.ok("get_net_worth_insights", json!({})),
+        json!({ "years": [] })
+    );
+    let bank = app.ok(
+        "create_bank_account",
+        json!({ "input": bank_input("Example Bank", "Yearly") }),
+    );
+    app.ok(
+        "add_bank_entry",
+        json!({ "accountId": bank["id"], "period": "2025", "balance": "5000.00" }),
+    );
+    let debt = app.ok(
+        "create_debt",
+        json!({ "input": debt_input("Example Loan", "Yearly") }),
+    );
+    app.ok(
+        "add_debt_statement",
+        json!({ "debtId": debt["id"], "period": "2025", "balance": "9000.00" }),
+    );
+    let years = app.ok("get_net_worth_insights", json!({}))["years"].clone();
+    let first = &years[0];
+    assert_eq!(first["year"], 2025);
+    assert_eq!(first["cash"], "5000.00");
+    assert_eq!(first["debts"], "9000.00");
+    assert_eq!(first["assets"], "0.00");
+    assert_eq!(first["net_worth"], "-4000.00");
+    assert_eq!(first["has_records"], true);
+    assert_eq!(
+        years.as_array().unwrap().last().unwrap()["is_partial"],
+        true
+    );
+    app.ok("new_project", json!({}));
+    assert_eq!(
+        app.ok("get_net_worth_insights", json!({})),
+        json!({ "years": [] })
+    );
+}

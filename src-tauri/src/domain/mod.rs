@@ -8,6 +8,7 @@ pub mod expenses;
 pub mod income;
 pub mod investments;
 pub mod money;
+pub mod net_worth;
 pub mod preferences;
 pub mod project_data;
 pub mod settings;
@@ -38,6 +39,7 @@ pub use investments::{
     InvestmentsOverview, NetDeposits, Note, Period, StatementCalculation, StatementPrefill,
 };
 pub use money::{Amounts, Currency};
+pub use net_worth::NetWorthInsights;
 pub use preferences::Theme;
 pub use project_data::ProjectData;
 pub use settings::Settings;
