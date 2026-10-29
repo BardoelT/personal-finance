@@ -1,7 +1,8 @@
 use thiserror::Error;
 
 /// Validation and lookup failures of the income (CSD-001), investments
-/// (CSD-005), bank accounts (CSD-009) and debts (CSD-011) domains.
+/// (CSD-005), bank accounts (CSD-009), debts (CSD-011) and major expenses
+/// (CSD-013) domains.
 ///
 /// Messages are safe to show to the user: they never contain user data.
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
@@ -170,6 +171,30 @@ pub enum DomainError {
     DebtStatementNoteTooLong,
     #[error("The debt data is not consistent.")]
     DebtDataInvalid,
+    #[error("Enter a name for the expense.")]
+    ExpenseNameRequired,
+    #[error("The expense name can be at most 100 characters.")]
+    ExpenseNameTooLong,
+    #[error("Choose Home, Vehicle, Holiday, Sport, Study, Appliances, Hobby or Other.")]
+    ExpenseCategoryUnsupported,
+    #[error("Enter the date as dd/mm/yyyy, from 01/01/1900.")]
+    ExpenseDateInvalid,
+    #[error("An expense cannot be dated in the future.")]
+    ExpenseDateInFuture,
+    #[error("Enter the amount as a number such as 4500.00.")]
+    ExpenseAmountInvalid,
+    #[error("The amount must be greater than 0.00.")]
+    ExpenseAmountNotPositive,
+    #[error("The amount can have at most 2 decimal places.")]
+    ExpenseAmountPrecision,
+    #[error("The amount can be at most 1000000000.00.")]
+    ExpenseAmountTooLarge,
+    #[error("A note can be at most 2000 characters.")]
+    ExpenseNoteTooLong,
+    #[error("This expense does not exist.")]
+    ExpenseNotFound,
+    #[error("The expense data is not consistent.")]
+    ExpenseDataInvalid,
 }
 
 impl DomainError {
@@ -258,6 +283,18 @@ impl DomainError {
             Self::DebtStatementBalanceTooLarge => "DEBT_STATEMENT_BALANCE_TOO_LARGE",
             Self::DebtStatementNoteTooLong => "DEBT_STATEMENT_NOTE_TOO_LONG",
             Self::DebtDataInvalid => "DEBT_DATA_INVALID",
+            Self::ExpenseNameRequired => "EXPENSE_NAME_REQUIRED",
+            Self::ExpenseNameTooLong => "EXPENSE_NAME_TOO_LONG",
+            Self::ExpenseCategoryUnsupported => "EXPENSE_CATEGORY_UNSUPPORTED",
+            Self::ExpenseDateInvalid => "EXPENSE_DATE_INVALID",
+            Self::ExpenseDateInFuture => "EXPENSE_DATE_IN_FUTURE",
+            Self::ExpenseAmountInvalid => "EXPENSE_AMOUNT_INVALID",
+            Self::ExpenseAmountNotPositive => "EXPENSE_AMOUNT_NOT_POSITIVE",
+            Self::ExpenseAmountPrecision => "EXPENSE_AMOUNT_PRECISION",
+            Self::ExpenseAmountTooLarge => "EXPENSE_AMOUNT_TOO_LARGE",
+            Self::ExpenseNoteTooLong => "EXPENSE_NOTE_TOO_LONG",
+            Self::ExpenseNotFound => "EXPENSE_NOT_FOUND",
+            Self::ExpenseDataInvalid => "EXPENSE_DATA_INVALID",
         }
     }
 }

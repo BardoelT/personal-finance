@@ -3,6 +3,7 @@
 pub mod bank_accounts;
 pub mod debts;
 pub mod error;
+pub mod expenses;
 pub mod income;
 pub mod investments;
 pub mod money;
@@ -19,6 +20,9 @@ pub use debts::{
     StatementPrefill as DebtStatementPrefill,
 };
 pub use error::DomainError;
+pub use expenses::{
+    Expense, ExpenseId, ExpenseInsights, ExpenseList, ExpensePrefill, ExpenseYearlyTotal, Expenses,
+};
 pub use income::{
     Entry, Income, IncomeInsightsYear, IncomeOverview, IncomeYearlyTotal, Job, JobId, JobInput,
     PaycheckPrefill, Year, YearMonth,
