@@ -3,7 +3,7 @@ id: CSD-017
 title: Net worth insights
 status: approved
 owner: Thijs Bardoel
-version: 0.2
+version: 0.3
 last_updated: 29/10/2026
 related: [CSD-000, CSD-004, CSD-007, CSD-010, CSD-012, CSD-016]
 ---
@@ -147,7 +147,7 @@ Scenario: A past year
 ```
 
 **REQ-6: Chart** *(ubiquitous)*
-The app shall draw a stacked bar per year in which Assets, Investments and Cash rise from the zero line in that order from the bottom up and Debts hangs down from it, with the top corners of the highest segment and the bottom corners of Debts rounded, with the look, the size and the motion of the bank accounts chart (CSD-010 REQ-12 and REQ-13): bars at most 50% of the slot and at most 44 px wide, a 1 px gap between segments, a plot 390 px high and a minimum slot of 64 px per year. A series of 0.00 adds no height. The axis shall reach the highest bar, the deepest Debts and the net worth markers.
+The app shall draw a stacked bar per year in which Assets, Investments and Cash rise from the zero line in that order from the bottom up and Debts hangs down from it, with the top corners of the highest segment and the bottom corners of Debts rounded, with the look, the size and the motion of the bank accounts chart (CSD-010 REQ-12 and REQ-13): bars at most 50% of the slot and at most 44 px wide, a 1 px gap between segments, a plot height that scales with the height of the window and a minimum slot of 64 px per year. A series of 0.00 adds no height. The axis shall reach the highest bar, the deepest Debts and the net worth markers.
 
 ```gherkin
 @AC-6.1
@@ -160,7 +160,7 @@ Scenario: Order of the segments
 @AC-6.2
 Scenario: Same size as the other charts
   Given this chart and the chart of Bank accounts
-  Then both plots are 390 px high and give every year a slot of at least 64 px
+  Then both plots scale with the height of the window and give every year a slot of at least 64 px
 
 @AC-6.3
 Scenario: Nothing to draw for a series
@@ -322,5 +322,6 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.3 (29/10/2026): The plot height scales with the height of the window instead of being a fixed 390 px: with the page scrolled to the top the chart ends at the bottom of the window, and the plot is never lower than 260 px. It is recomputed when the window is resized.
 - 0.2 (29/10/2026): The tooltip rows (REQ-10, AC-10.1) read Cash, Investments, Assets, Debts, Net worth, so they follow the bar from top to bottom as AC-6.1 stacks it; 0.1 listed them in the opposite order, which contradicted AC-6.1.
 - 0.1 (29/10/2026): initial draft, from GitHub issue 24 and the grill-me interview. It follows CSD-010 and CSD-016 (yearly series, partial year, marker, tooltip, highlight, look and size), with four fixed series, Debts below the zero line and a net worth marker. Approving it also changes CSD-004 REQ-1 (the "Reports" placeholder becomes "Net worth") and the combined-chart non-goals of CSD-012 NG-5 and CSD-016 NG-5.

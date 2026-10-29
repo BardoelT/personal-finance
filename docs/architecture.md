@@ -68,7 +68,7 @@ styles/             CSS by area
 | `dom.js` | `h` (element builder), icons, toast, the confirm dialog, `showError` |
 | `format.js` | Display formatting and today's year or month. No figures are computed |
 | `chart.js` | Chart building blocks: SVG helper, bar segments, tooltip rows (listed top to bottom like the bar), legend items, the highlight |
-| `yearly-chart.js` | The frame every insights chart shares: one size (`CHART_SIZE`), axis, bars, closing-balance marker, tooltip, loading, resize |
+| `yearly-chart.js` | The frame every insights chart shares: one size rule (`CHART_SIZE` and a plot height that follows the window), axis, bars, closing-balance marker, tooltip, loading, resize |
 | `tabs.js` | Tabs such as Overview and Insights |
 
 **Composition, not inheritance.** The insights charts differ only in their data, so `createYearlyChart(strategy)` takes a small object (the stacked pieces, tooltip rows, extra marks, labels under the axis) and draws the rest. The CRUD dialogs of the two overview pages stay separate on purpose: their forms differ (the statement form calculates balance and growth), and one generic dialog would be harder to read than two plain files.
