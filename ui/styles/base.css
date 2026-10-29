@@ -22,6 +22,8 @@
   --chart-gain: hsl(152, 44%, 42%); --chart-loss: hsl(4, 66%, 60%);
   /* The eight colours of the banks in the bank accounts chart (CSD-010 REQ-8). */
   --bank-0: hsl(228, 58%, 60%); --bank-1: hsl(174, 40%, 42%); --bank-2: hsl(36, 60%, 52%); --bank-3: hsl(340, 45%, 58%); --bank-4: hsl(262, 40%, 60%); --bank-5: hsl(95, 34%, 44%); --bank-6: hsl(200, 52%, 48%); --bank-7: hsl(18, 55%, 54%);
+  /* The four series of the net worth chart (CSD-017 REQ-8); they follow the mode through the tokens they use. */
+  --nw-assets: var(--bank-4); --nw-investments: var(--bank-0); --nw-cash: var(--bank-1); --nw-debts: var(--chart-loss);
   --tag-expense-bg: #fee2e2; --tag-expense-fg: #b91c1c;
 }
 

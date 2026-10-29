@@ -103,7 +103,7 @@
 
         <div class="nav-section-label">Insights</div>
 
-        <button class="nav-item" data-section="reports">
+        <button class="nav-item" data-section="net-worth">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
             <path d="M3 20h18"/>
             <path d="M5 20V12"/>
@@ -111,7 +111,7 @@
             <path d="M15 20V14"/>
             <path d="M20 20V5"/>
           </svg>
-          Reports
+          Net worth
         </button>
       </nav>
 
@@ -702,13 +702,23 @@
         </div>
       </section>
 
-      <!-- Reports -->
-      <section class="section" id="reports" aria-labelledby="reports-title">
+      <!-- Net worth -->
+      <section class="section" id="net-worth" aria-labelledby="net-worth-title">
         <div class="section-header">
-          <h1 class="section-title" id="reports-title">Reports</h1>
+          <h1 class="section-title" id="net-worth-title">Net worth</h1>
         </div>
-        <div class="placeholder">
-          <p>Charts and trend analysis will appear here.<br>Add transaction data to generate your first report.</p>
+
+        <div id="net-worth-insights">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Net worth per year</span>
+              <ul class="legend" id="net-worth-insights-legend" aria-label="Legend"></ul>
+            </div>
+            <p class="empty-note" id="net-worth-insights-empty" hidden>No data yet. The chart appears once there is an asset, investment, bank account entry or debt.</p>
+            <div class="chart-scroll" id="net-worth-insights-scroll" hidden>
+              <div class="chart-inner" id="net-worth-insights-chart"></div>
+            </div>
+          </div>
         </div>
       </section>
 
