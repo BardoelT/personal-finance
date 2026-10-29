@@ -33,7 +33,7 @@ export function axisLabel(value) {
 }
 
 /** The size every yearly chart shares, so the charts look alike from page to page. */
-export const CHART_SIZE = { plotHeight: 260, minSlotWidth: 64 };
+export const CHART_SIZE = { plotHeight: 390, minSlotWidth: 64 };
 
 /**
  * The closing-balance marker of a year: a short line across the bar, wider than the bar,
