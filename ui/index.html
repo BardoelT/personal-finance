@@ -79,6 +79,15 @@
           Debts
         </button>
 
+        <button class="nav-item" data-section="expenses">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/>
+            <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/>
+            <path d="M12 17.5v-11"/>
+          </svg>
+          Major expenses
+        </button>
+
         <div class="nav-section-label">Insights</div>
 
         <button class="nav-item" data-section="reports">
@@ -496,6 +505,85 @@
         </div>
       </section>
 
+      <!-- Major expenses -->
+      <section class="section" id="expenses" aria-labelledby="expenses-title">
+        <div class="section-header">
+          <h1 class="section-title" id="expenses-title">Major expenses</h1>
+        </div>
+
+        <div class="tabs" role="tablist" aria-label="Major expense views">
+          <button type="button" class="tab" role="tab" id="expenses-tab-overview" aria-controls="expenses-overview" aria-selected="true">Overview</button>
+          <button type="button" class="tab" role="tab" id="expenses-tab-insights" aria-controls="expenses-insights" aria-selected="false" tabindex="-1">Insights</button>
+        </div>
+
+        <div id="expenses-overview" role="tabpanel" aria-labelledby="expenses-tab-overview">
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">Yearly totals</span></div>
+            <p class="empty-note" id="expense-totals-empty" hidden>No totals yet. Totals appear once there is an expense.</p>
+            <div class="table-wrap">
+              <table class="data-table" id="expense-totals-table" hidden>
+                <thead>
+                  <tr>
+                    <th scope="col">Year</th>
+                    <th scope="col" class="num">Total</th>
+                    <th scope="col" class="num">Expenses</th>
+                    <th scope="col" class="num">Largest</th>
+                  </tr>
+                </thead>
+                <tbody id="expense-totals-rows"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Expenses</span>
+              <div class="panel-actions">
+                <select class="filter-select" id="expense-filter-year" aria-label="Year"></select>
+                <select class="filter-select" id="expense-filter-month" aria-label="Month"></select>
+                <button type="button" class="btn primary" id="expense-add">Add expense</button>
+              </div>
+            </div>
+            <p class="empty-note" id="expenses-empty" hidden></p>
+            <div class="table-wrap">
+              <table class="data-table" id="expenses-table" hidden>
+                <thead>
+                  <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Category</th>
+                    <th scope="col" class="num">Amount</th>
+                    <th scope="col">Note</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody id="expenses-rows"></tbody>
+                <tfoot>
+                  <tr>
+                    <th scope="row" colspan="3">Total</th>
+                    <td class="num" id="expenses-total"></td>
+                    <td colspan="2"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div id="expenses-insights" role="tabpanel" aria-labelledby="expenses-tab-insights" hidden>
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Major expenses per year</span>
+              <ul class="legend" id="expenses-insights-legend" aria-label="Legend"></ul>
+            </div>
+            <p class="empty-note" id="expenses-insights-empty" hidden>No expenses yet. The chart appears once there is an expense.</p>
+            <div class="chart-scroll" id="expenses-insights-scroll" hidden>
+              <div class="chart-inner" id="expenses-insights-chart"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Settings -->
       <section class="section" id="settings" aria-labelledby="settings-title">
         <div class="section-header">
@@ -755,6 +843,47 @@
       <div class="dialog-actions">
         <button type="button" class="btn" data-cancel>Cancel</button>
         <button type="submit" class="btn primary">Save statement</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="expense-dialog" aria-labelledby="expense-dialog-title">
+    <form method="dialog" id="expense-form" novalidate>
+      <h2 id="expense-dialog-title">Add expense</h2>
+      <div class="field-action">
+        <button type="button" class="btn" id="expense-copy">Copy previous expense</button>
+      </div>
+      <label class="field">Name
+        <input type="text" name="name" maxlength="100" autocomplete="off" required>
+      </label>
+      <div class="field-row">
+        <label class="field">Amount
+          <input type="text" name="amount" inputmode="decimal" placeholder="0.00" autocomplete="off" required>
+        </label>
+        <label class="field">Date (dd/mm/yyyy)
+          <input type="text" name="date" inputmode="numeric" placeholder="15/09/2026" maxlength="10" autocomplete="off" required>
+        </label>
+      </div>
+      <label class="field">Category
+        <select name="category">
+          <option value="Home">Home</option>
+          <option value="Vehicle">Vehicle</option>
+          <option value="Holiday">Holiday</option>
+          <option value="Sport">Sport</option>
+          <option value="Study">Study</option>
+          <option value="Appliances">Appliances</option>
+          <option value="Hobby">Hobby</option>
+          <option value="Other" selected>Other</option>
+        </select>
+      </label>
+      <label class="field">Note (optional)
+        <textarea name="note" rows="4" autocomplete="off"></textarea>
+      </label>
+      <p class="field-hint">Use a dot for decimals, for example 4500.00. The amount must be above 0.00, and the date cannot be in the future. A note can be up to 2000 characters.</p>
+      <p class="form-error" id="expense-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn" data-cancel>Cancel</button>
+        <button type="submit" class="btn primary">Save expense</button>
       </div>
     </form>
   </dialog>
