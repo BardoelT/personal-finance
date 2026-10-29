@@ -1,14 +1,22 @@
 # Varde
 
-A private, local-only desktop app for tracking personal wealth. It covers **employment income** and **investments**, and more areas will follow as their specs are approved.
+A private, local-only desktop app for tracking personal wealth: what comes in, what goes out, what you own and what you owe. Each area has a table view and an **Insights** tab with a yearly chart.
 
 ## What it does today
 
-- **Dashboard:** your income this year to date and last month (total gross, gross salary, holiday pay, bonus and number of entries), summed over all jobs. An annual statement counts in full in this year and not in last month.
-- **Income:** any number of jobs. A monthly job has one paycheck per month, a yearly job has one annual statement per year, both with gross salary, holiday pay and bonus. Yearly totals over all jobs and a list of all paychecks and annual statements sit next to the jobs. An **Insights** tab charts income per year, with the year-over-year growth.
-- **Investments:** any number of investment accounts, each recorded monthly or yearly. A statement is the closing balance of one period, the net deposits of that period (money put in minus money taken out) and an optional note. The capital growth of each statement is derived from the balance, the previous statement and the net deposits, and the form calculates the balance or the growth from the other. Each account shows its latest balance, the total of the latest balances is shown over all accounts, and yearly totals show the closing balance, net deposits and capital growth per year. An **Insights** tab charts each year as opening balance, net deposits and capital growth with a closing-balance marker and the growth as a percentage of the opening balance. Individual stocks, prices and trades are not tracked.
-- **Settings:** project settings. The first one is the currency (EUR, USD or GBP) of the whole project. Changing it does not convert any amount.
+The left pane groups the pages as **Overview**, **Finance**, **Wealth**, **Liabilities** and **Insights**, with Settings and the project status at the bottom.
+
+- **Dashboard:** your income this year to date and last month (total gross, gross salary, holiday pay and bonus), summed over all jobs. An annual statement counts in full in this year and not in last month.
+- **Income:** any number of jobs. A monthly job has one paycheck per month, a yearly job has one annual statement per year, both with gross salary, holiday pay and bonus. Yearly totals and a list of all paychecks and annual statements sit next to the jobs. Insights charts income per year with the year-over-year growth.
+- **Expenses:** dated expenses with a name, amount, category (a fixed list) and a note, with yearly totals and the largest expense of each year. Insights charts the spending per year, stacked by category.
+- **Bank accounts:** any number of accounts, each recorded monthly or yearly as a closing balance (negative when overdrawn) and a note. Yearly totals and the total of the latest balances. Insights charts the balance per bank per year with a closing-balance marker.
+- **Investments:** any number of investment accounts, each recorded monthly or yearly. A statement holds the closing balance, the net deposits (money put in minus money taken out) and a note; the capital growth is derived from them, and the form calculates the balance or the growth from the other. Yearly totals show closing balance, net deposits and capital growth. Insights charts opening balance, net deposits and capital growth with a closing-balance marker and the growth percentage. Individual stocks, prices and trades are not tracked.
+- **Assets:** things you own (a house, a car), each valued monthly or yearly, with the change since the previous valuation and yearly values. Insights charts the value per asset per year.
+- **Debts:** what you owe, each recorded monthly or yearly as a remaining balance, with the amount repaid per year. Insights charts the debt per debt per year.
+- **Settings:** the currency (EUR, USD or GBP) of the whole project, and the theme (System, Light or Dark). Changing the currency does not convert any amount.
 - **Project file:** everything is saved in one file you choose, and the app reopens the last one you used.
+
+All insights charts look and behave alike: hovering a legend item highlights that series in every year, and the tooltip lists its rows in the same order as the bar.
 
 The Reports page is a placeholder for a later feature.
 
@@ -81,7 +89,7 @@ src-tauri/
   src/lib.rs        app setup, command registration
   src/menu.rs       native macOS menu bar (File menu, Settings…)
   src/commands/     thin #[tauri::command] handlers
-  src/domain/       pure business logic (money, income, investments, settings), unit-tested
+  src/domain/       pure business logic (money, income, expenses, bank accounts, investments, assets, debts, settings), unit-tested
   src/storage/      project file persistence (JSON, atomic write)
   src/error.rs      app error type
   capabilities/     Tauri permission files
@@ -99,11 +107,19 @@ Behaviour is defined in Capability Specification Documents in [`docs/csd/`](docs
 | [CSD-001](docs/csd/CSD-001-employment-income.md) | Income tracking (employment income) |
 | [CSD-002](docs/csd/CSD-002-project-file.md) | Project file (save, open, new, reopen last project) |
 | [CSD-003](docs/csd/CSD-003-project-settings.md) | Project settings (currency) |
-| [CSD-004](docs/csd/CSD-004-income-dashboard.md) | Income dashboard |
+| [CSD-004](docs/csd/CSD-004-income-dashboard.md) | Income dashboard and the structure of the left pane |
 | [CSD-005](docs/csd/CSD-005-investments.md) | Investments (accounts, statements, net deposits, capital growth, yearly totals) |
 | [CSD-006](docs/csd/CSD-006-income-insights.md) | Income insights chart |
 | [CSD-007](docs/csd/CSD-007-investment-insights.md) | Investment insights chart |
 | [CSD-008](docs/csd/CSD-008-application-preferences.md) | Application preferences (theme) |
+| [CSD-009](docs/csd/CSD-009-bank-accounts.md) | Bank accounts |
+| [CSD-010](docs/csd/CSD-010-bank-account-insights.md) | Bank account insights chart |
+| [CSD-011](docs/csd/CSD-011-debts.md) | Debts |
+| [CSD-012](docs/csd/CSD-012-debt-insights.md) | Debt insights chart |
+| [CSD-013](docs/csd/CSD-013-expenses.md) | Expenses |
+| [CSD-014](docs/csd/CSD-014-expense-insights.md) | Expense insights chart |
+| [CSD-015](docs/csd/CSD-015-assets.md) | Assets |
+| [CSD-016](docs/csd/CSD-016-asset-insights.md) | Asset insights chart |
 
 Only specs with `status: approved` are implemented; check a spec's status before relying on it. Tests reference acceptance criteria in their names, for example `test_csd002_ac_1_1_...`.
 
