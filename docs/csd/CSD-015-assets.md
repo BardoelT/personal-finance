@@ -1004,7 +1004,7 @@ All ACs are proven by `cargo test`, with domain logic tested in `domain/`. Tests
 Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 
 ## 8. Open questions
-- OQ-1: The grill-me interview agreed to place Assets "right after Debts", but CSD-013 (the left pane item requirement, REQ-13) places Expenses "directly under Debts". REQ-26 and REQ-21 draft the position as directly under Bank accounts and above Debts, so assets come before debts and CSD-013 stays valid. Owner: Thijs. Blocks: REQ-21, REQ-26 (if the owner prefers Assets under Debts or Expenses, CSD-013 must change too).
+None. (OQ-1, the position in the left pane, was resolved on 29/10/2026: directly under Bank accounts and above Debts, REQ-26.)
 
 ## 9. Changelog
 - 0.1 (29/10/2026): initial draft, from GitHub issue 17 and the grill-me interview. It follows CSD-011 (assets, colour slot, period lock, valuations, changing the period, copy previous, yearly values, layout), with a value of 0.00 or more, a change per valuation (REQ-19) counted as growth, and a yearly change in the yearly values. The Insights tab is CSD-016.
