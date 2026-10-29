@@ -10,6 +10,7 @@ pub mod investments;
 pub mod net_worth;
 pub mod preferences;
 pub mod project;
+pub mod ratios;
 pub mod settings;
 
 use std::sync::{Mutex, MutexGuard};

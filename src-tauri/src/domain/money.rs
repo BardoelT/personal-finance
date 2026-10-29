@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, RoundingStrategy};
 use serde::{Deserialize, Serialize};
 
 use super::error::DomainError;
@@ -162,6 +162,20 @@ pub(super) fn parse_plain_decimal(text: &str) -> Option<Decimal> {
         return None;
     }
     Decimal::from_str(text).ok()
+}
+
+/// `part` in percent of `whole`, to one decimal with banker's rounding (CSD-007
+/// REQ-6, CSD-018 CON-3). `None` when `whole` is zero.
+#[must_use]
+pub fn percent_of(part: Decimal, whole: Decimal) -> Option<Decimal> {
+    let percent = part.checked_mul(Decimal::ONE_HUNDRED)?.checked_div(whole)?;
+    let mut rounded = percent.round_dp_with_strategy(1, RoundingStrategy::MidpointNearestEven);
+    if rounded.is_zero() {
+        // A decrease that rounds to zero shows no sign.
+        rounded = Decimal::ZERO;
+    }
+    rounded.rescale(1);
+    Some(rounded)
 }
 
 #[cfg(test)]
