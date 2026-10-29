@@ -6,7 +6,7 @@
 import { h, showToast } from '../shared/dom.js';
 import { errorText } from '../shared/ipc.js';
 import { formatAmount } from '../shared/format.js';
-import { swatch, legendLabel, legendItem, tooltipRow } from '../shared/chart.js';
+import { swatch, legendLabel, legendItem, tooltipRow, topToBottom } from '../shared/chart.js';
 import { createYearlyChart, levelMarker, isNegative, yearLabel } from '../shared/yearly-chart.js';
 
 /** The series from the bottom of the bar up: the Rust field, the legend key, the colour class and the label. */
@@ -23,6 +23,13 @@ const signed = (row, field) => (field === 'debts' ? -Number(row.debts) : Number(
 /** A debt is shown with a minus sign (CSD-017 REQ-10); the other amounts as they are. */
 const shown = (row, field) => (field === 'debts' && Number(row.debts) !== 0 ? `−${formatAmount(row.debts)}` : formatAmount(row[field]));
 
+/** The series in the order the bar shows them, top to bottom; debts, which hang below the zero line, come last. */
+function rowsTopToBottom(row) {
+  const [debts] = SERIES.filter(([field]) => field === 'debts');
+  const others = SERIES.filter(([field]) => field !== 'debts');
+  return [...topToBottom(others, ([field]) => signed(row, field)), debts];
+}
+
 function describe(row) {
   if (!row.has_records) return `${yearLabel(row)}: no records`;
   const parts = SERIES.map(([field, , , label]) => `${label} ${shown(row, field)}`);
@@ -30,13 +37,13 @@ function describe(row) {
 }
 
 /**
- * The rows read like the bar, top to bottom: cash, investments, assets, then debts below
- * the zero line (CSD-017 REQ-10), and the net worth.
+ * The rows read like the bar, top to bottom: cash, investments, assets, then what hangs below
+ * the zero line (debts, and cash of an overdrawn bank), and the net worth (CSD-017 REQ-10).
  */
 function tooltipContent(row) {
   const rows = row.has_records
     ? [
-        ...[...SERIES].reverse().flatMap(([field, key, cssClass, label]) =>
+        ...rowsTopToBottom(row).flatMap(([field, key, cssClass, label]) =>
           tooltipRow(key, swatch(cssClass), label, shown(row, field), field === 'cash' && isNegative(row.cash) ? 'negative' : ''),
         ),
         ...tooltipRow('marker', swatch('marker'), 'Net worth', formatAmount(row.net_worth), isNegative(row.net_worth) ? 'negative' : ''),
