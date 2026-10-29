@@ -35,8 +35,15 @@ export function axisLabel(value) {
 /** The size every yearly chart shares: a slot per year is at least this wide, and the plot is never lower than this. */
 export const CHART_SIZE = { minPlotHeight: 260, minSlotWidth: 64 };
 
-/** What lies below the chart in the page: the padding of the chart box and of the content area, and the panel border. */
-const SPACE_BELOW = 12 + 30 + 2;
+/** The space below the chart in the page: the padding of the chart box, the margin of its panel and the padding of the content area. */
+function spaceBelow(inner) {
+  const px = (element, property) => (element ? Number.parseFloat(getComputedStyle(element)[property]) || 0 : 0);
+  return (
+    px(inner.closest('.chart-scroll'), 'paddingBottom') +
+    px(inner.closest('.panel'), 'marginBottom') +
+    px(inner.closest('.content'), 'paddingBottom')
+  );
+}
 
 /**
  * The plot height that lets the chart end at the bottom of the window with the page
@@ -45,8 +52,9 @@ const SPACE_BELOW = 12 + 30 + 2;
 function plotHeightFor(inner, margin) {
   const scroller = inner.closest('.content');
   const top = inner.getBoundingClientRect().top + (scroller ? scroller.scrollTop : 0);
-  const room = window.innerHeight - top - margin.top - margin.bottom - SPACE_BELOW;
-  return Math.max(CHART_SIZE.minPlotHeight, Math.round(room));
+  // One pixel less, so rounding never pushes the page into a scrollbar.
+  const room = window.innerHeight - top - margin.top - margin.bottom - spaceBelow(inner) - 1;
+  return Math.max(CHART_SIZE.minPlotHeight, Math.floor(room));
 }
 
 /**
