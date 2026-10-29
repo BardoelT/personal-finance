@@ -4,7 +4,7 @@
 // segments and the legend of the eight categories.
 import { h } from '../shared/dom.js';
 import { formatAmount } from '../shared/format.js';
-import { swatch, noSwatch, legendLabel, setHighlight } from '../shared/chart.js';
+import { swatch, noSwatch, legendLabel, legendItem, tooltipRow, topToBottom } from '../shared/chart.js';
 import { createYearlyChart, yearLabel } from '../shared/yearly-chart.js';
 import { initTabs } from '../shared/tabs.js';
 
@@ -13,30 +13,26 @@ let categories = new Map();
 
 const keyOf = (category) => `category-${category}`;
 const slotOf = (category) => categories.get(category)?.colour_slot ?? 0;
-const expensesText = (count) => `${count} expense${count === 1 ? '' : 's'}`;
 
 function describe(row) {
   if (row.expense_count === 0) return `${yearLabel(row)}: no expenses`;
   const parts = row.segments.map((segment) => `${segment.category} ${formatAmount(segment.amount)}`);
-  return `${yearLabel(row)}: ${parts.join(', ')}, total ${formatAmount(row.total)}, ${expensesText(row.expense_count)}`;
+  return `${yearLabel(row)}: ${parts.join(', ')}, total ${formatAmount(row.total)}`;
 }
 
+/** The rows read like the bar: the highest segment first. */
 function tooltipContent(row) {
-  const line = (legend, swatchNode, label, value) => [
-    h('dt', { 'data-legend': legend }, swatchNode, legendLabel(label)),
-    h('dd', { 'data-legend': legend }, value),
-  ];
   return [
     h('div', { class: 'tip-title' }, yearLabel(row)),
     row.is_partial ? h('div', { class: 'tip-note' }, 'Partial year: expenses so far') : null,
+    row.expense_count === 0 ? h('div', { class: 'tip-note' }, 'No expenses') : null,
     h(
       'dl',
       {},
-      ...row.segments.flatMap((segment) =>
-        line(keyOf(segment.category), swatch(`slot-${slotOf(segment.category)}`), segment.category, formatAmount(segment.amount)),
+      ...topToBottom(row.segments, (segment) => segment.amount).flatMap((segment) =>
+        tooltipRow(keyOf(segment.category), swatch(`slot-${slotOf(segment.category)}`), segment.category, formatAmount(segment.amount)),
       ),
-      ...line(null, noSwatch(), 'Total', formatAmount(row.total)),
-      ...line(null, noSwatch(), 'Expenses', String(row.expense_count)),
+      ...(row.expense_count === 0 ? [] : tooltipRow(null, noSwatch(), 'Total', formatAmount(row.total))),
     ),
   ].filter(Boolean);
 }
@@ -68,29 +64,15 @@ function buildLegend({ categories: list }) {
   categories = new Map(list.map((category) => [category.name, category]));
   const legendList = document.getElementById('expenses-insights-legend');
   const scopes = () => [legendList, document.getElementById('expenses-insights-chart')];
-  const items = list.map((category) => {
-    const item = h(
-      'li',
-      { 'data-legend': keyOf(category.name), tabindex: '0' },
-      swatch(`slot-${category.colour_slot}`),
-      legendLabel(category.name),
-    );
-    // Hovering or focusing a category highlights it in every year (CSD-014 REQ-9).
-    for (const on of ['mouseenter', 'focus']) item.addEventListener(on, () => setHighlight(keyOf(category.name), scopes()));
-    for (const off of ['mouseleave', 'blur']) item.addEventListener(off, () => setHighlight(null, scopes()));
-    return item;
-  });
-  legendList.replaceChildren(...items);
+  legendList.replaceChildren(
+    ...list.map((category) => legendItem(keyOf(category.name), swatch(`slot-${category.colour_slot}`), legendLabel(category.name), scopes)),
+  );
 }
 
 const chart = createYearlyChart({
   id: 'expenses-insights',
   command: 'get_expense_insights',
   ariaLabel: 'Expenses per year',
-  plotHeight: 260,
-  minSlotWidth: 64,
-  zeroLine: true,
-  highlightAcrossYears: true,
   onLoaded: buildLegend,
   piecesOf,
   describe,

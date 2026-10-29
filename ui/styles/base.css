@@ -3,8 +3,8 @@
   --sidebar-w: 220px;
   --sidebar-bg: #1e2234;
   --sidebar-border: rgba(255,255,255,.06);
-  --nav-text: #8892b0;
-  --nav-hover: #ccd6f6;
+  --nav-text: #c3cbe3;
+  --nav-hover: #f1f4ff;
   --nav-active-text: #fff;
   --nav-active-bg: rgba(67,97,238,.14);
   --nav-active-bar: #4361ee;
@@ -17,8 +17,9 @@
   --negative: #dc2626;
   --accent: #4361ee;
   --series-salary: hsl(228, 58%, 60%); --series-holiday: hsl(174, 40%, 42%); --series-bonus: hsl(36, 60%, 52%);
-  --series-opening: hsl(228, 58%, 60%); --series-deposits: hsl(174, 40%, 42%);
-  --chart-gain: hsl(145, 38%, 44%); --chart-loss: hsl(0, 48%, 58%);
+  /* Investments: a neutral base, the accent blue for money put in, and green and coral for gain and loss. */
+  --series-opening: hsl(215, 20%, 64%); --series-deposits: hsl(228, 62%, 62%);
+  --chart-gain: hsl(152, 44%, 42%); --chart-loss: hsl(4, 66%, 60%);
   /* The eight colours of the banks in the bank accounts chart (CSD-010 REQ-8). */
   --bank-0: hsl(228, 58%, 60%); --bank-1: hsl(174, 40%, 42%); --bank-2: hsl(36, 60%, 52%); --bank-3: hsl(340, 45%, 58%); --bank-4: hsl(262, 40%, 60%); --bank-5: hsl(95, 34%, 44%); --bank-6: hsl(200, 52%, 48%); --bank-7: hsl(18, 55%, 54%);
   --tag-expense-bg: #fee2e2; --tag-expense-fg: #b91c1c;
@@ -31,8 +32,8 @@
     --text: #e2e8f0; --muted: #8892b0; --border: rgba(255,255,255,.08);
       --tag-expense-bg: rgba(220,38,38,.2); --tag-expense-fg: #f87171;
     --series-salary: hsl(228, 58%, 72%); --series-holiday: hsl(174, 45%, 55%); --series-bonus: hsl(38, 60%, 62%);
-    --series-opening: hsl(228, 58%, 72%); --series-deposits: hsl(174, 45%, 55%);
-    --chart-gain: hsl(145, 40%, 56%); --chart-loss: hsl(0, 52%, 68%);
+    --series-opening: hsl(215, 22%, 68%); --series-deposits: hsl(228, 64%, 73%);
+    --chart-gain: hsl(152, 46%, 55%); --chart-loss: hsl(4, 72%, 70%);
     --bank-0: hsl(228, 58%, 72%); --bank-1: hsl(174, 45%, 55%); --bank-2: hsl(38, 60%, 62%); --bank-3: hsl(340, 50%, 70%); --bank-4: hsl(262, 45%, 72%); --bank-5: hsl(95, 36%, 56%); --bank-6: hsl(200, 55%, 60%); --bank-7: hsl(18, 58%, 64%);
     color-scheme: dark;
   }
@@ -44,8 +45,8 @@
   --text: #e2e8f0; --muted: #8892b0; --border: rgba(255,255,255,.08);
   --tag-expense-bg: rgba(220,38,38,.2); --tag-expense-fg: #f87171;
   --series-salary: hsl(228, 58%, 72%); --series-holiday: hsl(174, 45%, 55%); --series-bonus: hsl(38, 60%, 62%);
-  --series-opening: hsl(228, 58%, 72%); --series-deposits: hsl(174, 45%, 55%);
-  --chart-gain: hsl(145, 40%, 56%); --chart-loss: hsl(0, 52%, 68%);
+  --series-opening: hsl(215, 22%, 68%); --series-deposits: hsl(228, 64%, 73%);
+  --chart-gain: hsl(152, 46%, 55%); --chart-loss: hsl(4, 72%, 70%);
   --bank-0: hsl(228, 58%, 72%); --bank-1: hsl(174, 45%, 55%); --bank-2: hsl(38, 60%, 62%); --bank-3: hsl(340, 50%, 70%); --bank-4: hsl(262, 45%, 72%); --bank-5: hsl(95, 36%, 56%); --bank-6: hsl(200, 55%, 60%); --bank-7: hsl(18, 58%, 64%);
   color-scheme: dark;
 }

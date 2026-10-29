@@ -1,49 +1,45 @@
 // Asset insights: the yearly stacked chart on the Assets page (CSD-016), one
 // segment per asset. Its frame (axis, bars, tooltip, loading) is shared with the
 // other charts in shared/yearly-chart.js; this file supplies what is specific
-// to assets: the segments, the legend of assets and the total-value marker.
+// to assets: the segments, the legend of assets and the total value marker.
 import { h } from '../shared/dom.js';
 import { formatAmount } from '../shared/format.js';
-import { svg, swatch, noSwatch, legendLabel, setHighlight } from '../shared/chart.js';
-import { createYearlyChart, isNegative, yearLabel, axisLabel } from '../shared/yearly-chart.js';
+import { swatch, noSwatch, legendLabel, nameLabel, legendItem, tooltipRow, topToBottom } from '../shared/chart.js';
+import { createYearlyChart, levelMarker, isNegative, yearLabel } from '../shared/yearly-chart.js';
 import { initTabs } from '../shared/tabs.js';
 
 /** The assets of the series by id, as Rust returned them (creation order). */
-let assets = new Map();
+let items = new Map();
 
-const keyOf = (assetId) => `asset-${assetId}`;
-const nameOf = (segment) => assets.get(segment.asset_id)?.name ?? '';
-const slotOf = (assetId) => assets.get(assetId)?.colour_slot ?? 0;
-const valuationsText = (count) => `${count} valuation${count === 1 ? '' : 's'}`;
+const keyOf = (id) => `asset-${id}`;
+const nameOf = (segment) => items.get(segment.asset_id)?.name ?? '';
+const slotOf = (id) => items.get(id)?.colour_slot ?? 0;
 /** The change amount as shown: a dash when Rust has none. */
-const changeText = (row) => (row.change === null ? '–' : formatAmount(row.change));
+const deltaText = (row) => (row.change === null ? '–' : formatAmount(row.change));
 
 function describe(row) {
   if (row.valuation_count === 0) return `${yearLabel(row)}: no valuations`;
   const parts = row.segments.map((segment) => `${nameOf(segment)} ${formatAmount(segment.value)}`);
-  const change = row.change === null ? 'change none' : `change ${formatAmount(row.change)}${isNegative(row.change) ? ' (negative)' : ''}`;
-  return `${yearLabel(row)}: ${parts.join(', ')}, total value ${formatAmount(row.closing_value)}, ${change}, ${valuationsText(row.valuation_count)}`;
+  const delta = row.change === null ? 'change none' : `change ${formatAmount(row.change)}${isNegative(row.change) ? ' (negative)' : ''}`;
+  return `${yearLabel(row)}: ${parts.join(', ')}, total value ${formatAmount(row.closing_value)}, ${delta}`;
 }
 
+/** The rows read like the bar: the highest segment first. */
 function tooltipContent(row) {
-  const line = (legend, swatchNode, label, value, cssClass = '') => [
-    h('dt', { 'data-legend': legend }, swatchNode, legendLabel(label)),
-    h('dd', { 'data-legend': legend, class: cssClass }, value),
-  ];
   const rows =
     row.valuation_count === 0
-      ? line(null, noSwatch(), 'Valuations', '0')
+      ? []
       : [
-          ...row.segments.flatMap((segment) =>
-            line(keyOf(segment.asset_id), swatch(`slot-${slotOf(segment.asset_id)}`), nameOf(segment), formatAmount(segment.value)),
+          ...topToBottom(row.segments, (segment) => segment.value).flatMap((segment) =>
+            tooltipRow(keyOf(segment.asset_id), swatch(`slot-${slotOf(segment.asset_id)}`), nameOf(segment), formatAmount(segment.value)),
           ),
-          ...line('marker', swatch('marker'), 'Total value', formatAmount(row.closing_value)),
-          ...line(null, noSwatch(), 'Change', changeText(row), row.change !== null && isNegative(row.change) ? 'negative' : ''),
-          ...line(null, noSwatch(), 'Valuations', String(row.valuation_count)),
+          ...tooltipRow('marker', swatch('marker'), 'Total value', formatAmount(row.closing_value)),
+          ...tooltipRow(null, noSwatch(), 'Change', deltaText(row), row.change !== null && isNegative(row.change) ? 'negative' : ''),
         ];
   return [
     h('div', { class: 'tip-title' }, yearLabel(row)),
     row.is_partial ? h('div', { class: 'tip-note' }, 'Partial year: valuations so far') : null,
+    row.valuation_count === 0 ? h('div', { class: 'tip-note' }, 'No valuations') : null,
     h('dl', {}, ...rows),
   ].filter(Boolean);
 }
@@ -51,7 +47,7 @@ function tooltipContent(row) {
 /**
  * The segments of a year, stacked upwards from the zero line in the order
  * received (CSD-016 REQ-6). A value is never negative, so nothing hangs down;
- * an asset at 0.00 adds no height. The top corners of the highest segment are rounded.
+ * a asset at 0.00 adds no height. The top corners of the highest segment are rounded.
  */
 function piecesOf(row) {
   let level = 0;
@@ -75,51 +71,28 @@ function piecesOf(row) {
   return pieces;
 }
 
-/** The legend: a swatch and the name of every asset in the series, and the total-value marker (CSD-016 REQ-9). */
+/** The legend: a swatch and the name of every asset in the series, and the total value marker (CSD-016 REQ-9). */
 function buildLegend({ assets: list }) {
-  assets = new Map(list.map((asset) => [asset.id, asset]));
+  items = new Map(list.map((item) => [item.id, item]));
   const legendList = document.getElementById('assets-insights-legend');
   const scopes = () => [legendList, document.getElementById('assets-insights-chart')];
-  const items = list.map((asset) => {
-    const item = h(
-      'li',
-      { 'data-legend': keyOf(asset.id), tabindex: '0' },
-      swatch(`slot-${asset.colour_slot}`),
-      h('span', { class: 'legend-label legend-name', 'data-text': asset.name }, h('span', { class: 'legend-name-text' }, asset.name)),
-    );
-    // Hovering or focusing an asset highlights it in every year (CSD-016 REQ-11).
-    for (const on of ['mouseenter', 'focus']) item.addEventListener(on, () => setHighlight(keyOf(asset.id), scopes()));
-    for (const off of ['mouseleave', 'blur']) item.addEventListener(off, () => setHighlight(null, scopes()));
-    return item;
-  });
-  items.push(h('li', { 'data-legend': 'marker' }, swatch('marker'), legendLabel('Total value')));
-  legendList.replaceChildren(...items);
+  legendList.replaceChildren(
+    ...list.map((item) => legendItem(keyOf(item.id), swatch(`slot-${item.colour_slot}`), nameLabel(item.name), scopes)),
+    legendItem('marker', swatch('marker'), legendLabel('Total value'), scopes),
+  );
 }
 
 const chart = createYearlyChart({
   id: 'assets-insights',
   command: 'get_asset_insights',
   ariaLabel: 'Assets per year',
-  plotHeight: 260,
-  minSlotWidth: 64,
-  zeroLine: true,
-  highlightAcrossYears: true,
   onLoaded: buildLegend,
   piecesOf,
   extraLevels: (row) => [Number(row.closing_value)],
   describe,
   tooltipContent,
-  /** The total-value marker, drawn for each year that has valuations. */
-  decorate(row, { centre, barWidth, yOf }) {
-    if (row.valuation_count === 0) return [];
-    const y = yOf(Number(row.closing_value));
-    const half = barWidth * 0.7;
-    return [
-      svg('line', { class: 'chart-marker-hit', 'data-legend': 'marker', x1: centre - half, x2: centre + half, y1: y, y2: y }),
-      svg('line', { class: 'chart-marker', 'data-legend': 'marker', x1: centre - half, x2: centre + half, y1: y, y2: y }),
-      svg('text', { class: 'chart-marker-label', x: centre, y: y - 7 }, axisLabel(Number(row.closing_value))),
-    ];
-  },
+  /** The total value marker, drawn for each year that has valuations. */
+  decorate: (row, geometry) => (row.valuation_count === 0 ? [] : levelMarker(Number(row.closing_value), geometry)),
   labelLines: (row) => [{ text: yearLabel(row), className: 'chart-year' }],
 });
 
