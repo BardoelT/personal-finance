@@ -50,6 +50,7 @@ impl ExpenseDate {
     }
 
     /// The calendar month, 1 to 12.
+    #[cfg(test)]
     #[must_use]
     pub fn month(self) -> u8 {
         u8::from(self.0.month())

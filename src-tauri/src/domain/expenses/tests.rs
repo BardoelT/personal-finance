@@ -258,12 +258,7 @@ fn test_csd013_ac_5_3_an_invalid_amount_in_an_edit_changes_nothing() {
     let result =
         expenses.update_expense(id, &input("Example", "0.00", "15/09/2026", "Home"), today());
     assert_eq!(code(result), "EXPENSE_AMOUNT_NOT_POSITIVE");
-    assert_eq!(
-        expenses.list(None, None).unwrap().expenses[0]
-            .amount
-            .value(),
-        dec("4500.00")
-    );
+    assert_eq!(expenses.list().expenses[0].amount.value(), dec("4500.00"));
 }
 
 // REQ-6: note validation
@@ -463,7 +458,7 @@ fn test_csd013_ac_8_1_and_8_3_deleting_removes_only_that_expense() {
         "Home",
     );
     expenses.delete_expense(bike).unwrap();
-    let list = expenses.list(None, None).unwrap();
+    let list = expenses.list();
     assert_eq!(names(&list), ["Example Roof Repair"]);
     assert_eq!(
         expenses
@@ -539,7 +534,7 @@ fn test_csd013_ac_10_1_newest_first() {
     add(&mut expenses, "A", "1.00", "10/09/2026", "Other");
     add(&mut expenses, "B", "1.00", "15/10/2026", "Other");
     add(&mut expenses, "C", "1.00", "01/01/2026", "Other");
-    assert_eq!(names(&expenses.list(None, None).unwrap()), ["B", "A", "C"]);
+    assert_eq!(names(&expenses.list()), ["B", "A", "C"]);
 }
 
 #[test]
@@ -547,10 +542,7 @@ fn test_csd013_ac_10_2_same_date_is_ordered_by_name_ignoring_case() {
     let mut expenses = Expenses::default();
     add(&mut expenses, "example sofa", "1.00", "10/09/2026", "Other");
     add(&mut expenses, "Example Bike", "1.00", "10/09/2026", "Other");
-    assert_eq!(
-        names(&expenses.list(None, None).unwrap()),
-        ["Example Bike", "example sofa"]
-    );
+    assert_eq!(names(&expenses.list()), ["Example Bike", "example sofa"]);
 }
 
 #[test]
@@ -558,99 +550,28 @@ fn test_csd013_ac_10_3_equal_expenses_keep_the_order_they_were_added() {
     let mut expenses = Expenses::default();
     let first = add(&mut expenses, "Example Bike", "1.00", "10/09/2026", "Other").id;
     let second = add(&mut expenses, "Example Bike", "2.00", "10/09/2026", "Other").id;
-    let list = expenses.list(None, None).unwrap();
+    let list = expenses.list();
     assert_eq!(list.expenses[0].id, first);
     assert_eq!(list.expenses[1].id, second);
 }
 
-// REQ-11: filter by year and month
+// REQ-11: the list and its total
 
 #[test]
-fn test_csd013_ac_11_2_filter_by_month() {
-    let mut expenses = Expenses::default();
-    add(
-        &mut expenses,
-        "Example Bike",
-        "900.00",
-        "10/09/2026",
-        "Hobby",
-    );
-    add(
-        &mut expenses,
-        "Example Helmet",
-        "80.00",
-        "12/09/2026",
-        "Sport",
-    );
-    add(
-        &mut expenses,
-        "Example Sofa",
-        "1200.00",
-        "03/10/2026",
-        "Home",
-    );
-    let list = expenses.list(Some(2026), Some(9)).unwrap();
-    assert_eq!(names(&list), ["Example Helmet", "Example Bike"]);
-    assert_eq!(list.total, dec("980.00"));
-}
-
-#[test]
-fn test_csd013_ac_11_3_all_years_and_a_month_without_a_year_is_ignored() {
+fn test_csd013_ac_11_1_the_total_is_the_sum_of_all_expenses() {
     let mut expenses = Expenses::default();
     add(&mut expenses, "A", "900.00", "10/09/2025", "Hobby");
     add(&mut expenses, "B", "1200.00", "03/10/2026", "Home");
-    assert_eq!(expenses.list(None, None).unwrap().total, dec("2100.00"));
-    assert_eq!(expenses.list(None, Some(9)).unwrap().total, dec("2100.00"));
-    assert_eq!(
-        expenses.list(Some(2025), None).unwrap().total,
-        dec("900.00")
-    );
+    let list = expenses.list();
+    assert_eq!(list.expenses.len(), 2);
+    assert_eq!(list.total, dec("2100.00"));
 }
 
 #[test]
-fn test_csd013_ac_11_4_only_years_with_expenses_are_offered() {
-    let mut expenses = Expenses::default();
-    add(&mut expenses, "A", "1.00", "15/09/2024", "Other");
-    add(&mut expenses, "B", "1.00", "10/03/2026", "Other");
-    assert_eq!(expenses.list(Some(2026), None).unwrap().years, [2026, 2024]);
-}
-
-#[test]
-fn test_csd013_ac_11_5_a_month_without_expenses_is_empty_with_a_zero_total() {
-    let mut expenses = Expenses::default();
-    add(&mut expenses, "A", "1.00", "10/09/2026", "Other");
-    let list = expenses.list(Some(2026), Some(10)).unwrap();
+fn test_csd013_ac_11_2_no_expenses() {
+    let list = Expenses::default().list();
     assert_eq!(list.expenses.len(), 0);
     assert_eq!(list.total.to_string(), "0.00");
-}
-
-#[test]
-fn test_csd013_ac_11_6_the_month_is_the_month_of_the_date() {
-    let mut expenses = Expenses::default();
-    add(&mut expenses, "End", "1.00", "31/10/2025", "Other");
-    add(&mut expenses, "Start", "1.00", "01/11/2025", "Other");
-    assert_eq!(
-        names(&expenses.list(Some(2025), Some(10)).unwrap()),
-        ["End"]
-    );
-}
-
-#[test]
-fn test_csd013_ac_11_9_no_expenses() {
-    let list = Expenses::default().list(None, None).unwrap();
-    assert!(list.expenses.is_empty() && list.years.is_empty());
-    assert_eq!(list.total.to_string(), "0.00");
-}
-
-#[test]
-fn test_csd013_ac_11_a_month_outside_1_to_12_is_rejected() {
-    let expenses = Expenses::default();
-    for month in [0, 13] {
-        assert_eq!(
-            expenses.list(Some(2026), Some(month)).unwrap_err().code(),
-            "EXPENSE_DATE_INVALID"
-        );
-    }
 }
 
 // REQ-12: yearly totals
@@ -792,7 +713,7 @@ fn test_csd013_ac_16_5_the_order_they_were_added_survives() {
     let first = add(&mut expenses, "Example Bike", "1.00", "10/09/2026", "Other").id;
     add(&mut expenses, "Example Bike", "2.00", "10/09/2026", "Other");
     let back: Expenses = serde_json::from_str(&serde_json::to_string(&expenses).unwrap()).unwrap();
-    assert_eq!(back.list(None, None).unwrap().expenses[0].id, first);
+    assert_eq!(back.list().expenses[0].id, first);
 }
 
 // CSD-014: insights

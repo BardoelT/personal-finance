@@ -12,16 +12,11 @@ use crate::domain::{
 };
 use crate::error::AppError;
 
-/// The expenses of a year and month, newest first, with their total and the
-/// years that can be chosen (CSD-013 REQ-10, REQ-11).
+/// All expenses, newest first, with their total (CSD-013 REQ-10, REQ-11).
 #[tauri::command]
-pub fn list_expenses(
-    state: State<'_, AppState>,
-    year: Option<i32>,
-    month: Option<u8>,
-) -> Result<ExpenseList, AppError> {
+pub fn list_expenses(state: State<'_, AppState>) -> Result<ExpenseList, AppError> {
     let project = state.project()?;
-    Ok(project.expenses().list(year, month)?)
+    Ok(project.expenses().list())
 }
 
 #[tauri::command]

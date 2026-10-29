@@ -1609,7 +1609,7 @@ mod expenses_tests {
         let mut fresh = Project::new();
         fresh.open(&path).unwrap();
         assert_eq!(fresh.expenses(), project.expenses());
-        let list = fresh.expenses().list(None, None).unwrap();
+        let list = fresh.expenses().list();
         assert_eq!(list.expenses[0].note.as_str(), "Line one\nLine two");
         assert!(!fresh.status().unsaved_changes);
 
