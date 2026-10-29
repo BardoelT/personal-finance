@@ -10,7 +10,8 @@ use tauri::{Emitter, Manager, RunEvent, Runtime, WindowEvent};
 use time::UtcOffset;
 
 use commands::{
-    bank_accounts, dashboard, debts, income, investments, preferences, project, settings, AppState,
+    bank_accounts, dashboard, debts, expenses, income, investments, preferences, project, settings,
+    AppState,
 };
 
 /// Event the frontend listens for to ask "quit with unsaved changes?".
@@ -84,6 +85,13 @@ fn configure<R: Runtime>(builder: tauri::Builder<R>, utc_offset: UtcOffset) -> t
             debts::copy_previous_debt_statement,
             debts::yearly_debt_totals,
             debts::get_debt_insights,
+            expenses::list_expenses,
+            expenses::add_expense,
+            expenses::update_expense,
+            expenses::delete_expense,
+            expenses::copy_previous_expense,
+            expenses::yearly_expense_totals,
+            expenses::get_expense_insights,
             dashboard::get_dashboard,
             settings::get_settings,
             settings::set_currency,
