@@ -96,7 +96,7 @@ Behaviour is defined in Capability Specification Documents in [`docs/csd/`](docs
 
 | CSD | Capability |
 |---|---|
-| [CSD-001](docs/csd/CSD-001-employment-income.md) | Employment income tracking |
+| [CSD-001](docs/csd/CSD-001-employment-income.md) | Income tracking (employment income) |
 | [CSD-002](docs/csd/CSD-002-project-file.md) | Project file (save, open, new, reopen last project) |
 | [CSD-003](docs/csd/CSD-003-project-settings.md) | Project settings (currency) |
 | [CSD-004](docs/csd/CSD-004-income-dashboard.md) | Income dashboard |
