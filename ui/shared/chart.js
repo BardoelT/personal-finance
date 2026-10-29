@@ -39,20 +39,48 @@ const BAR_RADIUS = 3;
 /**
  * A bar segment from `yTop` down to `yBottom`, inset by half the 1 px gap so
  * stacked segments are separated by a gap and not by an outline. The topmost
- * segment of a bar has rounded top corners (CSD-006 REQ-16, CSD-007 REQ-18).
+ * segment of a bar has rounded top corners (CSD-006 REQ-16, CSD-007 REQ-18);
+ * `rounded` is `true` or 'top' for that, and 'bottom' for the lowest segment
+ * that hangs below the zero line (CSD-010 REQ-13).
  */
 export function segmentShape(attrs, x, width, yTop, yBottom, { rounded = false } = {}) {
   const y = yTop + BAR_GAP / 2;
   const height = Math.max(yBottom - yTop - BAR_GAP, 0.5);
   if (!rounded) return svg('rect', { ...attrs, x, y, width, height });
   const r = Math.min(BAR_RADIUS, width / 2, height);
-  const d = `M${x},${y + height} V${y + r} Q${x},${y} ${x + r},${y} H${x + width - r} Q${x + width},${y} ${x + width},${y + r} V${y + height} Z`;
+  const bottom = y + height;
+  const d =
+    rounded === 'bottom'
+      ? `M${x},${y} H${x + width} V${bottom - r} Q${x + width},${bottom} ${x + width - r},${bottom} H${x + r} Q${x},${bottom} ${x},${bottom - r} Z`
+      : `M${x},${bottom} V${y + r} Q${x},${y} ${x + r},${y} H${x + width - r} Q${x + width},${y} ${x + width},${y + r} V${bottom} Z`;
   return svg('path', { ...attrs, d });
 }
 
 /** A legend swatch for the series `key`, or a spacer that keeps rows without one aligned. */
 export const swatch = (key) => h('span', { class: `swatch ${key}` });
 export const noSwatch = () => h('span', { class: 'swatch-spacer' });
+
+/**
+ * A tooltip row, as the `dt` and `dd` that go in the tooltip's list. `legend` ties it to the legend
+ * item of the same key, so it is highlighted with it; `null` for a row that has no legend item.
+ */
+export function tooltipRow(legend, swatchNode, label, value, cssClass = '') {
+  return [
+    h('dt', { 'data-legend': legend }, swatchNode, legendLabel(label)),
+    h('dd', { 'data-legend': legend, class: cssClass }, value),
+  ];
+}
+
+/**
+ * The segments in the order their bars show them from top to bottom: the ones that rise
+ * from the zero line, highest first, then the ones that hang below it, nearest first.
+ * A tooltip lists its rows in this order, so it reads like the bar.
+ */
+export function topToBottom(segments, valueOf) {
+  const rising = segments.filter((segment) => Number(valueOf(segment)) >= 0).reverse();
+  const hanging = segments.filter((segment) => Number(valueOf(segment)) < 0);
+  return [...rising, ...hanging];
+}
 
 /** A legend label whose heavier weight takes no extra width, so highlighting never moves its neighbours. */
 export const legendLabel = (text) => h('span', { class: 'legend-label', 'data-text': text }, text);
@@ -130,6 +158,21 @@ export function setHighlight(key, scopes) {
     }
   }
 }
+
+/**
+ * A legend item for the series `key`. Hovering or focusing it highlights that series in every
+ * year, in the panel legend and in the chart (`scopes()` gives the elements to search).
+ */
+export function legendItem(key, swatchNode, labelNode, scopes) {
+  const item = h('li', { 'data-legend': key, tabindex: '0' }, swatchNode, labelNode);
+  for (const on of ['mouseenter', 'focus']) item.addEventListener(on, () => setHighlight(key, scopes()));
+  for (const off of ['mouseleave', 'blur']) item.addEventListener(off, () => setHighlight(null, scopes()));
+  return item;
+}
+
+/** A legend label for a name that may be long: it is cut with an ellipsis, the full name stays in the text. */
+export const nameLabel = (name) =>
+  h('span', { class: 'legend-label legend-name', 'data-text': name }, h('span', { class: 'legend-name-text' }, name));
 
 /** Highlights the legend item of the segment under the mouse; nothing elsewhere or on leaving. */
 export function bindHighlight(group, scopes) {

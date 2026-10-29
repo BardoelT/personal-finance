@@ -1,26 +1,27 @@
 // Income insights: the yearly stacked chart on the Income page (CSD-006). Its
-// frame (axis, bars, tooltip, loading) is shared with the investments chart in
+// frame (axis, bars, tooltip, loading) is shared with the other charts in
 // shared/yearly-chart.js; this file supplies what is specific to income.
 import { h } from '../shared/dom.js';
 import { formatAmount } from '../shared/format.js';
-import { svg, swatch, noSwatch, legendLabel } from '../shared/chart.js';
+import { svg, swatch, noSwatch, legendLabel, legendItem, tooltipRow } from '../shared/chart.js';
 import { createYearlyChart, percentLabel, isNegative, yearLabel } from '../shared/yearly-chart.js';
 import { initTabs } from '../shared/tabs.js';
 
+/** The stacked series, bottom to top: the Rust field, the legend key and the label. */
 const SEGMENTS = [
-  ['gross_salary', 'bar-salary', 'Gross salary'],
-  ['holiday_pay', 'bar-holiday', 'Holiday pay'],
-  ['bonus', 'bar-bonus', 'Bonus'],
+  ['gross_salary', 'salary', 'Gross salary'],
+  ['holiday_pay', 'holiday', 'Holiday pay'],
+  ['bonus', 'bonus', 'Bonus'],
 ];
 
 /** The stacked pieces of a year, bottom to top. */
 function piecesOf(row) {
   let level = 0;
   const pieces = [];
-  for (const [field, cssClass] of SEGMENTS) {
+  for (const [field, key] of SEGMENTS) {
     const value = Number(row[field]);
     if (value <= 0) continue;
-    pieces.push({ key: cssClass.replace('bar-', ''), cssClass, low: level, high: level + value });
+    pieces.push({ key, cssClass: `bar-${key}`, low: level, high: level + value });
     level += value;
   }
   return pieces;
@@ -34,31 +35,33 @@ function describe(row) {
   );
 }
 
+/** The rows read like the bar: the top piece first. */
 function tooltipContent(row) {
   const negative = row.growth_percent !== null && isNegative(row.growth_percent);
-  const line = (key, label, value, cssClass = '') => [
-    h('dt', { 'data-legend': key }, key ? swatch(key) : noSwatch(), legendLabel(label)),
-    h('dd', { 'data-legend': key, class: cssClass }, value),
-  ];
   return [
     h('div', { class: 'tip-title' }, yearLabel(row)),
     h(
       'dl',
       {},
-      ...SEGMENTS.flatMap(([field, cssClass, label]) => line(cssClass.replace('bar-', ''), label, formatAmount(row[field]))),
-      ...line(null, 'Total gross', formatAmount(row.total_gross)),
-      ...line(null, 'Growth', percentLabel(row.growth_percent), negative ? 'negative' : ''),
+      ...[...SEGMENTS].reverse().flatMap(([field, key, label]) => tooltipRow(key, swatch(key), label, formatAmount(row[field]))),
+      ...tooltipRow(null, noSwatch(), 'Total gross', formatAmount(row.total_gross)),
+      ...tooltipRow(null, noSwatch(), 'Growth', percentLabel(row.growth_percent), negative ? 'negative' : ''),
     ),
   ];
+}
+
+/** The legend: one item per stacked series; hovering one highlights it in every year. */
+function buildLegend() {
+  const legendList = document.getElementById('income-insights-legend');
+  const scopes = () => [legendList, document.getElementById('income-insights-chart')];
+  legendList.replaceChildren(...SEGMENTS.map(([, key, label]) => legendItem(key, swatch(key), legendLabel(label), scopes)));
 }
 
 const chart = createYearlyChart({
   id: 'income-insights',
   command: 'get_income_insights',
   ariaLabel: 'Income per year',
-  plotHeight: 240,
-  minSlotWidth: 56,
-  zeroLine: false,
+  onLoaded: buildLegend,
   piecesOf,
   describe,
   tooltipContent,

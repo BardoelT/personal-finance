@@ -3,8 +3,8 @@ id: CSD-001
 title: Employment income tracking
 status: approved
 owner: Thijs Bardoel
-version: 0.12
-last_updated: 28/10/2026
+version: 0.13
+last_updated: 29/10/2026
 related: [CSD-000, CSD-002, CSD-003, CSD-006]
 ---
 
@@ -141,15 +141,22 @@ Scenario: End date before start date is rejected on edit
 **REQ-3: (removed in v0.8)** Jobs no longer have a currency, so there is nothing to lock. The project has one currency (CSD-003). AC-3.1 and AC-3.2 are removed.
 
 **REQ-4: Delete a job** *(event-driven)*
-When the user confirms deletion of a job, the app shall remove the job and all of its entries.
+When the user confirms deletion of a job, the app shall remove the job and all of its entries. The confirmation says "This job and all its paychecks and statements will be deleted." and states no number, also when the job has no entries.
 
 ```gherkin
 @AC-4.1
 Scenario: Deletion cascades
   Given a job "Example Employer" with 3 entries
   When the user deletes the job and confirms
-  Then the job no longer exists
+  Then the confirmation says "This job and all its paychecks and statements will be deleted."
+  And after confirming, the job no longer exists
   And none of its 3 entries exist
+
+@AC-4.3
+Scenario: The confirmation is the same without entries
+  Given a job "Example Employer" with no entries
+  When the user starts deleting the job
+  Then the confirmation says "This job and all its paychecks and statements will be deleted."
 
 @AC-4.2
 Scenario: Cancelled deletion changes nothing
@@ -587,15 +594,16 @@ Scenario: Switching job switches the form
 ### 4.3 Views
 
 **REQ-11: Yearly totals** *(event-driven)*
-When the user views the employment overview, the app shall show, for each calendar year with at least one entry of any job, the sums over all jobs of gross salary, holiday pay, bonus and total gross and the number of entries, without extrapolating partial years. An annual statement counts in its own year only.
+When the user views the employment overview, the app shall show, for each calendar year with at least one entry of any job, the sums over all jobs of gross salary, holiday pay, bonus and total gross, without extrapolating partial years. An annual statement counts in its own year only.
 
 ```gherkin
 @AC-11.1
 Scenario: Totals per calendar year
   Given a job with paychecks 2025-11 (gross 3000.00), 2025-12 (gross 3000.00, bonus 1000.00) and 2026-05 (gross 3000.00, holiday pay 2400.00)
   When the user views the yearly totals
-  Then 2026 shows gross 3000.00, holiday pay 2400.00, bonus 0.00, total 5400.00, count 1
-  And 2025 shows gross 6000.00, holiday pay 0.00, bonus 1000.00, total 7000.00, count 2
+  Then the totals table has the columns Year, Gross salary, Holiday pay, Bonus and Total gross, and no count of entries
+  And 2026 shows gross 3000.00, holiday pay 2400.00, bonus 0.00, total 5400.00
+  And 2025 shows gross 6000.00, holiday pay 0.00, bonus 1000.00, total 7000.00
 
 @AC-11.2
 Scenario: No paychecks
@@ -609,7 +617,7 @@ Scenario: Totals add up all jobs
   Given job "Example Employer" with paychecks 2026-08 (gross 3000.00) and 2026-09 (gross 3000.00, bonus 500.00)
   And job "Older Example Employer" with paycheck 2026-09 (gross 1000.00)
   When the user views the yearly totals
-  Then there is one row for 2026 with gross 7000.00, holiday pay 0.00, bonus 500.00, total 7500.00, count 3
+  Then there is one row for 2026 with gross 7000.00, holiday pay 0.00, bonus 500.00, total 7500.00
 
 
 @AC-11.5
@@ -617,7 +625,7 @@ Scenario: Annual statements count in their year
   Given a yearly job with an annual statement for 2025 (gross 40000.00, bonus 3000.00)
   And a monthly job with a paycheck 2025-12 (gross 3000.00)
   When the user views the yearly totals
-  Then 2025 shows gross 43000.00, holiday pay 0.00, bonus 3000.00, total 46000.00, count 2
+  Then 2025 shows gross 43000.00, holiday pay 0.00, bonus 3000.00, total 46000.00
 
 @AC-11.6
 Scenario: A statement does not count in other years
@@ -709,20 +717,22 @@ Scenario: Month stays YYYY-MM
 ```
 
 **REQ-23: Employment view layout** *(ubiquitous)*
-The app shall show the employment view as the sections Jobs, Yearly totals and Paychecks and statements in that order, with the button "Add job" in the header of the Jobs section, the pay period and the icon buttons Edit (pencil) and Delete (trash) on each job in the Jobs section (the buttons flush right), the icon buttons Edit (pencil) and Delete (trash) flush right on each entry, a Period column and a Job column in the entries, and no job selection that changes what the sections show.
+The app shall show the employment view as the sections Jobs, Yearly totals and Paychecks and statements in that order, with the button "Add job" in the header of the Jobs section, the pay period and the icon buttons Edit (pencil) and Delete (trash) on each job in the Jobs section (the buttons flush right), the icon buttons Edit (pencil) and Delete (trash) flush right on each entry, a Period column and a Job column in the entries, and no job selection that changes what the sections show. The page is titled "Income". No count of entries is shown anywhere in the view: not in the job rows, not in the yearly totals and not in confirmations.
 
 ```gherkin
 @AC-23.1
 Scenario: Sections in order
   Given a job with an entry
-  Then the sections appear in the order Jobs, Yearly totals, Paychecks and statements
+  Then the page is titled "Income"
+  And the sections appear in the order Jobs, Yearly totals, Paychecks and statements
   And there is no section that only describes one selected job
 
 @AC-23.2
-Scenario: Job rows carry their pay period, actions and entry count
+Scenario: Job rows carry their pay period and actions
   Given monthly job "Example Employer" with 2 paychecks and yearly job "Older Example Employer" with 1 annual statement
-  Then the row of "Example Employer" shows the employer, dates, "Monthly" and "2 paychecks"
-  And the row of "Older Example Employer" shows the employer, dates, "Yearly" and "1 statement"
+  Then the row of "Example Employer" shows the employer, dates and "Monthly"
+  And the row of "Older Example Employer" shows the employer, dates and "Yearly"
+  And no row shows a number of paychecks or statements
   And each row has the icon buttons Edit (pencil) and Delete (trash) at its right edge, each named for screen readers and in a tooltip, such as "Edit Example Employer"
 
 @AC-23.5
@@ -788,7 +798,7 @@ erDiagram
 The project file keeps annual statements in their own list `statements` next to `paychecks`. A job without a pay period is Monthly: `format_version` stays 1 and nothing is migrated, as the app is not released yet. Years are `YYYY` everywhere. Statements follow the same amount rules as paychecks and use the same amount error codes.
 
 Commands (all inputs validated in Rust; amounts cross IPC as decimal strings):
-`list_jobs`, `create_job`, `update_job`, `delete_job`, `list_entries()` (paychecks and annual statements of all jobs, each with its employer and period; replaces `list_paychecks()`), `add_paycheck`, `add_statement`, `update_paycheck` and `update_statement` (the month or year that identifies the entry stays an argument, and a new month or year is an extra argument, equal to it when the period does not change; the edit is applied as a whole or not at all, REQ-30), `delete_paycheck`, `delete_statement`, `copy_previous_entry(job_id)` (replaces `copy_previous_paycheck`), `yearly_totals()` (over all jobs). Project commands (save, open, new) are in CSD-002. The income data is stored as one section of the project file defined there.
+`list_jobs`, `create_job`, `update_job`, `delete_job`, `list_entries()` (paychecks and annual statements of all jobs, each with its employer and period; replaces `list_paychecks()`), `add_paycheck`, `add_statement`, `update_paycheck` and `update_statement` (the month or year that identifies the entry stays an argument, and a new month or year is an extra argument, equal to it when the period does not change; the edit is applied as a whole or not at all, REQ-30), `delete_paycheck`, `delete_statement`, `copy_previous_entry(job_id)` (replaces `copy_previous_paycheck`), `yearly_totals()` (over all jobs). `yearly_totals()` still returns an entry count per year over IPC, and the Rust side uses entry counts internally (for example to lock the pay period, REQ-24); the frontend does not display any count. Project commands (save, open, new) are in CSD-002. The income data is stored as one section of the project file defined there.
 
 Error codes (returned as code plus safe message): `JOB_EMPLOYER_REQUIRED`, `JOB_START_REQUIRED`, `JOB_END_BEFORE_START`, `PAYCHECK_MONTH_IN_FUTURE`, `PAYCHECK_DUPLICATE_MONTH`, `PAYCHECK_GROSS_INVALID`, `PAYCHECK_AMOUNT_NEGATIVE`, `PAYCHECK_AMOUNT_PRECISION`, `PAYCHECK_AMOUNT_TOO_LARGE`, `JOB_DATE_INVALID`, `JOB_PERIOD_UNSUPPORTED`, `JOB_PERIOD_LOCKED`, `JOB_PERIOD_MISMATCH`, `STATEMENT_DUPLICATE_YEAR`, `STATEMENT_YEAR_IN_FUTURE`, `STATEMENT_YEAR_INVALID`. Project error codes are in CSD-002.
 
@@ -809,7 +819,7 @@ All ACs are proven by `cargo test`, with domain logic tested in `domain/`. Tests
 | Requirement | Command |
 |---|---|
 | All of REQ-1 to REQ-13, REQ-24 to REQ-27, REQ-29 (except AC-29.6) and REQ-30, and AC-22.2 and AC-22.3 | `cargo test test_csd001_` |
-| AC-1.7, AC-5.6, AC-22.1, AC-29.6, REQ-28, REQ-23 (AC-23.1, AC-23.2, AC-23.4) and the display parts of AC-9.3 to AC-9.5, AC-11.2, AC-13.2 | Manual checklist: section order and contents, job buttons and paycheck counts, no selection, dd/mm/yyyy dates, default job in the add form, the month or year field in the edit form. There is no frontend test setup |
+| AC-1.7, AC-5.6, AC-22.1, AC-29.6, REQ-28, REQ-23 (AC-23.1, AC-23.2, AC-23.4), the display parts of AC-9.3 to AC-9.5, AC-11.1, AC-11.2, AC-13.2 and the confirmation text of AC-4.1 and AC-4.3 | Manual checklist: section order and contents, page title "Income", job buttons and no counts, columns of the yearly totals, delete confirmation text, no selection, dd/mm/yyyy dates, default job in the add form, the month or year field in the edit form. There is no frontend test setup |
 | AC-23.3 (data) | `cargo test test_csd001_ac_23_` covers the data of the entries table (all jobs, their employer and period) |
 | One requirement, e.g. REQ-5 | `cargo test test_csd001_ac_5_` |
 
@@ -826,6 +836,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 - OQ-8: (resolved in v0.8) The project is single-currency: per-job currency, `JOB_CURRENCY_*`, the Currency column and the CON-1 exception are removed (CSD-003).
 
 ## 9. Changelog
+- 0.13 (29/10/2026): The page is titled "Income" (REQ-23, AC-23.1). Entry counts are no longer shown: removed from the yearly totals (REQ-11, AC-11.1, AC-11.3, AC-11.5), from the job rows (AC-23.2) and from the job delete confirmation, which now has fixed text (REQ-4, AC-4.1, new AC-4.3). The count stays in the IPC payload but is not displayed.
 - 0.12 (28/10/2026): The month of a paycheck and the year of an annual statement can be changed when editing (GitHub issue 12). REQ-8 no longer forbids it, AC-8.4 and AC-8.6 are removed, new REQ-29 (AC-29.1 to AC-29.7) and REQ-30 (AC-30.1 to AC-30.6) reuse the add rules and error codes, NG-9 and NG-10 added, OQ-6 reversed, the commands `update_paycheck` and `update_statement` take a new month or year. Back to `draft` until the owner approves.
 - 0.11 (26/10/2026): NG-6 no longer excludes the yearly insights chart of CSD-006. No other change to income behaviour.
 - 0.10 (26/10/2026): Consistent action layout. REQ-23: "Add job" moves to the Jobs section header, the job actions become the icon buttons Edit (pencil) and Delete (trash), and all row actions are flush right (AC-23.2 amended, AC-23.5 and AC-23.6 added).

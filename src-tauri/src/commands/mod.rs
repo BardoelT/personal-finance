@@ -1,6 +1,10 @@
 //! `#[tauri::command]` handlers: validate input, call the domain, map errors.
 
+pub mod assets;
+pub mod bank_accounts;
 pub mod dashboard;
+pub mod debts;
+pub mod expenses;
 pub mod income;
 pub mod investments;
 pub mod preferences;
@@ -9,7 +13,7 @@ pub mod settings;
 
 use std::sync::{Mutex, MutexGuard};
 
-use time::{OffsetDateTime, UtcOffset};
+use time::{Date, OffsetDateTime, UtcOffset};
 
 use crate::domain::YearMonth;
 use crate::error::AppError;
@@ -44,7 +48,12 @@ impl AppState {
     /// The current calendar month in local time (CSD-001 REQ-5).
     #[must_use]
     pub fn today(&self) -> YearMonth {
-        let now = OffsetDateTime::now_utc().to_offset(self.utc_offset);
-        YearMonth::from_date(now.date())
+        YearMonth::from_date(self.today_date())
+    }
+
+    /// The current calendar date in local time (CSD-013 CON-11).
+    #[must_use]
+    pub fn today_date(&self) -> Date {
+        OffsetDateTime::now_utc().to_offset(self.utc_offset).date()
     }
 }

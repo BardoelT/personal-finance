@@ -1,7 +1,8 @@
 use thiserror::Error;
 
-/// Validation and lookup failures of the income (CSD-001) and investments
-/// (CSD-005) domains.
+/// Validation and lookup failures of the income (CSD-001), investments
+/// (CSD-005), bank accounts (CSD-009), debts (CSD-011) and expenses
+/// (CSD-013) domains.
 ///
 /// Messages are safe to show to the user: they never contain user data.
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
@@ -104,11 +105,139 @@ pub enum DomainError {
     InvestmentGrowthTooLarge,
     #[error("The investment data is not consistent.")]
     InvestmentDataInvalid,
+    #[error("Enter an account name.")]
+    BankAccountNameRequired,
+    #[error("The account name can be at most 100 characters.")]
+    BankAccountNameTooLong,
+    #[error("A bank account with this name already exists.")]
+    BankAccountNameDuplicate,
+    #[error("This bank account does not exist.")]
+    BankAccountNotFound,
+    #[error("Choose Monthly or Yearly.")]
+    BankAccountPeriodUnsupported,
+    #[error("The entry period cannot change once the account has entries.")]
+    BankAccountPeriodLocked,
+    #[error("A monthly account has monthly entries and a yearly account has yearly entries.")]
+    BankEntryPeriodMismatch,
+    #[error("An entry cannot be for a period that has not started yet.")]
+    BankEntryInFuture,
+    #[error("Enter the month as YYYY-MM or the year as YYYY.")]
+    BankEntryPeriodInvalid,
+    #[error("This account already has an entry for that period.")]
+    BankEntryDuplicate,
+    #[error("There is no entry for that period.")]
+    BankEntryNotFound,
+    #[error("Enter the balance as a number such as 2500.00 or -150.25.")]
+    BankEntryBalanceInvalid,
+    #[error("The balance can have at most 2 decimal places.")]
+    BankEntryBalancePrecision,
+    #[error("The balance can be at most 1000000000.00, or -1000000000.00.")]
+    BankEntryBalanceTooLarge,
+    #[error("A note can be at most 2000 characters.")]
+    BankEntryNoteTooLong,
+    #[error("The bank account data is not consistent.")]
+    BankDataInvalid,
+    #[error("Enter a debt name.")]
+    DebtNameRequired,
+    #[error("The debt name can be at most 100 characters.")]
+    DebtNameTooLong,
+    #[error("A debt with this name already exists.")]
+    DebtNameDuplicate,
+    #[error("This debt does not exist.")]
+    DebtNotFound,
+    #[error("Choose Monthly or Yearly.")]
+    DebtPeriodUnsupported,
+    #[error("The statement period cannot change once the debt has statements.")]
+    DebtPeriodLocked,
+    #[error("A monthly debt has monthly statements and a yearly debt has yearly statements.")]
+    DebtPeriodMismatch,
+    #[error("A statement cannot be for a period that has not started yet.")]
+    DebtStatementInFuture,
+    #[error("Enter the month as YYYY-MM or the year as YYYY.")]
+    DebtStatementPeriodInvalid,
+    #[error("This debt already has a statement for that period.")]
+    DebtStatementDuplicate,
+    #[error("There is no statement for that period.")]
+    DebtStatementNotFound,
+    #[error("Enter the balance as a number such as 150000.00.")]
+    DebtStatementBalanceInvalid,
+    #[error("The balance cannot be negative.")]
+    DebtStatementBalanceNegative,
+    #[error("The balance can have at most 2 decimal places.")]
+    DebtStatementBalancePrecision,
+    #[error("The balance can be at most 1000000000.00.")]
+    DebtStatementBalanceTooLarge,
+    #[error("A note can be at most 2000 characters.")]
+    DebtStatementNoteTooLong,
+    #[error("The debt data is not consistent.")]
+    DebtDataInvalid,
+    #[error("Enter an asset name.")]
+    AssetNameRequired,
+    #[error("The asset name can be at most 100 characters.")]
+    AssetNameTooLong,
+    #[error("An asset with this name already exists.")]
+    AssetNameDuplicate,
+    #[error("This asset does not exist.")]
+    AssetNotFound,
+    #[error("Choose Monthly or Yearly.")]
+    AssetPeriodUnsupported,
+    #[error("The valuation period cannot change once the asset has valuations.")]
+    AssetPeriodLocked,
+    #[error("A monthly asset has monthly valuations and a yearly asset has yearly valuations.")]
+    AssetPeriodMismatch,
+    #[error("A valuation cannot be for a period that has not started yet.")]
+    AssetValuationInFuture,
+    #[error("Enter the month as YYYY-MM or the year as YYYY.")]
+    AssetValuationPeriodInvalid,
+    #[error("This asset already has a valuation for that period.")]
+    AssetValuationDuplicate,
+    #[error("There is no valuation for that period.")]
+    AssetValuationNotFound,
+    #[error("Enter the value as a number such as 300000.00.")]
+    AssetValuationValueInvalid,
+    #[error("The value cannot be negative.")]
+    AssetValuationValueNegative,
+    #[error("The value can have at most 2 decimal places.")]
+    AssetValuationValuePrecision,
+    #[error("The value can be at most 1000000000.00.")]
+    AssetValuationValueTooLarge,
+    #[error("A note can be at most 2000 characters.")]
+    AssetValuationNoteTooLong,
+    #[error("The asset data is not consistent.")]
+    AssetDataInvalid,
+    #[error("Enter a name for the expense.")]
+    ExpenseNameRequired,
+    #[error("The expense name can be at most 100 characters.")]
+    ExpenseNameTooLong,
+    #[error("Choose Home, Vehicle, Holiday, Sport, Study, Appliances, Hobby or Other.")]
+    ExpenseCategoryUnsupported,
+    #[error("Enter the date as dd/mm/yyyy, from 01/01/1900.")]
+    ExpenseDateInvalid,
+    #[error("An expense cannot be dated in the future.")]
+    ExpenseDateInFuture,
+    #[error("Enter the amount as a number such as 4500.00.")]
+    ExpenseAmountInvalid,
+    #[error("The amount must be greater than 0.00.")]
+    ExpenseAmountNotPositive,
+    #[error("The amount can have at most 2 decimal places.")]
+    ExpenseAmountPrecision,
+    #[error("The amount can be at most 1000000000.00.")]
+    ExpenseAmountTooLarge,
+    #[error("A note can be at most 2000 characters.")]
+    ExpenseNoteTooLong,
+    #[error("This expense does not exist.")]
+    ExpenseNotFound,
+    #[error("The expense data is not consistent.")]
+    ExpenseDataInvalid,
 }
 
 impl DomainError {
     /// Stable machine-readable code for the frontend.
     #[must_use]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "one flat match from error to code, one arm per error"
+    )]
     pub fn code(&self) -> &'static str {
         match self {
             Self::JobEmployerRequired => "JOB_EMPLOYER_REQUIRED",
@@ -159,6 +288,68 @@ impl DomainError {
             Self::InvestmentGrowthPrecision => "INVESTMENT_GROWTH_PRECISION",
             Self::InvestmentGrowthTooLarge => "INVESTMENT_GROWTH_TOO_LARGE",
             Self::InvestmentDataInvalid => "INVESTMENT_DATA_INVALID",
+            Self::BankAccountNameRequired => "BANK_ACCOUNT_NAME_REQUIRED",
+            Self::BankAccountNameTooLong => "BANK_ACCOUNT_NAME_TOO_LONG",
+            Self::BankAccountNameDuplicate => "BANK_ACCOUNT_NAME_DUPLICATE",
+            Self::BankAccountNotFound => "BANK_ACCOUNT_NOT_FOUND",
+            Self::BankAccountPeriodUnsupported => "BANK_ACCOUNT_PERIOD_UNSUPPORTED",
+            Self::BankAccountPeriodLocked => "BANK_ACCOUNT_PERIOD_LOCKED",
+            Self::BankEntryPeriodMismatch => "BANK_ENTRY_PERIOD_MISMATCH",
+            Self::BankEntryInFuture => "BANK_ENTRY_IN_FUTURE",
+            Self::BankEntryPeriodInvalid => "BANK_ENTRY_PERIOD_INVALID",
+            Self::BankEntryDuplicate => "BANK_ENTRY_DUPLICATE",
+            Self::BankEntryNotFound => "BANK_ENTRY_NOT_FOUND",
+            Self::BankEntryBalanceInvalid => "BANK_ENTRY_BALANCE_INVALID",
+            Self::BankEntryBalancePrecision => "BANK_ENTRY_BALANCE_PRECISION",
+            Self::BankEntryBalanceTooLarge => "BANK_ENTRY_BALANCE_TOO_LARGE",
+            Self::BankEntryNoteTooLong => "BANK_ENTRY_NOTE_TOO_LONG",
+            Self::BankDataInvalid => "BANK_DATA_INVALID",
+            Self::DebtNameRequired => "DEBT_NAME_REQUIRED",
+            Self::DebtNameTooLong => "DEBT_NAME_TOO_LONG",
+            Self::DebtNameDuplicate => "DEBT_NAME_DUPLICATE",
+            Self::DebtNotFound => "DEBT_NOT_FOUND",
+            Self::DebtPeriodUnsupported => "DEBT_PERIOD_UNSUPPORTED",
+            Self::DebtPeriodLocked => "DEBT_PERIOD_LOCKED",
+            Self::DebtPeriodMismatch => "DEBT_PERIOD_MISMATCH",
+            Self::DebtStatementInFuture => "DEBT_STATEMENT_IN_FUTURE",
+            Self::DebtStatementPeriodInvalid => "DEBT_STATEMENT_PERIOD_INVALID",
+            Self::DebtStatementDuplicate => "DEBT_STATEMENT_DUPLICATE",
+            Self::DebtStatementNotFound => "DEBT_STATEMENT_NOT_FOUND",
+            Self::DebtStatementBalanceInvalid => "DEBT_STATEMENT_BALANCE_INVALID",
+            Self::DebtStatementBalanceNegative => "DEBT_STATEMENT_BALANCE_NEGATIVE",
+            Self::DebtStatementBalancePrecision => "DEBT_STATEMENT_BALANCE_PRECISION",
+            Self::DebtStatementBalanceTooLarge => "DEBT_STATEMENT_BALANCE_TOO_LARGE",
+            Self::DebtStatementNoteTooLong => "DEBT_STATEMENT_NOTE_TOO_LONG",
+            Self::DebtDataInvalid => "DEBT_DATA_INVALID",
+            Self::AssetNameRequired => "ASSET_NAME_REQUIRED",
+            Self::AssetNameTooLong => "ASSET_NAME_TOO_LONG",
+            Self::AssetNameDuplicate => "ASSET_NAME_DUPLICATE",
+            Self::AssetNotFound => "ASSET_NOT_FOUND",
+            Self::AssetPeriodUnsupported => "ASSET_PERIOD_UNSUPPORTED",
+            Self::AssetPeriodLocked => "ASSET_PERIOD_LOCKED",
+            Self::AssetPeriodMismatch => "ASSET_PERIOD_MISMATCH",
+            Self::AssetValuationInFuture => "ASSET_VALUATION_IN_FUTURE",
+            Self::AssetValuationPeriodInvalid => "ASSET_VALUATION_PERIOD_INVALID",
+            Self::AssetValuationDuplicate => "ASSET_VALUATION_DUPLICATE",
+            Self::AssetValuationNotFound => "ASSET_VALUATION_NOT_FOUND",
+            Self::AssetValuationValueInvalid => "ASSET_VALUATION_VALUE_INVALID",
+            Self::AssetValuationValueNegative => "ASSET_VALUATION_VALUE_NEGATIVE",
+            Self::AssetValuationValuePrecision => "ASSET_VALUATION_VALUE_PRECISION",
+            Self::AssetValuationValueTooLarge => "ASSET_VALUATION_VALUE_TOO_LARGE",
+            Self::AssetValuationNoteTooLong => "ASSET_VALUATION_NOTE_TOO_LONG",
+            Self::AssetDataInvalid => "ASSET_DATA_INVALID",
+            Self::ExpenseNameRequired => "EXPENSE_NAME_REQUIRED",
+            Self::ExpenseNameTooLong => "EXPENSE_NAME_TOO_LONG",
+            Self::ExpenseCategoryUnsupported => "EXPENSE_CATEGORY_UNSUPPORTED",
+            Self::ExpenseDateInvalid => "EXPENSE_DATE_INVALID",
+            Self::ExpenseDateInFuture => "EXPENSE_DATE_IN_FUTURE",
+            Self::ExpenseAmountInvalid => "EXPENSE_AMOUNT_INVALID",
+            Self::ExpenseAmountNotPositive => "EXPENSE_AMOUNT_NOT_POSITIVE",
+            Self::ExpenseAmountPrecision => "EXPENSE_AMOUNT_PRECISION",
+            Self::ExpenseAmountTooLarge => "EXPENSE_AMOUNT_TOO_LARGE",
+            Self::ExpenseNoteTooLong => "EXPENSE_NOTE_TOO_LONG",
+            Self::ExpenseNotFound => "EXPENSE_NOT_FOUND",
+            Self::ExpenseDataInvalid => "EXPENSE_DATA_INVALID",
         }
     }
 }

@@ -3,8 +3,8 @@ id: CSD-005
 title: Investments
 status: approved
 owner: Thijs Bardoel
-version: 0.9
-last_updated: 28/10/2026
+version: 0.11
+last_updated: 29/10/2026
 related: [CSD-000, CSD-001, CSD-002, CSD-003, CSD-007]
 ---
 
@@ -20,7 +20,7 @@ The app tracks wealth but has no view of what the user has invested. This capabi
 - Change the period of an existing statement (REQ-28).
 - Capital growth per statement, derived from the balance, the previous statement and the net deposits, and shown in the Statements section.
 - A statement form that calculates the balance or the capital growth from the other, given the net deposits.
-- Yearly totals per calendar year over all accounts: closing balance, net deposits, capital growth and the number of statements, like the yearly totals of employment income (CSD-001 REQ-11).
+- Yearly totals per calendar year over all accounts: closing balance, net deposits and capital growth, like the yearly totals of employment income (CSD-001 REQ-11). Rust also returns the number of statements per year, but the app does not display it.
 - One Investments view with the accounts, their latest balances, the total of the latest balances and the statements of all accounts.
 - Investment data is part of the project file. Saving and loading is specified in CSD-002.
 
@@ -47,7 +47,7 @@ The app tracks wealth but has no view of what the user has invested. This capabi
 | **Balance** | The value of the account at the end of the period, as one amount in the project currency. |
 | **Net deposits** | The money the user put into the account minus the money taken out of it during the period, as one signed amount. A negative amount is a net withdrawal. 0.00 unless the user enters another amount. |
 | **Previous statement** | The statement of the same account with the latest period before that of the statement at hand, also when periods in between have none. When there is none, the account is taken to start at 0.00: the balance before its first statement is 0.00. |
-| **Yearly total** | One row per calendar year: the closing balance, the net deposits, the capital growth and the number of statements of that year, over all accounts. See REQ-26. |
+| **Yearly total** | One row per calendar year: the closing balance, the net deposits, and the capital growth of that year, over all accounts. Rust also returns the number of statements of that year, which is not displayed. See REQ-26. |
 | **Closing balance (of a year)** | The sum, over the accounts that have a statement in that year, of the balance of each account's latest statement in that year. |
 | **Capital growth** | The gain or loss of the account over the period: balance, minus the balance of the previous statement, minus the net deposits. A signed amount. It is derived and never stored. For the first statement of an account the balance of the previous statement is 0.00. |
 | **Note** | Optional plain text, up to 2,000 characters, that goes with one statement. |
@@ -183,7 +183,7 @@ Scenario: Period change allowed again after deleting the last statement
 ```
 
 **REQ-5: Delete an account** *(event-driven)*
-When the user confirms deletion of an investment account, the app shall remove the account and all of its statements.
+When the user confirms deletion of an investment account, the app shall remove the account and all of its statements. The confirmation reads "This account and all its statements will be deleted.", the same whether or not the account has statements, and states no number.
 
 ```gherkin
 @AC-5.1
@@ -198,6 +198,18 @@ Scenario: Cancelled deletion changes nothing
   Given an account "Example Brokerage" with 3 statements
   When the user starts deleting the account and cancels
   Then the account and its 3 statements still exist
+
+@AC-5.3
+Scenario Outline: The deletion confirmation states no count
+  Given an account "Example Brokerage" with <statements> statements
+  When the user starts deleting the account
+  Then the confirmation reads "This account and all its statements will be deleted."
+  And it shows no number
+
+  Examples:
+    | statements |
+    | 0          |
+    | 3          |
 ```
 
 ### 4.2 Statements
@@ -630,21 +642,22 @@ Scenario: Same period is ordered by account
 ```
 
 **REQ-17: Investments view layout** *(ubiquitous)*
-The app shall offer Investments as its own item in the left pane next to Employment, and shall show the view as the sections Accounts, Yearly totals and Statements in that order, with the statement period, the statement count, the latest balance with its period and the icon buttons Edit (pencil) and Delete (trash) (flush right) on each account row, the button "Add account" in the header of the Accounts section, the icon buttons Edit (pencil) and Delete (trash) flush right on each statement row, the total in a footer row of the Accounts section, the columns Year, Closing balance, Net deposits, Capital growth and Statements and no actions in the Yearly totals section, the columns Period, Account, Balance, Net deposits, Capital growth and Note in the Statements section, and no account selection that changes what the sections show. A note longer than one line is cut to one line in the table and shown in full when the statement is edited.
+The app shall offer Investments as its own item in the left pane (CSD-004 REQ-1), and shall show the view as the sections Accounts, Yearly totals and Statements in that order, with the statement period (and no statement count), the latest balance with its period and the icon buttons Edit (pencil) and Delete (trash) (flush right) on each account row, the button "Add account" in the header of the Accounts section, the icon buttons Edit (pencil) and Delete (trash) flush right on each statement row, the total in a footer row of the Accounts section, the columns Year, Closing balance, Net deposits, Capital growth and no actions in the Yearly totals section, the columns Period, Account, Balance, Net deposits, Capital growth and Note in the Statements section, and no account selection that changes what the sections show. A note longer than one line is cut to one line in the table and shown in full when the statement is edited. The app shall display no count of statements anywhere on the page: not in the yearly totals, on the account rows, in a confirmation, in a chart tooltip or in the screen-reader description of a chart.
 
 ```gherkin
 @AC-17.1
 Scenario: Sections in order
   Given an account with a statement
   Then the sections appear in the order Accounts, Yearly totals, Statements
-  And Investments is an item in the left pane next to Employment
+  And Investments is an item in the left pane (CSD-004 REQ-1)
 
 @AC-17.2
-Scenario: Account rows carry their period, count, latest balance and actions
+Scenario: Account rows carry their period, latest balance and actions
   Given monthly account "Example Brokerage" with 2 statements, the latest for 2026-09 with balance 12500.00
   And yearly account "Example Pension" with 1 statement for 2025 with balance 80000.00
-  Then the row of "Example Brokerage" shows "Monthly", "2 statements" and "12500.00" for 2026-09
-  And the row of "Example Pension" shows "Yearly", "1 statement" and "80000.00" for 2025
+  Then the row of "Example Brokerage" shows "Monthly" and "12500.00" for 2026-09
+  And the row of "Example Pension" shows "Yearly" and "80000.00" for 2025
+  And no row shows a number of statements
   And each row has the icon buttons Edit (pencil) and Delete (trash) at its right edge, each named for screen readers and in a tooltip, such as "Edit Example Employer"
   And the footer row shows the total "92500.00"
 
@@ -690,7 +703,8 @@ Scenario: Net deposits and capital growth columns
 @AC-17.9
 Scenario: Yearly totals section
   Given a monthly account "Example Brokerage" with a statement for 2026-09
-  Then the Yearly totals section shows the columns Year, Closing balance, Net deposits, Capital growth and Statements in that order
+  Then the Yearly totals section shows the columns Year, Closing balance, Net deposits and Capital growth in that order
+  And it shows no column with a number of statements
   And its header holds no button and its rows hold no Edit or Delete button
   And the section is not shown while no accounts exist
 ```
@@ -708,7 +722,7 @@ Scenario: No accounts
 @AC-18.2
 Scenario: Account without statements
   Given an account with no statements
-  Then its row shows a dash as latest balance
+  Then its row shows a dash as latest balance and only its period as meta, without "No statements yet"
   And the Statements section shows "No statements yet"
   And no error is shown
 
@@ -1071,7 +1085,7 @@ Scenario: Editing the first statement
 ### 4.6 Yearly totals
 
 **REQ-26: Yearly totals** *(event-driven)*
-When the user views the Investments overview, the app shall show, for each calendar year with at least one statement of any account and newest year first, in Rust: the closing balance, the sum of the net deposits and the sum of the capital growth of the statements of that year, and the number of those statements, without extrapolating partial years and without carrying balances forward. A statement counts in the year of its own period only.
+When the user views the Investments overview, the app shall show, for each calendar year with at least one statement of any account and newest year first, in Rust: the closing balance, the sum of the net deposits and the sum of the capital growth of the statements of that year, and shall return the number of those statements without displaying it, without extrapolating partial years and without carrying balances forward. A statement counts in the year of its own period only. In the ACs of this requirement and in AC-28.5, "statements" is that returned count field, which the screen does not show.
 
 ```gherkin
 @AC-26.1
@@ -1173,7 +1187,7 @@ Capital growth is not part of the model: it is derived (REQ-23).
 
 The project file gets a new section `investments` with the lists `accounts` and `statements`. Balances and net deposits are decimal strings. `format_version` stays 1 and nothing is migrated: a file without the section opens with no accounts, and a statement without `net_deposits` opens with 0.00, as the app is not released yet.
 
-Commands (all inputs validated in Rust; amounts cross IPC as decimal strings): `list_investment_accounts()` (each account with its statement count and latest balance and period, plus the total), `create_investment_account`, `update_investment_account`, `delete_investment_account`, `list_investment_statements()` (statements of all accounts, each with its account name, its net deposits and its capital growth), `add_investment_statement` and `update_investment_statement` (both take the net deposits; `update_investment_statement` keeps the period that identifies the statement as an argument and takes the new period as an extra one, equal to it when the period does not change, and applies the edit as a whole or not at all, REQ-29), `delete_investment_statement`, `copy_previous_investment_statement(account_id)`, `yearly_investment_totals()` (over all accounts; each row has the year, closing balance, net deposits, capital growth and statement count, newest year first), and `calculate_investment_statement(account_id, period, net_deposits, input, value, ignore_period)` (`input` is `balance` or `growth`; `ignore_period` is optional: the current period of the statement being edited, which never counts as a previous statement, REQ-24; returns the balance and the capital growth, or an error code; it stores nothing). Project commands (save, open, new) are in CSD-002.
+Commands (all inputs validated in Rust; amounts cross IPC as decimal strings): `list_investment_accounts()` (each account with its statement count, which is not displayed, and latest balance and period, plus the total), `create_investment_account`, `update_investment_account`, `delete_investment_account`, `list_investment_statements()` (statements of all accounts, each with its account name, its net deposits and its capital growth), `add_investment_statement` and `update_investment_statement` (both take the net deposits; `update_investment_statement` keeps the period that identifies the statement as an argument and takes the new period as an extra one, equal to it when the period does not change, and applies the edit as a whole or not at all, REQ-29), `delete_investment_statement`, `copy_previous_investment_statement(account_id)`, `yearly_investment_totals()` (over all accounts; each row has the year, closing balance, net deposits, capital growth and statement count, newest year first; the count is not displayed, but the frontend may use it, for example to lock the period or to detect an empty year), and `calculate_investment_statement(account_id, period, net_deposits, input, value, ignore_period)` (`input` is `balance` or `growth`; `ignore_period` is optional: the current period of the statement being edited, which never counts as a previous statement, REQ-24; returns the balance and the capital growth, or an error code; it stores nothing). Project commands (save, open, new) are in CSD-002.
 
 Error codes (returned as code plus safe message): `INVESTMENT_ACCOUNT_NAME_REQUIRED`, `INVESTMENT_ACCOUNT_NAME_TOO_LONG`, `INVESTMENT_ACCOUNT_NAME_DUPLICATE`, `INVESTMENT_PERIOD_UNSUPPORTED`, `INVESTMENT_PERIOD_LOCKED`, `INVESTMENT_PERIOD_MISMATCH`, `INVESTMENT_STATEMENT_IN_FUTURE`, `INVESTMENT_STATEMENT_PERIOD_INVALID`, `INVESTMENT_STATEMENT_DUPLICATE`, `INVESTMENT_BALANCE_INVALID`, `INVESTMENT_BALANCE_NEGATIVE`, `INVESTMENT_BALANCE_PRECISION`, `INVESTMENT_BALANCE_TOO_LARGE`, `INVESTMENT_NOTE_TOO_LONG`, `INVESTMENT_NET_DEPOSITS_INVALID`, `INVESTMENT_NET_DEPOSITS_PRECISION`, `INVESTMENT_NET_DEPOSITS_TOO_LARGE`, `INVESTMENT_GROWTH_INVALID`, `INVESTMENT_GROWTH_PRECISION`, `INVESTMENT_GROWTH_TOO_LARGE`, `INVESTMENT_ACCOUNT_NOT_FOUND`, `INVESTMENT_STATEMENT_NOT_FOUND`. The last two are returned for an account or a statement that does not exist (a stale screen). Project error codes are in CSD-002.
 
@@ -1195,9 +1209,9 @@ All ACs are proven by `cargo test`, with domain logic tested in `domain/`. Tests
 
 | Requirement | Command |
 |---|---|
-| All of REQ-1 to REQ-13, REQ-15, REQ-16, REQ-19, REQ-21 to REQ-23, REQ-26, REQ-28 (except AC-28.6) and REQ-29 | `cargo test test_csd005_` |
+| All of REQ-1 to REQ-13 (except AC-5.3), REQ-15, REQ-16, REQ-19, REQ-21 to REQ-23, REQ-26, REQ-28 (except AC-28.6) and REQ-29 | `cargo test test_csd005_` |
 | AC-24.1 to AC-24.5, AC-24.9, AC-24.11 to AC-24.14, AC-25.1 to AC-25.4 (the calculation itself) | `cargo test test_csd005_ac_24_` and `cargo test test_csd005_ac_25_` cover the `calculate_investment_statement` command and the domain logic behind it |
-| AC-14.1 to AC-14.3, REQ-17 (all ACs, with AC-17.9), REQ-18 (with AC-18.3), REQ-20 and AC-28.6 (the period field in the edit form), AC-17.4, AC-17.7, AC-24.6 to AC-24.8, AC-24.10, REQ-27 (form behaviour) | Manual checklist: form labels, section order and contents, section titles without a currency, button placement, left-pane item, empty states, note cut-off, plain-text note, the calculated marking, the enabled growth field and the note when there is no earlier statement. There is no frontend test setup |
+| AC-5.3 (confirmation text), AC-14.1 to AC-14.3, REQ-17 (all ACs, with AC-17.9, including that no count is displayed), REQ-18 (with AC-18.3), REQ-20 and AC-28.6 (the period field in the edit form), AC-17.4, AC-17.7, AC-24.6 to AC-24.8, AC-24.10, REQ-27 (form behaviour) | Manual checklist: form labels, section order and contents, section titles without a currency, button placement, left-pane item, empty states, note cut-off, plain-text note, no statement counts anywhere, the delete confirmation text, the calculated marking, the enabled growth field and the note when there is no earlier statement. There is no frontend test setup |
 | The currency confirmation for investment statements | Governed by CSD-003 REQ-5 (AC-5.5, AC-5.6), verified there |
 | AC-17.2, AC-17.3 (data) | `cargo test test_csd005_ac_17_` covers the data of the accounts and statements tables |
 | One requirement, e.g. REQ-6 | `cargo test test_csd005_ac_6_` |
@@ -1210,6 +1224,8 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 - OQ-3: (resolved in v0.2) Deleting a statement asks for a confirmation, unlike CSD-001 REQ-8, on purpose: the note of a statement cannot be recreated by copying the previous period (REQ-13). CSD-001 is unchanged.
 
 ## 9. Changelog
+- 0.11 (29/10/2026): The position in the left pane is stated in CSD-004 REQ-1 and no longer repeated here (GitHub issue 21).
+- 0.10 (29/10/2026): Statement counts are no longer displayed. REQ-17 drops the count from the account rows and the Statements column from the yearly totals (AC-17.2, AC-17.9 amended) and says no count is shown anywhere, REQ-5 gets a fixed delete confirmation text without a number (AC-5.3 added), AC-18.2 amended, REQ-26 and the definitions say the count is still returned over IPC (used for the period lock and empty-year detection) but not shown. Verification marks AC-5.3 and the amended ACs as manual checklist items.
 - 0.9 (28/10/2026): The period of a statement can be changed when editing (GitHub issue 12). REQ-11 no longer forbids it, AC-11.3 is removed, new REQ-28 (AC-28.1 to AC-28.8) and REQ-29 (AC-29.1 to AC-29.5) reuse the add rules and error codes, REQ-24 ignores the statement being edited as a previous statement (AC-24.13, AC-24.14), NG-11 and NG-12 added, `update_investment_statement` takes a new period and `calculate_investment_statement` an optional `ignore_period`. Back to `draft` until the owner approves.
 - 0.8 (27/10/2026): The first statement of an account has a capital growth. The account is taken to start at 0.00 before its first statement, so growth = balance − net deposits (REQ-23: AC-23.3 rewritten, AC-23.7 amended, AC-23.9 and AC-23.10 added). The growth field of the form is no longer disabled (REQ-24: AC-24.7, AC-24.8, AC-24.12 rewritten), a note explains the convention (new REQ-27, AC-27.1 to AC-27.4), the yearly totals add the growth of first statements (REQ-26: AC-26.1, 26.3, 26.5, 26.7, 26.9 amended, AC-26.11 added) and AC-17.8 shows a growth instead of a dash. `INVESTMENT_GROWTH_UNAVAILABLE` is removed. Approved by the owner.
 - 0.7 (27/10/2026): NG-3 and NG-4 each get a one-line exception for the Insights chart of CSD-007 (the growth percentage of that chart, and the chart itself). No other behaviour changes.

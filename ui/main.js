@@ -1,4 +1,4 @@
-// Entry point: wires the project controls, the income and investments views (each with an insights chart), the settings and the dashboard.
+// Entry point: wires the project controls, the income, investments, bank accounts, assets, debts and expenses views (each with an insights chart), the settings and the dashboard.
 import { errorText, listen } from './shared/ipc.js';
 import { showToast } from './shared/dom.js';
 import { initProject, refreshProjectStatus } from './pages/project.js';
@@ -6,6 +6,14 @@ import { initIncomeOverview, reloadIncomeOverview } from './pages/income-overvie
 import { initIncomeInsights, reloadIncomeInsightsIfOpen } from './pages/income-insights.js';
 import { initInvestmentsInsights, reloadInvestmentsInsightsIfOpen } from './pages/investments-insights.js';
 import { initInvestmentsOverview, reloadInvestmentsOverview } from './pages/investments-overview.js';
+import { initBankInsights, reloadBankInsightsIfOpen } from './pages/bank-insights.js';
+import { initBankOverview, reloadBankOverview } from './pages/bank-overview.js';
+import { initAssetsInsights, reloadAssetsInsightsIfOpen } from './pages/assets-insights.js';
+import { initAssetsOverview, reloadAssetsOverview } from './pages/assets-overview.js';
+import { initDebtsInsights, reloadDebtsInsightsIfOpen } from './pages/debts-insights.js';
+import { initDebtsOverview, reloadDebtsOverview } from './pages/debts-overview.js';
+import { initExpensesInsights, reloadExpensesInsightsIfOpen } from './pages/expenses-insights.js';
+import { initExpensesOverview, reloadExpensesOverview } from './pages/expenses-overview.js';
 import { initSettings, loadPreferences, reloadSettings } from './pages/settings.js';
 import { reloadDashboard } from './pages/dashboard.js';
 
@@ -42,6 +50,38 @@ async function start() {
       await reloadSettings();
     },
   });
+  initBankInsights();
+  // Bank entries count for the currency confirmation of the settings page (CSD-009 REQ-24).
+  initBankOverview({
+    onChanged: async () => {
+      await refreshProjectStatus();
+      await reloadSettings();
+    },
+  });
+  initDebtsInsights();
+  // Debt statements count for the currency confirmation of the settings page (CSD-011 REQ-24).
+  initDebtsOverview({
+    onChanged: async () => {
+      await refreshProjectStatus();
+      await reloadSettings();
+    },
+  });
+  initAssetsInsights();
+  // Asset valuations count for the currency confirmation of the settings page (CSD-015 REQ-25).
+  initAssetsOverview({
+    onChanged: async () => {
+      await refreshProjectStatus();
+      await reloadSettings();
+    },
+  });
+  initExpensesInsights();
+  // Expenses count for the currency confirmation of the settings page (CSD-013 REQ-17).
+  initExpensesOverview({
+    onChanged: async () => {
+      await refreshProjectStatus();
+      await reloadSettings();
+    },
+  });
   initSettings({
     onChanged: async () => {
       await refreshProjectStatus();
@@ -54,6 +94,14 @@ async function start() {
       await reloadIncomeInsightsIfOpen();
       await reloadInvestmentsOverview();
       await reloadInvestmentsInsightsIfOpen();
+      await reloadBankOverview();
+      await reloadBankInsightsIfOpen();
+      await reloadDebtsOverview();
+      await reloadDebtsInsightsIfOpen();
+      await reloadAssetsOverview();
+      await reloadAssetsInsightsIfOpen();
+      await reloadExpensesOverview();
+      await reloadExpensesInsightsIfOpen();
       await reloadDashboard();
     },
   });
@@ -73,6 +121,10 @@ async function start() {
   await reloadSettings();
   await reloadIncomeOverview();
   await reloadInvestmentsOverview();
+  await reloadBankOverview();
+  await reloadDebtsOverview();
+  await reloadAssetsOverview();
+  await reloadExpensesOverview();
   await reloadDashboard();
 }
 

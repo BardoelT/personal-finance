@@ -40,12 +40,12 @@ impl Period {
     }
 
     /// The calendar year of the period; a statement counts in this year only.
-    pub(super) fn year(self) -> i32 {
+    pub(crate) fn year(self) -> i32 {
         self.sort_key().0
     }
 
     /// Newest-first ordering key: a year counts as December (CSD-005 REQ-16).
-    pub(super) fn sort_key(self) -> (i32, u8) {
+    pub(crate) fn sort_key(self) -> (i32, u8) {
         match self {
             Self::Month(month) => (month.year(), month.month()),
             Self::Year(year) => (year.value(), 12),
@@ -53,7 +53,7 @@ impl Period {
     }
 
     /// Whether the period starts after the current month `today` (REQ-6).
-    pub(super) fn is_after(self, today: YearMonth) -> bool {
+    pub(crate) fn is_after(self, today: YearMonth) -> bool {
         match self {
             Self::Month(month) => month > today,
             Self::Year(year) => year.value() > today.year(),

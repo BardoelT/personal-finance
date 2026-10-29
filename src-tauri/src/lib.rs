@@ -9,7 +9,10 @@ mod storage;
 use tauri::{Emitter, Manager, RunEvent, Runtime, WindowEvent};
 use time::UtcOffset;
 
-use commands::{dashboard, income, investments, preferences, project, settings, AppState};
+use commands::{
+    assets, bank_accounts, dashboard, debts, expenses, income, investments, preferences, project,
+    settings, AppState,
+};
 
 /// Event the frontend listens for to ask "quit with unsaved changes?".
 const CLOSE_REQUESTED_EVENT: &str = "close-requested";
@@ -60,6 +63,46 @@ fn configure<R: Runtime>(builder: tauri::Builder<R>, utc_offset: UtcOffset) -> t
             investments::calculate_investment_statement,
             investments::yearly_investment_totals,
             investments::get_investment_insights,
+            bank_accounts::list_bank_accounts,
+            bank_accounts::create_bank_account,
+            bank_accounts::update_bank_account,
+            bank_accounts::delete_bank_account,
+            bank_accounts::list_bank_entries,
+            bank_accounts::add_bank_entry,
+            bank_accounts::update_bank_entry,
+            bank_accounts::delete_bank_entry,
+            bank_accounts::copy_previous_bank_entry,
+            bank_accounts::yearly_bank_totals,
+            bank_accounts::get_bank_insights,
+            debts::list_debts,
+            debts::create_debt,
+            debts::update_debt,
+            debts::delete_debt,
+            debts::list_debt_statements,
+            debts::add_debt_statement,
+            debts::update_debt_statement,
+            debts::delete_debt_statement,
+            debts::copy_previous_debt_statement,
+            debts::yearly_debt_totals,
+            debts::get_debt_insights,
+            assets::list_assets,
+            assets::create_asset,
+            assets::update_asset,
+            assets::delete_asset,
+            assets::list_asset_valuations,
+            assets::add_asset_valuation,
+            assets::update_asset_valuation,
+            assets::delete_asset_valuation,
+            assets::copy_previous_asset_valuation,
+            assets::yearly_asset_values,
+            assets::get_asset_insights,
+            expenses::list_expenses,
+            expenses::add_expense,
+            expenses::update_expense,
+            expenses::delete_expense,
+            expenses::copy_previous_expense,
+            expenses::yearly_expense_totals,
+            expenses::get_expense_insights,
             dashboard::get_dashboard,
             settings::get_settings,
             settings::set_currency,

@@ -20,6 +20,15 @@
 .swatch.deposits, .bar-deposits { background: var(--series-deposits); fill: var(--series-deposits); }
 .swatch.growth-up, .bar-growth-up { background: var(--chart-gain); fill: var(--chart-gain); }
 .swatch.growth-down, .bar-growth-down { background: var(--chart-loss); fill: var(--chart-loss); }
+/* One colour per bank colour slot (CSD-010 REQ-8). */
+.swatch.slot-0, .bar-slot-0 { background: var(--bank-0); fill: var(--bank-0); }
+.swatch.slot-1, .bar-slot-1 { background: var(--bank-1); fill: var(--bank-1); }
+.swatch.slot-2, .bar-slot-2 { background: var(--bank-2); fill: var(--bank-2); }
+.swatch.slot-3, .bar-slot-3 { background: var(--bank-3); fill: var(--bank-3); }
+.swatch.slot-4, .bar-slot-4 { background: var(--bank-4); fill: var(--bank-4); }
+.swatch.slot-5, .bar-slot-5 { background: var(--bank-5); fill: var(--bank-5); }
+.swatch.slot-6, .bar-slot-6 { background: var(--bank-6); fill: var(--bank-6); }
+.swatch.slot-7, .bar-slot-7 { background: var(--bank-7); fill: var(--bank-7); }
 .swatch.marker { width: 14px; height: 0; border-radius: 0; border-top: 2px solid var(--muted); }
 .swatch-spacer { width: 10px; height: 10px; flex: none; }
 
@@ -29,6 +38,10 @@
 .legend li.hl, .chart-tooltip dt.hl { color: var(--text); }
 .legend li.hl .legend-label, .chart-tooltip dt.hl .legend-label { font-weight: 600; }
 .legend li.dim { opacity: .7; }
+.legend li[tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 4px; }
+/* A long bank name is cut with an ellipsis; the full name stays in the text (CSD-010 REQ-9). */
+.legend-name { max-width: 16em; min-width: 0; }
+.legend-name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 
 .chart-scroll { overflow-x: auto; padding: 16px 12px 12px; }
 .chart-inner { position: relative; }
@@ -38,6 +51,7 @@
 .chart-inner .partial .bar-opening, .chart-inner .partial .bar-deposits,
 .chart-inner .partial .bar-growth-up, .chart-inner .partial .bar-growth-down { opacity: .55; }
 .chart-inner .chart-year-group [data-legend].dim { opacity: .7; }
+.chart-inner .partial [class*="bar-slot-"] { opacity: .55; }
 .chart-inner .partial [data-legend].dim { opacity: .4; }
 .chart-inner .bar-deposits.withdrawal { fill-opacity: .35; stroke: var(--series-deposits); stroke-width: 1; stroke-dasharray: 3 2; }
 .chart-grid { stroke: var(--border); stroke-opacity: .55; stroke-width: 1; }
@@ -64,7 +78,7 @@
 /* Closed, the tooltip sits at the corner of the chart. Without top and left it would sit
    below the chart, outside .chart-scroll, and give that box a scrollbar of its own. */
 .chart-tooltip {
-  position: absolute; top: 0; left: 0; z-index: 2; pointer-events: none; min-width: 190px;
+  position: absolute; top: 0; left: 0; z-index: 2; pointer-events: none; min-width: 190px; max-width: 360px;
   background: var(--card-bg); color: var(--text); border: 1px solid var(--border);
   border-radius: 10px; box-shadow: 0 10px 28px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.05); padding: 12px 14px; font-size: 12px;
   opacity: 0; visibility: hidden; transform: translate(var(--slide-x, 0), var(--slide-y, 0));
@@ -73,6 +87,7 @@
 .chart-tooltip.is-open { opacity: 1; visibility: visible; transform: none; transition: opacity 140ms ease-out, transform 140ms ease-out, left 140ms ease-out, top 140ms ease-out, visibility 0s; }
 .chart-tooltip.no-glide { transition: none; }
 .chart-tooltip .tip-title { font-size: 12px; font-weight: 600; margin-bottom: 8px; }
+.chart-tooltip .tip-note { color: var(--muted); margin: -4px 0 8px; }
 .chart-tooltip dl { display: grid; grid-template-columns: 1fr auto; gap: 4px 18px; }
 .chart-tooltip dt { display: flex; align-items: center; gap: 6px; color: var(--muted); transition: color 140ms ease-out; }
 .chart-tooltip dd { text-align: right; font-variant-numeric: tabular-nums; }

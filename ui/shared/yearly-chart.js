@@ -32,18 +32,38 @@ export function axisLabel(value) {
   return value < 0 ? `−${compact(-value)}` : compact(value);
 }
 
+/** The size every yearly chart shares, so the charts look alike from page to page. */
+export const CHART_SIZE = { plotHeight: 390, minSlotWidth: 64 };
+
+/**
+ * The closing-balance marker of a year: a short line across the bar, wider than the bar,
+ * and its value above it. `level` is the value the marker stands at.
+ */
+export function levelMarker(level, { centre, barWidth, yOf }) {
+  const y = yOf(level);
+  const half = barWidth * 0.7;
+  return [
+    svg('line', { class: 'chart-marker-hit', 'data-legend': 'marker', x1: centre - half, x2: centre + half, y1: y, y2: y }),
+    svg('line', { class: 'chart-marker', 'data-legend': 'marker', x1: centre - half, x2: centre + half, y1: y, y2: y }),
+    svg('text', { class: 'chart-marker-label', x: centre, y: y - 7 }, axisLabel(level)),
+  ];
+}
+
 /**
  * Builds a yearly chart inside the page whose root element has the id `id`.
  * Its parts are found as `${id}-legend`, `${id}-empty`, `${id}-scroll` and
  * `${id}-chart`. The strategy:
  *
  * - `command`, `ariaLabel`: the Rust command that returns `{ years }`, and the chart's name
- * - `plotHeight`, `minSlotWidth`, `zeroLine`: the size, and whether the zero line gets its own style
- * - `piecesOf(row)`: the stacked pieces `{ key, cssClass, low, high, hangs }` in drawing order
+ * - the size is `CHART_SIZE`, the same for every chart
+ * - `piecesOf(row)`: the stacked pieces `{ key, cssClass, low, high, hangs }` in drawing order;
+ *   a piece may also carry `label` (its accessible name) and `rounding` (`'top'`, `'bottom'` or `false`),
+ *   which otherwise rounds the top of the highest piece
  * - `extraLevels(row)`: further values the axis must reach (such as a closing balance)
  * - `describe(row)`, `tooltipContent(row)`: the screen-reader text and the tooltip rows
  * - `decorate(row, geometry)`: extra nodes for a bar (growth label, marker)
  * - `labelLines(row)`: the lines under the axis, `[{ text, className }]`
+ * - `onLoaded(data)` (optional): runs with the whole response before drawing, for a legend built from it
  */
 export function createYearlyChart(strategy) {
   const part = (suffix) => document.getElementById(suffix ? `${strategy.id}-${suffix}` : strategy.id);
@@ -58,12 +78,12 @@ export function createYearlyChart(strategy) {
     // Draw at the real pixel width, so bars, lines and text are never scaled up.
     inner.style.minWidth = '';
     const available = inner.clientWidth - margin.left - margin.right;
-    const plotWidth = Math.max(count * strategy.minSlotWidth, MIN_PLOT_WIDTH, available);
+    const plotWidth = Math.max(count * CHART_SIZE.minSlotWidth, MIN_PLOT_WIDTH, available);
     const slot = plotWidth / count;
     const barWidth = Math.min(slot * 0.5, MAX_BAR_WIDTH);
     const width = margin.left + plotWidth + margin.right;
-    const height = margin.top + strategy.plotHeight + margin.bottom;
-    const bottomEdge = margin.top + strategy.plotHeight;
+    const height = margin.top + CHART_SIZE.plotHeight + margin.bottom;
+    const bottomEdge = margin.top + CHART_SIZE.plotHeight;
 
     const pieces = years.map(strategy.piecesOf);
     const extras = years.flatMap((row) => strategy.extraLevels?.(row) ?? []);
@@ -74,7 +94,7 @@ export function createYearlyChart(strategy) {
     const below = Math.ceil(-lowest / step);
     const bottom = -below * step;
     const allTicks = [...Array.from({ length: below }, (_, i) => -(below - i) * step), ...ticks];
-    const yOf = (value) => margin.top + ((top - value) / (top - bottom)) * strategy.plotHeight;
+    const yOf = (value) => margin.top + ((top - value) / (top - bottom)) * CHART_SIZE.plotHeight;
 
     const chart = svg('svg', { viewBox: `0 0 ${width} ${height}`, role: 'group', 'aria-label': strategy.ariaLabel });
     // The container is as wide as the chart, so the tooltip is placed against the whole chart.
@@ -82,7 +102,7 @@ export function createYearlyChart(strategy) {
     chart.style.minWidth = `${width}px`;
 
     for (const tick of allTicks) {
-      const lineClass = strategy.zeroLine && tick === 0 ? 'chart-zero' : 'chart-grid';
+      const lineClass = tick === 0 ? 'chart-zero' : 'chart-grid';
       chart.append(
         svg('line', { class: lineClass, x1: margin.left, x2: margin.left + plotWidth, y1: yOf(tick), y2: yOf(tick) }),
         svg('text', { class: 'chart-axis-label', x: margin.left - 8, y: yOf(tick) + 4 }, axisLabel(tick)),
@@ -98,7 +118,7 @@ export function createYearlyChart(strategy) {
         role: 'img',
         'aria-label': strategy.describe(row),
       });
-      const hit = svg('rect', { class: 'chart-hit', x: centre - slot / 2, y: margin.top, width: slot, height: strategy.plotHeight + margin.bottom });
+      const hit = svg('rect', { class: 'chart-hit', x: centre - slot / 2, y: margin.top, width: slot, height: CHART_SIZE.plotHeight + margin.bottom });
       group.append(hit);
 
       const yearPieces = pieces[index];
@@ -108,12 +128,12 @@ export function createYearlyChart(strategy) {
       yearPieces.forEach((piece, i) =>
         group.append(
           segmentShape(
-            { class: piece.cssClass, 'data-legend': piece.key },
+            { class: piece.cssClass, 'data-legend': piece.key, ...(piece.label ? { 'aria-label': piece.label } : {}) },
             centre - barWidth / 2,
             barWidth,
             yOf(piece.high),
             yOf(piece.low),
-            { rounded: i === topmost },
+            { rounded: piece.rounding === undefined ? i === topmost : piece.rounding },
           ),
         ),
       );
@@ -133,7 +153,8 @@ export function createYearlyChart(strategy) {
       group.addEventListener('mouseleave', () => tooltip.hide());
       group.addEventListener('focus', () => tooltip.show(strategy.tooltipContent(row), bar, hit));
       group.addEventListener('blur', () => tooltip.hide());
-      bindHighlight(group, [part('legend'), tooltip.element, group]);
+      // A highlighted series is highlighted in every year, not only the hovered one.
+      bindHighlight(group, [part('legend'), inner]);
       chart.append(group);
     });
 
@@ -142,7 +163,9 @@ export function createYearlyChart(strategy) {
 
   /** Loads the series from Rust and draws it, or shows the note when there is nothing yet. */
   async function reload() {
-    const { years } = await invoke(strategy.command);
+    const data = await invoke(strategy.command);
+    const { years } = data;
+    strategy.onLoaded?.(data);
     part('empty').hidden = years.length > 0;
     part('scroll').hidden = years.length === 0;
     if (years.length === 0) {

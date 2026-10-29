@@ -53,7 +53,7 @@ async function onCurrencyChosen(onChanged) {
   if (settings.entry_count > 0) {
     const confirmed = await confirmAction({
       title: `Change the currency to ${requested}?`,
-      message: `The ${settings.entry_count === 1 ? 'entry keeps its amount' : `${settings.entry_count} entries keep their amounts`} and only the currency changes. Amounts are not converted.`,
+      message: 'Existing amounts keep their values and only the currency changes. Amounts are not converted.',
       confirmLabel: `Change to ${requested}`,
     });
     if (!confirmed) {

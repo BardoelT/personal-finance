@@ -6,7 +6,9 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::StorageError;
-use crate::domain::{Income, Investments, ProjectData, Settings};
+use crate::domain::{
+    Assets, BankAccounts, Debts, Expenses, Income, Investments, ProjectData, Settings,
+};
 
 /// Version of the project file format this app writes and understands.
 pub const FORMAT_VERSION: u32 = 1;
@@ -19,17 +21,32 @@ struct FileRef<'a> {
     format_version: u32,
     income: &'a Income,
     investments: &'a Investments,
+    bank_accounts: &'a BankAccounts,
+    debts: &'a Debts,
+    expenses: &'a Expenses,
+    assets: &'a Assets,
     settings: &'a Settings,
 }
 
 /// A file without a `settings` section gets the default settings (CSD-003 NG-5),
 /// and one without an `investments` section has no investment accounts
-/// (CSD-005 REQ-19).
+/// (CSD-005 REQ-19), or without a `bank_accounts` section no bank accounts
+/// (CSD-009 REQ-23), and one without a `debts` section no debts (CSD-011
+/// REQ-23), and one without an `expenses` section no expenses (CSD-013
+/// REQ-16), and one without an `assets` section no assets (CSD-015 REQ-24).
 #[derive(Deserialize)]
 struct FileOwned {
     income: Income,
     #[serde(default)]
     investments: Investments,
+    #[serde(default)]
+    bank_accounts: BankAccounts,
+    #[serde(default)]
+    debts: Debts,
+    #[serde(default)]
+    expenses: Expenses,
+    #[serde(default)]
+    assets: Assets,
     #[serde(default)]
     settings: Settings,
 }
@@ -40,6 +57,10 @@ pub(super) fn to_json(data: &ProjectData) -> Result<String, StorageError> {
         format_version: FORMAT_VERSION,
         income: &data.income,
         investments: &data.investments,
+        bank_accounts: &data.bank_accounts,
+        debts: &data.debts,
+        expenses: &data.expenses,
+        assets: &data.assets,
         settings: &data.settings,
     })
     .map_err(|error| StorageError::SaveFailed(io::Error::other(error)))
@@ -65,9 +86,25 @@ pub(super) fn from_json(text: &str) -> Result<ProjectData, StorageError> {
     file.investments
         .validate()
         .map_err(|_| StorageError::InvalidFile)?;
+    file.bank_accounts
+        .validate()
+        .map_err(|_| StorageError::InvalidFile)?;
+    file.debts
+        .validate()
+        .map_err(|_| StorageError::InvalidFile)?;
+    file.expenses
+        .validate()
+        .map_err(|_| StorageError::InvalidFile)?;
+    file.assets
+        .validate()
+        .map_err(|_| StorageError::InvalidFile)?;
     Ok(ProjectData {
         income: file.income,
         investments: file.investments,
+        bank_accounts: file.bank_accounts,
+        debts: file.debts,
+        expenses: file.expenses,
+        assets: file.assets,
         settings: file.settings,
     })
 }

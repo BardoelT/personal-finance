@@ -9,12 +9,6 @@ let accounts = [];
 let statementRows = [];
 let onChanged = async () => {};
 
-/** "No statements yet", "1 statement" or "3 statements". */
-function statementCount(account) {
-  if (account.statement_count === 0) return 'No statements yet';
-  return `${account.statement_count} statement${account.statement_count === 1 ? '' : 's'}`;
-}
-
 /** The first line of a note, with an ellipsis when there is more (CSD-005 REQ-17). */
 function noteSummary(note) {
   const [first, ...rest] = note.split('\n');
@@ -24,10 +18,10 @@ function noteSummary(note) {
 // ---- Rendering ----
 
 function latestBalance(account) {
-  if (account.latest_balance === null) return h('span', { class: 'account-balance' }, '—');
+  if (account.latest_balance === null) return h('span', { class: 'account-amount' }, '—');
   return h(
     'span',
-    { class: 'account-balance' },
+    { class: 'account-amount' },
     formatAmount(account.latest_balance),
     h('small', {}, account.latest_period),
   );
@@ -45,7 +39,7 @@ function renderAccounts(overview) {
         'li',
         { class: 'job-row' },
         h('span', { class: 'job-name' }, account.name),
-        h('span', { class: 'job-meta' }, `${account.statement_period} · ${statementCount(account)}`),
+        h('span', { class: 'job-meta' }, account.statement_period),
         latestBalance(account),
         h(
           'span',
@@ -73,7 +67,6 @@ function renderTotals(totals) {
         h('td', { class: 'num' }, formatAmount(t.closing_balance)),
         h('td', { class: 'num' }, formatAmount(t.net_deposits)),
         h('td', { class: 'num' }, formatAmount(t.capital_growth)),
-        h('td', { class: 'num' }, String(t.statement_count)),
       ),
     ),
   );
@@ -171,10 +164,7 @@ async function submitAccount(event) {
 async function deleteAccount(account) {
   const confirmed = await confirmAction({
     title: `Delete ${account.name}?`,
-    message:
-      account.statement_count === 0
-        ? 'This account will be deleted.'
-        : `This account and its ${statementCount(account)} will be deleted.`,
+    message: 'This account and all its statements will be deleted.',
     confirmLabel: 'Delete account',
     danger: true,
   });

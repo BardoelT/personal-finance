@@ -40,7 +40,7 @@
           Dashboard
         </button>
 
-        <div class="nav-section-label">Money</div>
+        <div class="nav-section-label">Finance</div>
 
         <button class="nav-item" data-section="income">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -51,12 +51,54 @@
           Income
         </button>
 
+        <button class="nav-item" data-section="expenses">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/>
+            <path d="M15 9.2a3.6 3.6 0 1 0 0 5.6"/>
+            <path d="M8.5 11h5.5M8.5 13h5.5"/>
+          </svg>
+          Expenses
+        </button>
+
+        <div class="nav-section-label">Wealth</div>
+
+        <button class="nav-item" data-section="bank">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 10l9-6 9 6"/>
+            <path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/>
+            <path d="M3 20h18"/>
+          </svg>
+          Bank accounts
+        </button>
+
         <button class="nav-item" data-section="investments">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M3 17l6-6 4 4 8-8"/>
             <path d="M15 7h6v6"/>
           </svg>
           Investments
+        </button>
+
+        <button class="nav-item" data-section="assets">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 11l9-8 9 8"/>
+            <path d="M5 10v10h14V10"/>
+            <path d="M10 20v-6h4v6"/>
+          </svg>
+          Assets
+        </button>
+
+        <div class="nav-section-label">Liabilities</div>
+
+        <button class="nav-item" data-section="debts">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+            <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+            <path d="M7 21h10"/>
+            <path d="M12 3v18"/>
+            <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>
+          </svg>
+          Debts
         </button>
 
         <div class="nav-section-label">Insights</div>
@@ -119,7 +161,7 @@
       <!-- Income -->
       <section class="section" id="income" aria-labelledby="income-title">
         <div class="section-header">
-          <h1 class="section-title" id="income-title">Employment income</h1>
+          <h1 class="section-title" id="income-title">Income</h1>
         </div>
 
         <div class="placeholder" id="income-empty" hidden>
@@ -154,7 +196,6 @@
                     <th scope="col" class="num">Holiday pay</th>
                     <th scope="col" class="num">Bonus</th>
                     <th scope="col" class="num">Total gross</th>
-                    <th scope="col" class="num">Entries</th>
                   </tr>
                 </thead>
                 <tbody id="totals-rows"></tbody>
@@ -191,11 +232,7 @@
             <div class="panel">
               <div class="panel-header">
                 <span class="panel-title">Income per year</span>
-                <ul class="legend" id="income-insights-legend" aria-label="Legend">
-                  <li data-legend="salary"><span class="swatch salary"></span><span class="legend-label" data-text="Gross salary">Gross salary</span></li>
-                  <li data-legend="holiday"><span class="swatch holiday"></span><span class="legend-label" data-text="Holiday pay">Holiday pay</span></li>
-                  <li data-legend="bonus"><span class="swatch bonus"></span><span class="legend-label" data-text="Bonus">Bonus</span></li>
-                </ul>
+                <ul class="legend" id="income-insights-legend" aria-label="Legend"></ul>
               </div>
               <p class="empty-note" id="income-insights-empty" hidden>No income yet. The chart appears once there is a paycheck or an annual statement.</p>
               <div class="chart-scroll" id="income-insights-scroll" hidden>
@@ -233,7 +270,7 @@
             <div class="job-row account-total" id="account-total" hidden>
               <span class="job-name">Total of latest balances</span>
               <span class="job-meta"></span>
-              <span class="account-balance" id="account-total-value"></span>
+              <span class="account-amount" id="account-total-value"></span>
             </div>
           </div>
 
@@ -248,7 +285,6 @@
                     <th scope="col" class="num">Closing balance</th>
                     <th scope="col" class="num">Net deposits</th>
                     <th scope="col" class="num">Capital growth</th>
-                    <th scope="col" class="num">Statements</th>
                   </tr>
                 </thead>
                 <tbody id="investment-totals-rows"></tbody>
@@ -285,18 +321,347 @@
             <div class="panel">
               <div class="panel-header">
                 <span class="panel-title">Investments per year</span>
-                <ul class="legend" id="investments-insights-legend" aria-label="Legend">
-                  <li data-legend="opening"><span class="swatch opening"></span><span class="legend-label" data-text="Opening balance">Opening balance</span></li>
-                  <li data-legend="deposits"><span class="swatch deposits"></span><span class="legend-label" data-text="Net deposits">Net deposits</span></li>
-                  <li data-legend="growth-up"><span class="swatch growth-up"></span><span class="legend-label" data-text="Capital growth (gain)">Capital growth (gain)</span></li>
-                  <li data-legend="growth-down"><span class="swatch growth-down"></span><span class="legend-label" data-text="Capital growth (loss)">Capital growth (loss)</span></li>
-                  <li data-legend="marker"><span class="swatch marker"></span><span class="legend-label" data-text="Closing balance">Closing balance</span></li>
-                </ul>
+                <ul class="legend" id="investments-insights-legend" aria-label="Legend"></ul>
               </div>
               <p class="empty-note" id="investments-insights-empty" hidden>No statements yet. The chart appears once there is a statement.</p>
               <div class="chart-scroll" id="investments-insights-scroll" hidden>
                 <div class="chart-inner" id="investments-insights-chart"></div>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Bank accounts -->
+      <section class="section" id="bank" aria-labelledby="bank-title">
+        <div class="section-header">
+          <h1 class="section-title" id="bank-title">Bank accounts</h1>
+        </div>
+
+        <div class="placeholder" id="bank-empty" hidden>
+          <p>No bank accounts yet. Add your first bank account to start tracking its balance.</p>
+          <button type="button" class="btn primary" id="bank-account-add-first">Add your first bank account</button>
+        </div>
+
+        <div id="bank-content" hidden>
+          <div class="tabs" role="tablist" aria-label="Bank account views">
+            <button type="button" class="tab" role="tab" id="bank-tab-overview" aria-controls="bank-overview" aria-selected="true">Overview</button>
+            <button type="button" class="tab" role="tab" id="bank-tab-insights" aria-controls="bank-insights" aria-selected="false" tabindex="-1">Insights</button>
+          </div>
+
+          <div id="bank-overview" role="tabpanel" aria-labelledby="bank-tab-overview">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Accounts</span>
+              <button type="button" class="btn primary" id="bank-account-add">Add account</button>
+            </div>
+            <ul class="job-list" id="bank-account-list"></ul>
+            <div class="job-row account-total" id="bank-account-total" hidden>
+              <span class="job-name">Total of latest balances</span>
+              <span class="job-meta"></span>
+              <span class="account-amount" id="bank-account-total-value"></span>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">Yearly totals</span></div>
+            <p class="empty-note" id="bank-totals-empty" hidden>No totals yet. Totals appear once there is an entry.</p>
+            <div class="table-wrap">
+              <table class="data-table" id="bank-totals-table" hidden>
+                <thead>
+                  <tr>
+                    <th scope="col">Year</th>
+                    <th scope="col" class="num">Closing balance</th>
+                  </tr>
+                </thead>
+                <tbody id="bank-totals-rows"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Entries</span>
+              <button type="button" class="btn primary" id="bank-entry-add">Add entry</button>
+            </div>
+            <p class="empty-note" id="bank-entries-empty" hidden>No entries yet.</p>
+            <div class="table-wrap">
+              <table class="data-table" id="bank-entries-table" hidden>
+                <thead>
+                  <tr>
+                    <th scope="col">Period</th>
+                    <th scope="col">Account</th>
+                    <th scope="col" class="num">Balance</th>
+                    <th scope="col">Note</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody id="bank-entries-rows"></tbody>
+              </table>
+            </div>
+          </div>
+          </div>
+
+          <div id="bank-insights" role="tabpanel" aria-labelledby="bank-tab-insights" hidden>
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title">Bank accounts per year</span>
+                <ul class="legend" id="bank-insights-legend" aria-label="Legend"></ul>
+              </div>
+              <p class="empty-note" id="bank-insights-empty" hidden>No entries yet. The chart appears once there is an entry.</p>
+              <div class="chart-scroll" id="bank-insights-scroll" hidden>
+                <div class="chart-inner" id="bank-insights-chart"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Assets -->
+      <section class="section" id="assets" aria-labelledby="assets-title">
+        <div class="section-header">
+          <h1 class="section-title" id="assets-title">Assets</h1>
+        </div>
+
+        <div class="placeholder" id="assets-empty" hidden>
+          <p>No assets yet. Add your first asset to start tracking what you own.</p>
+          <button type="button" class="btn primary" id="asset-add-first">Add your first asset</button>
+        </div>
+
+        <div id="assets-content" hidden>
+          <div class="tabs" role="tablist" aria-label="Asset views">
+            <button type="button" class="tab" role="tab" id="assets-tab-overview" aria-controls="assets-overview" aria-selected="true">Overview</button>
+            <button type="button" class="tab" role="tab" id="assets-tab-insights" aria-controls="assets-insights" aria-selected="false" tabindex="-1">Insights</button>
+          </div>
+
+          <div id="assets-overview" role="tabpanel" aria-labelledby="assets-tab-overview">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Assets</span>
+              <button type="button" class="btn primary" id="asset-add">Add asset</button>
+            </div>
+            <ul class="job-list" id="asset-list"></ul>
+            <div class="job-row account-total" id="asset-total" hidden>
+              <span class="job-name">Total value</span>
+              <span class="job-meta"></span>
+              <span class="account-amount" id="asset-total-value"></span>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">Yearly values</span></div>
+            <p class="empty-note" id="asset-totals-empty" hidden>No yearly values yet. They appear once there is a valuation.</p>
+            <div class="table-wrap">
+              <table class="data-table" id="asset-totals-table" hidden>
+                <thead>
+                  <tr>
+                    <th scope="col">Year</th>
+                    <th scope="col" class="num">Closing value</th>
+                    <th scope="col" class="num">Change</th>
+                  </tr>
+                </thead>
+                <tbody id="asset-totals-rows"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Valuations</span>
+              <button type="button" class="btn primary" id="asset-valuation-add">Add valuation</button>
+            </div>
+            <p class="empty-note" id="asset-valuations-empty" hidden>No valuations yet.</p>
+            <div class="table-wrap">
+              <table class="data-table" id="asset-valuations-table" hidden>
+                <thead>
+                  <tr>
+                    <th scope="col">Period</th>
+                    <th scope="col">Asset</th>
+                    <th scope="col" class="num">Value</th>
+                    <th scope="col" class="num">Change</th>
+                    <th scope="col">Note</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody id="asset-valuations-rows"></tbody>
+              </table>
+            </div>
+          </div>
+          </div>
+
+          <div id="assets-insights" role="tabpanel" aria-labelledby="assets-tab-insights" hidden>
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title">Assets per year</span>
+                <ul class="legend" id="assets-insights-legend" aria-label="Legend"></ul>
+              </div>
+              <p class="empty-note" id="assets-insights-empty" hidden>No valuations yet. The chart appears once there is a valuation.</p>
+              <div class="chart-scroll" id="assets-insights-scroll" hidden>
+                <div class="chart-inner" id="assets-insights-chart"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Debts -->
+      <section class="section" id="debts" aria-labelledby="debts-title">
+        <div class="section-header">
+          <h1 class="section-title" id="debts-title">Debts</h1>
+        </div>
+
+        <div class="placeholder" id="debts-empty" hidden>
+          <p>No debts yet. Add your first debt to start tracking what you owe.</p>
+          <button type="button" class="btn primary" id="debt-add-first">Add your first debt</button>
+        </div>
+
+        <div id="debts-content" hidden>
+          <div class="tabs" role="tablist" aria-label="Debt views">
+            <button type="button" class="tab" role="tab" id="debts-tab-overview" aria-controls="debts-overview" aria-selected="true">Overview</button>
+            <button type="button" class="tab" role="tab" id="debts-tab-insights" aria-controls="debts-insights" aria-selected="false" tabindex="-1">Insights</button>
+          </div>
+
+          <div id="debts-overview" role="tabpanel" aria-labelledby="debts-tab-overview">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Debts</span>
+              <button type="button" class="btn primary" id="debt-add">Add debt</button>
+            </div>
+            <ul class="job-list" id="debt-list"></ul>
+            <div class="job-row account-total" id="debt-total" hidden>
+              <span class="job-name">Total debt</span>
+              <span class="job-meta"></span>
+              <span class="account-amount" id="debt-total-value"></span>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">Yearly totals</span></div>
+            <p class="empty-note" id="debt-totals-empty" hidden>No totals yet. Totals appear once there is a statement.</p>
+            <div class="table-wrap">
+              <table class="data-table" id="debt-totals-table" hidden>
+                <thead>
+                  <tr>
+                    <th scope="col">Year</th>
+                    <th scope="col" class="num">Closing balance</th>
+                    <th scope="col" class="num">Repaid</th>
+                  </tr>
+                </thead>
+                <tbody id="debt-totals-rows"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Statements</span>
+              <button type="button" class="btn primary" id="debt-statement-add">Add statement</button>
+            </div>
+            <p class="empty-note" id="debt-statements-empty" hidden>No statements yet.</p>
+            <div class="table-wrap">
+              <table class="data-table" id="debt-statements-table" hidden>
+                <thead>
+                  <tr>
+                    <th scope="col">Period</th>
+                    <th scope="col">Debt</th>
+                    <th scope="col" class="num">Balance</th>
+                    <th scope="col" class="num">Change</th>
+                    <th scope="col">Note</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody id="debt-statements-rows"></tbody>
+              </table>
+            </div>
+          </div>
+          </div>
+
+          <div id="debts-insights" role="tabpanel" aria-labelledby="debts-tab-insights" hidden>
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title">Debts per year</span>
+                <ul class="legend" id="debts-insights-legend" aria-label="Legend"></ul>
+              </div>
+              <p class="empty-note" id="debts-insights-empty" hidden>No statements yet. The chart appears once there is a statement.</p>
+              <div class="chart-scroll" id="debts-insights-scroll" hidden>
+                <div class="chart-inner" id="debts-insights-chart"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Expenses -->
+      <section class="section" id="expenses" aria-labelledby="expenses-title">
+        <div class="section-header">
+          <h1 class="section-title" id="expenses-title">Expenses</h1>
+        </div>
+
+        <div class="tabs" role="tablist" aria-label="Expense views">
+          <button type="button" class="tab" role="tab" id="expenses-tab-overview" aria-controls="expenses-overview" aria-selected="true">Overview</button>
+          <button type="button" class="tab" role="tab" id="expenses-tab-insights" aria-controls="expenses-insights" aria-selected="false" tabindex="-1">Insights</button>
+        </div>
+
+        <div id="expenses-overview" role="tabpanel" aria-labelledby="expenses-tab-overview">
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">Yearly totals</span></div>
+            <p class="empty-note" id="expense-totals-empty" hidden>No totals yet. Totals appear once there is an expense.</p>
+            <div class="table-wrap">
+              <table class="data-table" id="expense-totals-table" hidden>
+                <thead>
+                  <tr>
+                    <th scope="col">Year</th>
+                    <th scope="col" class="num">Total</th>
+                    <th scope="col" class="num">Largest</th>
+                  </tr>
+                </thead>
+                <tbody id="expense-totals-rows"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Expenses</span>
+              <div class="panel-actions">
+                <button type="button" class="btn primary" id="expense-add">Add expense</button>
+              </div>
+            </div>
+            <p class="empty-note" id="expenses-empty" hidden></p>
+            <div class="table-wrap">
+              <table class="data-table" id="expenses-table" hidden>
+                <thead>
+                  <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Category</th>
+                    <th scope="col" class="num">Amount</th>
+                    <th scope="col">Note</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody id="expenses-rows"></tbody>
+                <tfoot>
+                  <tr>
+                    <th scope="row" colspan="3">Total</th>
+                    <td class="num" id="expenses-total"></td>
+                    <td colspan="2"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div id="expenses-insights" role="tabpanel" aria-labelledby="expenses-tab-insights" hidden>
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Expenses per year</span>
+              <ul class="legend" id="expenses-insights-legend" aria-label="Legend"></ul>
+            </div>
+            <p class="empty-note" id="expenses-insights-empty" hidden>No expenses yet. The chart appears once there is an expense.</p>
+            <div class="chart-scroll" id="expenses-insights-scroll" hidden>
+              <div class="chart-inner" id="expenses-insights-chart"></div>
             </div>
           </div>
         </div>
@@ -465,6 +830,191 @@
       <div class="dialog-actions">
         <button type="button" class="btn" data-cancel>Cancel</button>
         <button type="submit" class="btn primary">Save statement</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="bank-account-dialog" aria-labelledby="bank-account-dialog-title">
+    <form method="dialog" id="bank-account-form" novalidate>
+      <h2 id="bank-account-dialog-title">Add account</h2>
+      <label class="field">Account name
+        <input type="text" name="name" maxlength="100" autocomplete="off" required>
+      </label>
+      <label class="field">Entry period
+        <select name="entry_period">
+          <option value="Monthly">Monthly</option>
+          <option value="Yearly">Yearly</option>
+        </select>
+        <span class="field-hint" id="bank-account-period-hint" hidden>The entry period cannot change once the account has entries.</span>
+      </label>
+      <p class="form-error" id="bank-account-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn" data-cancel>Cancel</button>
+        <button type="submit" class="btn primary">Save account</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="bank-entry-dialog" aria-labelledby="bank-entry-dialog-title">
+    <form method="dialog" id="bank-entry-form" novalidate>
+      <h2 id="bank-entry-dialog-title">Add entry</h2>
+      <label class="field">Account
+        <select name="account_id"></select>
+      </label>
+      <div class="field-action">
+        <button type="button" class="btn" id="bank-entry-copy">Copy previous month</button>
+      </div>
+      <label class="field"><span id="bank-entry-period-label">Month (YYYY-MM)</span>
+        <input type="text" name="period" inputmode="numeric" placeholder="2026-09" maxlength="7" autocomplete="off" required>
+      </label>
+      <label class="field">Balance
+        <input type="text" name="balance" inputmode="decimal" placeholder="0.00" autocomplete="off" required>
+      </label>
+      <label class="field">Note (optional)
+        <textarea name="note" rows="4" autocomplete="off"></textarea>
+      </label>
+      <p class="field-hint">Use a dot for decimals, for example 2500.00. The balance is the closing balance of the period. A negative balance, such as -150.25, means the account is overdrawn. A note can be up to 2000 characters.</p>
+      <p class="form-error" id="bank-entry-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn" data-cancel>Cancel</button>
+        <button type="submit" class="btn primary">Save entry</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="asset-dialog" aria-labelledby="asset-dialog-title">
+    <form method="dialog" id="asset-form" novalidate>
+      <h2 id="asset-dialog-title">Add asset</h2>
+      <label class="field">Asset name
+        <input type="text" name="name" maxlength="100" autocomplete="off" required>
+      </label>
+      <label class="field">Valuation period
+        <select name="valuation_period">
+          <option value="Monthly">Monthly</option>
+          <option value="Yearly">Yearly</option>
+        </select>
+        <span class="field-hint" id="asset-period-hint" hidden>The valuation period cannot change once the asset has valuations.</span>
+      </label>
+      <p class="form-error" id="asset-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn" data-cancel>Cancel</button>
+        <button type="submit" class="btn primary">Save asset</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="asset-valuation-dialog" aria-labelledby="asset-valuation-dialog-title">
+    <form method="dialog" id="asset-valuation-form" novalidate>
+      <h2 id="asset-valuation-dialog-title">Add valuation</h2>
+      <label class="field">Asset
+        <select name="asset_id"></select>
+      </label>
+      <div class="field-action">
+        <button type="button" class="btn" id="asset-valuation-copy">Copy previous month</button>
+      </div>
+      <label class="field"><span id="asset-valuation-period-label">Month (YYYY-MM)</span>
+        <input type="text" name="period" inputmode="numeric" placeholder="2026-09" maxlength="7" autocomplete="off" required>
+      </label>
+      <label class="field">Value
+        <input type="text" name="value" inputmode="decimal" placeholder="0.00" autocomplete="off" required>
+      </label>
+      <label class="field">Note (optional)
+        <textarea name="note" rows="4" autocomplete="off"></textarea>
+      </label>
+      <p class="field-hint">Use a dot for decimals, for example 150000.00. The value is what the asset is worth at the end of the period, so it cannot be negative. A note can be up to 2000 characters.</p>
+      <p class="form-error" id="asset-valuation-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn" data-cancel>Cancel</button>
+        <button type="submit" class="btn primary">Save valuation</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="debt-dialog" aria-labelledby="debt-dialog-title">
+    <form method="dialog" id="debt-form" novalidate>
+      <h2 id="debt-dialog-title">Add debt</h2>
+      <label class="field">Debt name
+        <input type="text" name="name" maxlength="100" autocomplete="off" required>
+      </label>
+      <label class="field">Statement period
+        <select name="statement_period">
+          <option value="Monthly">Monthly</option>
+          <option value="Yearly">Yearly</option>
+        </select>
+        <span class="field-hint" id="debt-period-hint" hidden>The statement period cannot change once the debt has statements.</span>
+      </label>
+      <p class="form-error" id="debt-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn" data-cancel>Cancel</button>
+        <button type="submit" class="btn primary">Save debt</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="debt-statement-dialog" aria-labelledby="debt-statement-dialog-title">
+    <form method="dialog" id="debt-statement-form" novalidate>
+      <h2 id="debt-statement-dialog-title">Add statement</h2>
+      <label class="field">Debt
+        <select name="debt_id"></select>
+      </label>
+      <div class="field-action">
+        <button type="button" class="btn" id="debt-statement-copy">Copy previous month</button>
+      </div>
+      <label class="field"><span id="debt-statement-period-label">Month (YYYY-MM)</span>
+        <input type="text" name="period" inputmode="numeric" placeholder="2026-09" maxlength="7" autocomplete="off" required>
+      </label>
+      <label class="field">Balance
+        <input type="text" name="balance" inputmode="decimal" placeholder="0.00" autocomplete="off" required>
+      </label>
+      <label class="field">Note (optional)
+        <textarea name="note" rows="4" autocomplete="off"></textarea>
+      </label>
+      <p class="field-hint">Use a dot for decimals, for example 150000.00. The balance is what you still owe at the end of the period, so it cannot be negative. A note can be up to 2000 characters.</p>
+      <p class="form-error" id="debt-statement-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn" data-cancel>Cancel</button>
+        <button type="submit" class="btn primary">Save statement</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="expense-dialog" aria-labelledby="expense-dialog-title">
+    <form method="dialog" id="expense-form" novalidate>
+      <h2 id="expense-dialog-title">Add expense</h2>
+      <div class="field-action">
+        <button type="button" class="btn" id="expense-copy">Copy previous expense</button>
+      </div>
+      <label class="field">Name
+        <input type="text" name="name" maxlength="100" autocomplete="off" required>
+      </label>
+      <div class="field-row">
+        <label class="field">Amount
+          <input type="text" name="amount" inputmode="decimal" placeholder="0.00" autocomplete="off" required>
+        </label>
+        <label class="field">Date (dd/mm/yyyy)
+          <input type="text" name="date" inputmode="numeric" placeholder="15/09/2026" maxlength="10" autocomplete="off" required>
+        </label>
+      </div>
+      <label class="field">Category
+        <select name="category">
+          <option value="Home">Home</option>
+          <option value="Vehicle">Vehicle</option>
+          <option value="Holiday">Holiday</option>
+          <option value="Sport">Sport</option>
+          <option value="Study">Study</option>
+          <option value="Appliances">Appliances</option>
+          <option value="Hobby">Hobby</option>
+          <option value="Other" selected>Other</option>
+        </select>
+      </label>
+      <label class="field">Note (optional)
+        <textarea name="note" rows="4" autocomplete="off"></textarea>
+      </label>
+      <p class="field-hint">Use a dot for decimals, for example 4500.00. The amount must be above 0.00, and the date cannot be in the future. A note can be up to 2000 characters.</p>
+      <p class="form-error" id="expense-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn" data-cancel>Cancel</button>
+        <button type="submit" class="btn primary">Save expense</button>
       </div>
     </form>
   </dialog>
