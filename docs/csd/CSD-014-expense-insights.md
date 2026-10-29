@@ -3,7 +3,7 @@ id: CSD-014
 title: Expense insights
 status: approved
 owner: Thijs Bardoel
-version: 0.3
+version: 0.4
 last_updated: 29/10/2026
 related: [CSD-010, CSD-012, CSD-013]
 ---
@@ -481,13 +481,13 @@ AC-13.4 (removed in v0.3): the Overview tab has no filter any more, so there is 
 ```
 
 **REQ-14: One size for every yearly chart** *(ubiquitous)*
-The Insights tab shall draw the chart with a plot height of 260 px and a minimum slot width of 64 px, with the zero line styled as on the bank accounts chart, and with a legend of one item per series (REQ-7), the same as the bank accounts chart (CSD-010), so that the yearly charts of all pages have the same size and behaviour.
+The Insights tab shall draw the chart with a plot height of 390 px and a minimum slot width of 64 px, with the zero line styled as on the bank accounts chart, and with a legend of one item per series (REQ-7), the same as the bank accounts chart (CSD-010), so that the yearly charts of all pages have the same size and behaviour.
 
 ```gherkin
 @AC-14.1
 Scenario: Same plot height and slot width as the bank accounts chart
   Given the Insights tab shows the chart
-  Then the plot is 260 px high
+  Then the plot is 390 px high
   And each year's slot is at least 64 px wide
   And the zero line is styled as on the bank accounts chart
 
@@ -540,7 +540,7 @@ The series is computed in Rust, so REQ-1 to REQ-4 are proven by `cargo test`. Te
 | Requirement | Command |
 |---|---|
 | REQ-1 to REQ-4 and AC-13.3 (the data) | `cargo test test_csd014_` |
-| REQ-5 to REQ-12 and REQ-14 (all ACs), AC-13.1, AC-13.2 (the screen) | Manual checklist: stacking, axis range, no marker, colours of both modes, legend order and wrapping, chart size (260 px plot, 64 px slots), tooltip placement, rows in the order of the bar and the "No expenses" note without a count, highlight from a segment and from the legend including keyboard and a category without expenses, motion and reduced motion, the look, accessible labels and the empty note. There is no frontend test setup |
+| REQ-5 to REQ-12 and REQ-14 (all ACs), AC-13.1, AC-13.2 (the screen) | Manual checklist: stacking, axis range, no marker, colours of both modes, legend order and wrapping, chart size (390 px plot, 64 px slots), tooltip placement, rows in the order of the bar and the "No expenses" note without a count, highlight from a segment and from the legend including keyboard and a category without expenses, motion and reduced motion, the look, accessible labels and the empty note. There is no frontend test setup |
 | One requirement, e.g. REQ-4 | `cargo test test_csd014_ac_4_` |
 
 Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
@@ -549,6 +549,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.4 (29/10/2026): The plot of every yearly chart is 390 px high (was 260 px), 50% taller. No other behaviour change.
 - 0.3 (29/10/2026): The yearly charts share one size and behaviour with the bank accounts chart (CSD-010): new REQ-14 (plot height 260 px, minimum slot width 64 px, zero line; AC-14.1, AC-14.2), REQ-5 refers to it. REQ-8: the tooltip lists the rows in the order of the bar (highest segment first, then Total, AC-8.1, AC-8.8), shows no number of expenses and shows the note "No expenses" without a Total row for an empty year (AC-8.3, AC-8.6, AC-8.7 amended). AC-13.4 removed (the Overview filter is gone, CSD-013 0.3); NG-2 and NG-3 reworded. `expense_count` stays in the payload but is not displayed. The legend highlight of REQ-9 is unchanged.
 - 0.2 (29/10/2026): Renamed from "Major expenses" to "Expenses": title, file name, page and navigation labels, and wording. No behaviour change. The file is now `CSD-014-expense-insights.md`.
 - 0.1 (29/10/2026): initial draft, from GitHub issue 16 and the grill-me interview. It follows CSD-012 (year series, partial year, tooltip, highlight, motion, look), with one segment per fixed category holding a sum, a legend of all eight categories and no total marker.

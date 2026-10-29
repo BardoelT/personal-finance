@@ -3,7 +3,7 @@ id: CSD-007
 title: Investment insights
 status: approved
 owner: Thijs Bardoel
-version: 0.5
+version: 0.6
 last_updated: 29/10/2026
 related: [CSD-003, CSD-005, CSD-006]
 ---
@@ -592,7 +592,7 @@ Scenario: Reduced motion
 ```
 
 **REQ-18: Refined look** *(ubiquitous)*
-The Insights tab shall draw the chart with bars at most 50% of the width of their slot and at most 44 px wide, with the top corners of the topmost segment rounded by 3 px and a 1 px gap between stacked segments in place of an outline, with 1 px gridlines at 55% opacity of the border colour and a 1 px zero line in the muted text colour at 70% opacity, with a plot height of 260 px and a year slot at least 64 px wide, the same size and behaviour as every other yearly chart of the app, the zero line always drawn, with axis and year labels in the muted text colour at regular font weight, with marker values in 10 px medium weight, with tooltips of 10 px corner radius, 12 px by 14 px padding, a shadow of at least 16 px blur and at most 12% opacity, a 12 px title in semibold and row labels in the muted text colour, and with series colours of at most 60% HSL saturation and gain and loss colours of at most 55% HSL saturation, in light and in dark mode, in which the opening balance is a neutral slate blue-grey, the net deposits the accent blue, a capital gain green and a capital loss coral red, so that neighbouring series can be told apart.
+The Insights tab shall draw the chart with bars at most 50% of the width of their slot and at most 44 px wide, with the top corners of the topmost segment rounded by 3 px and a 1 px gap between stacked segments in place of an outline, with 1 px gridlines at 55% opacity of the border colour and a 1 px zero line in the muted text colour at 70% opacity, with a plot height of 390 px and a year slot at least 64 px wide, the same size and behaviour as every other yearly chart of the app, the zero line always drawn, with axis and year labels in the muted text colour at regular font weight, with marker values in 10 px medium weight, with tooltips of 10 px corner radius, 12 px by 14 px padding, a shadow of at least 16 px blur and at most 12% opacity, a 12 px title in semibold and row labels in the muted text colour, and with series colours of at most 60% HSL saturation and gain and loss colours of at most 55% HSL saturation, in light and in dark mode, in which the opening balance is a neutral slate blue-grey, the net deposits the accent blue, a capital gain green and a capital loss coral red, so that neighbouring series can be told apart.
 
 ```gherkin
 @AC-18.1
@@ -643,7 +643,7 @@ Scenario: Colour roles in both modes
 Scenario: Size and zero line
   Given every running total of every year is positive
   When the user opens the Insights tab
-  Then the plot is 260 px high and each year slot is at least 64 px wide
+  Then the plot is 390 px high and each year slot is at least 64 px wide
   And the 1 px zero line is drawn at 0
 ```
 
@@ -679,7 +679,7 @@ The figures are proven by `cargo test`. Tests are named `test_csd007_ac_<n>_<m>_
 | Requirement | Command |
 |---|---|
 | REQ-2 to REQ-7 (data) | `cargo test test_csd007_` |
-| AC-1.1 to AC-1.3, REQ-8 to REQ-18 (display, including AC-14.9, AC-15.8 to AC-15.10, AC-18.6 and AC-18.7) | Manual checklist: tooltip row order and no statement count, legend items and legend hover and focus highlight in every year, colour roles of the series in both modes, plot height 260 px, slot width of at least 64 px, zero line always drawn, motion of the tooltip and the dimming, reduced motion, bar shape, gridlines, labels, tooltip look and colours in both modes, tabs, stacked and hanging segments, dashed withdrawal tint, growth colours, axis, gap and YTD years, closing markers, growth percentage labels and colours, tooltip by mouse and keyboard, swatches and placement of the tooltip, legend, segment and marker highlight on hover, no highlight on keyboard focus, empty note, refresh after a change, light and dark mode, and the income chart unchanged. There is no frontend test setup |
+| AC-1.1 to AC-1.3, REQ-8 to REQ-18 (display, including AC-14.9, AC-15.8 to AC-15.10, AC-18.6 and AC-18.7) | Manual checklist: tooltip row order and no statement count, legend items and legend hover and focus highlight in every year, colour roles of the series in both modes, plot height 390 px, slot width of at least 64 px, zero line always drawn, motion of the tooltip and the dimming, reduced motion, bar shape, gridlines, labels, tooltip look and colours in both modes, tabs, stacked and hanging segments, dashed withdrawal tint, growth colours, axis, gap and YTD years, closing markers, growth percentage labels and colours, tooltip by mouse and keyboard, swatches and placement of the tooltip, legend, segment and marker highlight on hover, no highlight on keyboard focus, empty note, refresh after a change, light and dark mode, and the income chart unchanged. There is no frontend test setup |
 
 Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 
@@ -687,6 +687,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.6 (29/10/2026): The plot of every yearly chart is 390 px high (was 260 px), 50% taller. No other behaviour change.
 - 0.5 (29/10/2026): Statement counts are no longer displayed: REQ-11 (AC-11.1, AC-11.3) and REQ-14 (AC-14.1, AC-14.6) drop the count from the tooltip and the screen-reader description, an empty year shows "No statements"; the count stays in the data (REQ-2, section 5). REQ-14 orders the tooltip rows as the bar shows them, top to bottom (AC-14.9 added). REQ-8 (AC-8.1) and REQ-15 (AC-15.1 to AC-15.3 amended, AC-15.8 to AC-15.10 added): the legend has one hoverable and focusable item per piece, and hovering or focusing a legend item, or hovering a segment, highlights that series in every year. REQ-18 sets the shared chart size, an always-drawn zero line and the colour roles (AC-18.6, AC-18.7 added). New ACs are manual checklist items.
 - 0.4 (27/10/2026): Quieter and more refined charts. REQ-8 (AC-8.3) and REQ-9: the hatch becomes a lighter tint with a dashed outline and the marker a 2 px muted line. REQ-15 (AC-15.1, AC-15.2, AC-15.6) replaces the chip and outline by a full-colour segment, eased dimming of the rest and a heavier legend label. New REQ-16 motion, REQ-17 reduced motion, REQ-18 refined look (AC-16.1 to AC-18.5), CON-9. The tooltip placement of REQ-14 is unchanged. Approved by the owner. Same change for the income chart in CSD-006 0.3.
 - 0.3 (27/10/2026): The first statement of an account has a capital growth (CSD-005 0.8), so the "New accounts" segment is gone: it is removed from the definitions, REQ-2, REQ-3, REQ-5, REQ-8, REQ-11, REQ-14, REQ-15, the legend, the tooltip and the `get_investment_insights()` payload. REQ-5 gets AC-5.6, the growth percentage counts only accounts with an opening balance (REQ-6, AC-6.2). Approved by the owner.
