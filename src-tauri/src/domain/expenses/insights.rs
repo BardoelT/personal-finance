@@ -1,4 +1,4 @@
-//! The yearly series behind the Major expenses Insights chart (CSD-014).
+//! The yearly series behind the Expenses Insights chart (CSD-014).
 
 use std::collections::BTreeMap;
 

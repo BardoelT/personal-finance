@@ -1,4 +1,4 @@
-// Entry point: wires the project controls, the income, investments, bank accounts, debts and major expenses views (each with an insights chart), the settings and the dashboard.
+// Entry point: wires the project controls, the income, investments, bank accounts, debts and expenses views (each with an insights chart), the settings and the dashboard.
 import { errorText, listen } from './shared/ipc.js';
 import { showToast } from './shared/dom.js';
 import { initProject, refreshProjectStatus } from './pages/project.js';
@@ -65,7 +65,7 @@ async function start() {
     },
   });
   initExpensesInsights();
-  // Major expenses count for the currency confirmation of the settings page (CSD-013 REQ-17).
+  // Expenses count for the currency confirmation of the settings page (CSD-013 REQ-17).
   initExpensesOverview({
     onChanged: async () => {
       await refreshProjectStatus();

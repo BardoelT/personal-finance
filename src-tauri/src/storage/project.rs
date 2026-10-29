@@ -99,7 +99,7 @@ impl Project {
         &mut self.data.debts
     }
 
-    /// The major expenses (CSD-013).
+    /// The expenses (CSD-013).
     #[must_use]
     pub fn expenses(&self) -> &Expenses {
         &self.data.expenses

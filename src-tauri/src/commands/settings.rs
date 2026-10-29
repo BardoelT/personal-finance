@@ -16,7 +16,7 @@ use crate::storage::Project;
 pub struct SettingsView {
     currency: Currency,
     /// How many entries (paychecks, annual statements, investment statements,
-    /// bank entries, debt statements and major expenses) exist, so the frontend knows whether
+    /// bank entries, debt statements and expenses) exist, so the frontend knows whether
     /// changing the currency needs a confirmation (REQ-5).
     entry_count: usize,
 }

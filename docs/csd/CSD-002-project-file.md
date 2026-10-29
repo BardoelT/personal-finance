@@ -3,7 +3,7 @@ id: CSD-002
 title: Project file (save, open, new)
 status: approved
 owner: Thijs Bardoel
-version: 0.11
+version: 0.12
 last_updated: 29/10/2026
 related: [CSD-001, CSD-003, CSD-005, CSD-008, CSD-009, CSD-011, CSD-013]
 ---
@@ -314,7 +314,7 @@ Menu: Rust builds the File menu items `project-new`, `project-open`, `project-sa
 
 Commands: `take_startup_notice()` (returns the REQ-11 notice once, then nothing), `new_project()`, `open_project()`, `save_project()`, `save_project_as()`, `project_status()` (returns whether there are unsaved changes and whether a path is set). The save and open commands show the native dialog themselves and take no path from the frontend.
 
-Project file: JSON with the extension `.wealth`, a top-level integer `format_version` (currently 1) and amounts as decimal strings. Each capability owns one section of the file. Income (CSD-001) is the first, the project settings (CSD-003) the second and the investments (CSD-005) the third and the bank accounts (CSD-009, section `bank_accounts`) the fourth and the debts (CSD-011, section `debts`) the fifth and the major expenses (CSD-013, section `expenses`) the sixth.
+Project file: JSON with the extension `.wealth`, a top-level integer `format_version` (currently 1) and amounts as decimal strings. Each capability owns one section of the file. Income (CSD-001) is the first, the project settings (CSD-003) the second and the investments (CSD-005) the third and the bank accounts (CSD-009, section `bank_accounts`) the fourth and the debts (CSD-011, section `debts`) the fifth and the expenses (CSD-013, section `expenses`) the sixth.
 
 Error codes (code plus safe message): `PROJECT_SAVE_FAILED`, `PROJECT_INVALID_FILE`.
 
@@ -343,6 +343,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 - OQ-2: When approved, `CLAUDE.md` is updated in the same PR: replace "SQLite" with "local project file (JSON), no database", drop the SQLite-crate item from Ask first, and reword the `storage/` layout line. Owner: Thijs. Blocks: approval PR.
 
 ## 9. Changelog
+- 0.12 (29/10/2026): Wording only: the `expenses` section belongs to the expenses (CSD-013), no longer called "major expenses". No behaviour change.
 - 0.11 (29/10/2026): The project file gets an `expenses` section (CSD-013). `format_version` stays 1: a file without it opens with no expenses, as the app is not released yet. Back to `draft` until the owner approves.
 - 0.10 (28/10/2026): The project file gets a `debts` section (CSD-011). `format_version` stays 1: a file without it opens with no debts, as the app is not released yet. Back to `draft` until the owner approves.
 - 0.9 (28/10/2026): The project file gets a `bank_accounts` section (CSD-009). `format_version` stays 1: a file without it opens with no bank accounts, as the app is not released yet. Back to `draft` until the owner approves.

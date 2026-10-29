@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 /// Validation and lookup failures of the income (CSD-001), investments
-/// (CSD-005), bank accounts (CSD-009), debts (CSD-011) and major expenses
+/// (CSD-005), bank accounts (CSD-009), debts (CSD-011) and expenses
 /// (CSD-013) domains.
 ///
 /// Messages are safe to show to the user: they never contain user data.

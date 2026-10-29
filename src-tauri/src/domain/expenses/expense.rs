@@ -40,7 +40,7 @@ impl fmt::Display for ExpenseId {
     }
 }
 
-/// One major purchase or cost (CSD-013 section 3).
+/// One purchase or cost (CSD-013 section 3).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Expense {
     pub id: ExpenseId,

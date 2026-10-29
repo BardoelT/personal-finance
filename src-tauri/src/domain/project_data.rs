@@ -6,7 +6,7 @@ use super::investments::Investments;
 use super::settings::Settings;
 
 /// Everything a project file holds: the income data, the investments, the bank
-/// accounts, the debts, the major expenses and the project settings.
+/// accounts, the debts, the expenses and the project settings.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct ProjectData {
     pub income: Income,

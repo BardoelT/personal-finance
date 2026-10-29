@@ -1,4 +1,4 @@
-//! Major expenses (CSD-013), and the yearly totals and insights built on them
+//! Expenses (CSD-013), and the yearly totals and insights built on them
 //! (CSD-013 REQ-12, CSD-014).
 //!
 //! `Expenses` holds the data and the rules for changing it; the other files add

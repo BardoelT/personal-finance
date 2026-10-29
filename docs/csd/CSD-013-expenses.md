@@ -1,17 +1,17 @@
 ---
 id: CSD-013
-title: Major expenses
+title: Expenses
 status: approved
 owner: Thijs Bardoel
-version: 0.1
+version: 0.2
 last_updated: 29/10/2026
 related: [CSD-000, CSD-002, CSD-003, CSD-009, CSD-011, CSD-014]
 ---
 
-# CSD-013: Major expenses
+# CSD-013: Expenses
 
 ## 1. Intent
-The app tracks what the user owns and owes, but has no view of the large one-off things the user spends money on: a new roof, a car, a holiday, a washing machine. This capability lets the user log such major expenses, each on a specific date, with an amount, a category and an optional note. From these the app derives, per calendar year, the total spent, the number of expenses and the largest expense, and lets the user look at one year or one month at a time. It is for a single person keeping a private, local history of their larger purchases. It is a log of what was spent: it has no budgets, no recurrence and no link to bank accounts. The result is a dated history of major expenses that the Insights chart of CSD-014 builds on. It follows the structure of Debts (CSD-011), but an expense is one dated record on its own and does not belong to a parent item such as a debt.
+The app tracks what the user owns and owes, but has no view of what the user spends money on: a new roof, a car, a holiday, a washing machine. This capability lets the user log expenses, each on a specific date, with an amount, a category and an optional note. From these the app derives, per calendar year, the total spent, the number of expenses and the largest expense, and lets the user look at one year or one month at a time. It is for a single person keeping a private, local history of their purchases. It is a log of what was spent: it has no budgets, no recurrence and no link to bank accounts. The result is a dated history of expenses that the Insights chart of CSD-014 builds on. It follows the structure of Debts (CSD-011), but an expense is one dated record on its own and does not belong to a parent item such as a debt.
 
 ## 2. Scope
 ### 2.1 In scope
@@ -19,14 +19,14 @@ The app tracks what the user owns and owes, but has no view of the large one-off
 - Copy the previous expense into the add form.
 - Filter the expenses by year and by month.
 - Yearly totals per calendar year: total spent, number of expenses and the largest expense.
-- One Major expenses view (tab Overview) with the yearly totals and the list of expenses. The Insights tab is CSD-014.
+- One Expenses view (tab Overview) with the yearly totals and the list of expenses. The Insights tab is CSD-014.
 - Expense data is part of the project file (CSD-002). Expenses count for the currency confirmation of CSD-003 (REQ-17).
 
 ### 2.2 Non-goals
 - NG-1: Budgets, spending limits, and a comparison with income or any other figure.
 - NG-2: Recurring expenses, instalments and spreading one expense over several months or years.
 - NG-3: A link to bank accounts, so recording an expense never changes a balance, and integration with net worth and the dashboard (CSD-004).
-- NG-4: A threshold or any other rule that decides what counts as "major". The user decides what to record.
+- NG-4: A threshold or any other rule that limits which expenses can be recorded, such as a minimum amount. The user decides what to record.
 - NG-5: Categories that the user can add, rename or remove. The categories are fixed (REQ-3).
 - NG-6: More than one category per expense, tags, and sub-categories.
 - NG-7: A currency per expense. All amounts are in the project currency (CSD-003).
@@ -39,7 +39,7 @@ The app tracks what the user owns and owes, but has no view of the large one-off
 ## 3. Definitions
 | Term | Meaning |
 |---|---|
-| **Expense** | One major purchase or cost: a name, an amount, a date, a category and an optional note. It stands on its own and does not belong to another item. |
+| **Expense** | One purchase or cost: a name, an amount, a date, a category and an optional note. It stands on its own and does not belong to another item. |
 | **Date** | The calendar day the expense was made, typed and shown as `dd/mm/yyyy`. Its month and year are derived from it and never stored apart from it. |
 | **Amount** | What the expense cost, one amount above 0.00 in the project currency. |
 | **Category** | One of the fixed values Home, Vehicle, Holiday, Sport, Study, Appliances, Hobby and Other, in that order. |
@@ -404,13 +404,13 @@ Scenario: Equal expenses keep the order they were added
 ```
 
 **REQ-11: Filter by year and month** *(event-driven)*
-When the user views the Major expenses overview or changes a filter, the app shall list only the expenses of the chosen year and, when a month is chosen, of that month of the year, together with the total amount of the listed expenses, computed in Rust, and shall offer as years "All years" and every year with at least one expense, newest first, and as months "All months" and the twelve months of the chosen year, with the month filter available only while a year is chosen. Initially the app shall choose the latest year with an expense and "All months", or "All years" while no expenses exist, and shall keep a chosen filter while expenses change, falling back to the latest year with an expense when the chosen year no longer has one.
+When the user views the Expenses overview or changes a filter, the app shall list only the expenses of the chosen year and, when a month is chosen, of that month of the year, together with the total amount of the listed expenses, computed in Rust, and shall offer as years "All years" and every year with at least one expense, newest first, and as months "All months" and the twelve months of the chosen year, with the month filter available only while a year is chosen. Initially the app shall choose the latest year with an expense and "All months", or "All years" while no expenses exist, and shall keep a chosen filter while expenses change, falling back to the latest year with an expense when the chosen year no longer has one.
 
 ```gherkin
 @AC-11.1
 Scenario: Initial filter
   Given expenses dated 15/09/2025 and 10/03/2026
-  When the user opens the Major expenses overview
+  When the user opens the Expenses overview
   Then the year filter shows 2026 and the month filter shows "All months"
   And only the expense of 10/03/2026 is listed
 
@@ -464,13 +464,13 @@ Scenario: The chosen year no longer has an expense
 @AC-11.9
 Scenario: No expenses
   Given no expenses exist
-  When the user opens the Major expenses overview
+  When the user opens the Expenses overview
   Then the year filter shows "All years"
   And the total of the list is 0.00
 ```
 
 **REQ-12: Yearly totals** *(event-driven)*
-When the user views the Major expenses overview, the app shall show, for each calendar year with at least one expense and newest year first, in Rust: the total amount spent, the number of expenses and the largest expense of that year, without extrapolating partial years and regardless of the filter of REQ-11.
+When the user views the Expenses overview, the app shall show, for each calendar year with at least one expense and newest year first, in Rust: the total amount spent, the number of expenses and the largest expense of that year, without extrapolating partial years and regardless of the filter of REQ-11.
 
 ```gherkin
 @AC-12.1
@@ -518,19 +518,19 @@ Scenario: The 1900 and the current year
   Then the rows are listed 2026 and 1900
 ```
 
-**REQ-13: Major expenses view layout** *(ubiquitous)*
-The app shall offer "Major expenses" as its own item in the left pane directly under Debts with a receipt icon, and shall show the Overview tab as the sections Yearly totals and Expenses in that order, with the columns Year, Total, Expenses and Largest and no actions in the Yearly totals section, the year and month filters and the button "Add expense" in the header of the Expenses section, the columns Date, Name, Category, Amount and Note and the icon buttons Edit (pencil) and Delete (trash) flush right on each row in the Expenses section, and the total of the listed expenses in a footer row labelled "Total". A note longer than one line is cut to one line in the table and shown in full when the expense is edited. Dates are shown as `dd/mm/yyyy`. The page offers the tabs "Overview" and "Insights" (CSD-014), with Overview shown first.
+**REQ-13: Expenses view layout** *(ubiquitous)*
+The app shall offer "Expenses" as its own item in the left pane directly under Debts with a receipt icon, and shall show the Overview tab as the sections Yearly totals and Expenses in that order, with the columns Year, Total, Expenses and Largest and no actions in the Yearly totals section, the year and month filters and the button "Add expense" in the header of the Expenses section, the columns Date, Name, Category, Amount and Note and the icon buttons Edit (pencil) and Delete (trash) flush right on each row in the Expenses section, and the total of the listed expenses in a footer row labelled "Total". A note longer than one line is cut to one line in the table and shown in full when the expense is edited. Dates are shown as `dd/mm/yyyy`. The page offers the tabs "Overview" and "Insights" (CSD-014), with Overview shown first.
 
 ```gherkin
 @AC-13.1
 Scenario: Left pane item
-  Then "Major expenses" is an item in the left pane directly under "Debts"
+  Then "Expenses" is an item in the left pane directly under "Debts"
   And it shows a receipt icon
 
 @AC-13.2
 Scenario: Sections in order
   Given an expense
-  When the user opens the Major expenses page
+  When the user opens the Expenses page
   Then the Overview tab is selected
   And the sections appear in the order Yearly totals, Expenses
 
@@ -702,7 +702,7 @@ Error codes (returned as code plus safe message): `EXPENSE_NAME_REQUIRED`, `EXPE
 - CON-7: Names and notes are stored as typed and displayed as plain text, never as HTML. Rationale: the frontend must not run markup typed by the user.
 - CON-8: The length of a name or a note is counted in characters (Unicode scalar values), not bytes. Rationale: names and notes in any language must fit the stated limits.
 - CON-9: The totals, the largest expenses and the filtered total are computed in Rust each time they are needed and are never stored in the project file. Rationale: CON-2, and stored figures would go stale when an expense changes.
-- CON-10: Major expenses get their own module, commands and page. Shared helpers may be reused or extracted when that is small, and Debts, Bank accounts and Investments are not refactored. Rationale: `CLAUDE.md` asks before large refactors across modules.
+- CON-10: Expenses get their own module, commands and page. Shared helpers may be reused or extracted when that is small, and Debts, Bank accounts and Investments are not refactored. Rationale: `CLAUDE.md` asks before large refactors across modules.
 - CON-11: "Today" is the local calendar date and is decided in Rust. Rationale: the rule against future dates (REQ-4) must not depend on the webview.
 
 ## 7. Verification
@@ -722,4 +722,5 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.2 (29/10/2026): Renamed from "Major expenses" to "Expenses": title, file name, page and navigation labels, and wording. No behaviour change. NG-4 is reworded: there is no minimum amount.
 - 0.1 (29/10/2026): initial draft, from GitHub issue 16 and the grill-me interview. It follows CSD-011 (layout, validation, copy previous, yearly totals, project file, currency confirmation), with a dated expense that has no parent item, a fixed category list, a year and month filter and no future dates.

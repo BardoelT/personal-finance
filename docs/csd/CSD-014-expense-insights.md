@@ -1,21 +1,21 @@
 ---
 id: CSD-014
-title: Major expense insights
+title: Expense insights
 status: approved
 owner: Thijs Bardoel
-version: 0.1
+version: 0.2
 last_updated: 29/10/2026
 related: [CSD-010, CSD-012, CSD-013]
 ---
 
-# CSD-014: Major expense insights
+# CSD-014: Expense insights
 
 ## 1. Intent
-The Major expenses page lists expenses and a table of yearly totals, but a table does not show how spending develops over the years or what it went to. This capability adds an insights layer to the Major expenses page: one chart with one bar per calendar year, stacked from one segment per category, so the height of a bar is what was spent that year and its segments show where it went. It is for the owner looking back over their own larger purchases. It follows the Debt insights of CSD-012, with the eight fixed categories of CSD-013 as segments, with sums in place of balances, and without a total marker, because the top of the stack is the total. It shows what was spent and nothing else: no budget, no comparison and no forecast.
+The Expenses page lists expenses and a table of yearly totals, but a table does not show how spending develops over the years or what it went to. This capability adds an insights layer to the Expenses page: one chart with one bar per calendar year, stacked from one segment per category, so the height of a bar is what was spent that year and its segments show where it went. It is for the owner looking back over their own purchases. It follows the Debt insights of CSD-012, with the eight fixed categories of CSD-013 as segments, with sums in place of balances, and without a total marker, because the top of the stack is the total. It shows what was spent and nothing else: no budget, no comparison and no forecast.
 
 ## 2. Scope
 ### 2.1 In scope
-- The "Insights" tab on the Major expenses page, next to "Overview" (CSD-013 REQ-13).
+- The "Insights" tab on the Expenses page, next to "Overview" (CSD-013 REQ-13).
 - A yearly stacked bar chart over all expenses with one segment per category, a legend of the categories, a tooltip and the highlight of one category.
 - Its empty state.
 
@@ -527,4 +527,5 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.2 (29/10/2026): Renamed from "Major expenses" to "Expenses": title, file name, page and navigation labels, and wording. No behaviour change. The file is now `CSD-014-expense-insights.md`.
 - 0.1 (29/10/2026): initial draft, from GitHub issue 16 and the grill-me interview. It follows CSD-012 (year series, partial year, tooltip, highlight, motion, look), with one segment per fixed category holding a sum, a legend of all eight categories and no total marker.

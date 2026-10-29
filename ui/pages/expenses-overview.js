@@ -1,4 +1,4 @@
-// Major expenses: dated expenses with a category and a note, a year and month filter and yearly totals (CSD-013).
+// Expenses: dated expenses with a category and a note, a year and month filter and yearly totals (CSD-013).
 import { invoke, errorText } from '../shared/ipc.js';
 import { h, iconButton, confirmAction, showToast, showError } from '../shared/dom.js';
 import { formatAmount, formatDate } from '../shared/format.js';

@@ -1,4 +1,4 @@
-// Major expense insights: the yearly stacked chart on the Major expenses page (CSD-014), one
+// Expense insights: the yearly stacked chart on the Expenses page (CSD-014), one
 // segment per category. Its frame (axis, bars, tooltip, loading) is shared with the other
 // charts in shared/yearly-chart.js; this file supplies what is specific to expenses: the
 // segments and the legend of the eight categories.
@@ -86,7 +86,7 @@ function buildLegend({ categories: list }) {
 const chart = createYearlyChart({
   id: 'expenses-insights',
   command: 'get_expense_insights',
-  ariaLabel: 'Major expenses per year',
+  ariaLabel: 'Expenses per year',
   plotHeight: 260,
   minSlotWidth: 64,
   zeroLine: true,
