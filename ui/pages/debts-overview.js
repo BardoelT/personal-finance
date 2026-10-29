@@ -8,12 +8,6 @@ const $ = (id) => document.getElementById(id);
 let debts = [];
 let onChanged = async () => {};
 
-/** "No statements yet", "1 statement" or "3 statements". */
-function statementCount(debt) {
-  if (debt.statement_count === 0) return 'No statements yet';
-  return `${debt.statement_count} statement${debt.statement_count === 1 ? '' : 's'}`;
-}
-
 /** The first line of a note, with an ellipsis when there is more (CSD-011 REQ-20). */
 function noteSummary(note) {
   const [first, ...rest] = note.split('\n');
@@ -28,8 +22,8 @@ function optionalAmount(value) {
 // ---- Rendering ----
 
 function latestBalance(debt) {
-  if (debt.latest_balance === null) return h('span', { class: 'account-balance' }, '—');
-  return h('span', { class: 'account-balance' }, formatAmount(debt.latest_balance), h('small', {}, debt.latest_period));
+  if (debt.latest_balance === null) return h('span', { class: 'account-amount' }, '—');
+  return h('span', { class: 'account-amount' }, formatAmount(debt.latest_balance), h('small', {}, debt.latest_period));
 }
 
 function renderDebts(overview) {
@@ -43,7 +37,7 @@ function renderDebts(overview) {
         'li',
         { class: 'job-row' },
         h('span', { class: 'job-name' }, debt.name),
-        h('span', { class: 'job-meta' }, `${debt.statement_period} · ${statementCount(debt)}`),
+        h('span', { class: 'job-meta' }, debt.statement_period),
         latestBalance(debt),
         h(
           'span',
@@ -70,7 +64,6 @@ function renderTotals(totals) {
         h('th', { scope: 'row' }, String(t.year)),
         h('td', { class: 'num' }, formatAmount(t.closing_balance)),
         h('td', { class: 'num' }, optionalAmount(t.repaid)),
-        h('td', { class: 'num' }, String(t.statement_count)),
       ),
     ),
   );
@@ -160,10 +153,7 @@ async function submitDebt(event) {
 async function deleteDebt(debt) {
   const confirmed = await confirmAction({
     title: `Delete ${debt.name}?`,
-    message:
-      debt.statement_count === 0
-        ? 'This debt will be deleted.'
-        : `This debt and its ${statementCount(debt)} will be deleted.`,
+    message: 'This debt and all its statements will be deleted.',
     confirmLabel: 'Delete debt',
     danger: true,
   });

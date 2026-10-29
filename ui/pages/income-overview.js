@@ -16,12 +16,6 @@ function jobMeta(job) {
   return [job.title, jobDates(job), job.pay_period].filter(Boolean).join(' · ');
 }
 
-/** "3 paychecks" for a monthly job, "1 statement" for a yearly job. */
-function entryCount(job) {
-  const noun = job.pay_period === 'Yearly' ? 'statement' : 'paycheck';
-  return `${job.entry_count} ${noun}${job.entry_count === 1 ? '' : 's'}`;
-}
-
 function amountCell(value) {
   return h('td', { class: 'num' }, formatAmount(value));
 }
@@ -40,7 +34,6 @@ function renderJobs() {
         { class: 'job-row' },
         h('span', { class: 'job-name' }, job.employer),
         h('span', { class: 'job-meta' }, jobMeta(job)),
-        h('span', { class: 'job-count' }, entryCount(job)),
         h(
           'span',
           { class: 'job-actions' },
@@ -65,7 +58,6 @@ function renderTotals(totals) {
         amountCell(t.holiday_pay),
         amountCell(t.bonus),
         amountCell(t.total_gross),
-        h('td', { class: 'num' }, String(t.entry_count)),
       ),
     ),
   );
@@ -160,13 +152,9 @@ async function submitJob(event) {
 }
 
 async function deleteJob(job) {
-  const n = job.entry_count;
   const confirmed = await confirmAction({
     title: `Delete ${job.employer}?`,
-    message:
-      n === 0
-        ? 'This job will be deleted.'
-        : `This job and its ${entryCount(job)} will be deleted.`,
+    message: 'This job and all its paychecks and statements will be deleted.',
     confirmLabel: 'Delete job',
     danger: true,
   });

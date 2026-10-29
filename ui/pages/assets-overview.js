@@ -8,12 +8,6 @@ const $ = (id) => document.getElementById(id);
 let assets = [];
 let onChanged = async () => {};
 
-/** "No valuations yet", "1 valuation" or "3 valuations". */
-function valuationCount(asset) {
-  if (asset.valuation_count === 0) return 'No valuations yet';
-  return `${asset.valuation_count} valuation${asset.valuation_count === 1 ? '' : 's'}`;
-}
-
 /** The first line of a note, with an ellipsis when there is more (CSD-015 REQ-20). */
 function noteSummary(note) {
   const [first, ...rest] = note.split('\n');
@@ -28,8 +22,8 @@ function optionalAmount(value) {
 // ---- Rendering ----
 
 function latestValue(asset) {
-  if (asset.latest_value === null) return h('span', { class: 'account-value' }, '—');
-  return h('span', { class: 'account-value' }, formatAmount(asset.latest_value), h('small', {}, asset.latest_period));
+  if (asset.latest_value === null) return h('span', { class: 'account-amount' }, '—');
+  return h('span', { class: 'account-amount' }, formatAmount(asset.latest_value), h('small', {}, asset.latest_period));
 }
 
 function renderAssets(overview) {
@@ -43,7 +37,7 @@ function renderAssets(overview) {
         'li',
         { class: 'job-row' },
         h('span', { class: 'job-name' }, asset.name),
-        h('span', { class: 'job-meta' }, `${asset.valuation_period} · ${valuationCount(asset)}`),
+        h('span', { class: 'job-meta' }, asset.valuation_period),
         latestValue(asset),
         h(
           'span',
@@ -70,7 +64,6 @@ function renderTotals(totals) {
         h('th', { scope: 'row' }, String(t.year)),
         h('td', { class: 'num' }, formatAmount(t.closing_value)),
         h('td', { class: 'num' }, optionalAmount(t.change)),
-        h('td', { class: 'num' }, String(t.valuation_count)),
       ),
     ),
   );
@@ -160,10 +153,7 @@ async function submitAsset(event) {
 async function deleteAsset(asset) {
   const confirmed = await confirmAction({
     title: `Delete ${asset.name}?`,
-    message:
-      asset.valuation_count === 0
-        ? 'This asset will be deleted.'
-        : `This asset and its ${valuationCount(asset)} will be deleted.`,
+    message: 'This asset and all its valuations will be deleted.',
     confirmLabel: 'Delete asset',
     danger: true,
   });

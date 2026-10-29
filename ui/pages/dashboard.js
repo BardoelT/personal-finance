@@ -20,7 +20,6 @@ function cardsFor(totals) {
     card('Gross salary', formatAmount(totals.gross_salary)),
     card('Holiday pay', formatAmount(totals.holiday_pay)),
     card('Bonus', formatAmount(totals.bonus)),
-    card('Entries', String(totals.entry_count)),
   ];
 }
 

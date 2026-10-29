@@ -8,12 +8,6 @@ const $ = (id) => document.getElementById(id);
 let accounts = [];
 let onChanged = async () => {};
 
-/** "No entries yet", "1 entry" or "3 entries". */
-function entryCount(account) {
-  if (account.entry_count === 0) return 'No entries yet';
-  return `${account.entry_count} ${account.entry_count === 1 ? 'entry' : 'entries'}`;
-}
-
 /** The first line of a note, with an ellipsis when there is more (CSD-009 REQ-20). */
 function noteSummary(note) {
   const [first, ...rest] = note.split('\n');
@@ -23,10 +17,10 @@ function noteSummary(note) {
 // ---- Rendering ----
 
 function latestBalance(account) {
-  if (account.latest_balance === null) return h('span', { class: 'account-balance' }, '—');
+  if (account.latest_balance === null) return h('span', { class: 'account-amount' }, '—');
   return h(
     'span',
-    { class: 'account-balance' },
+    { class: 'account-amount' },
     formatAmount(account.latest_balance),
     h('small', {}, account.latest_period),
   );
@@ -43,7 +37,7 @@ function renderAccounts(overview) {
         'li',
         { class: 'job-row' },
         h('span', { class: 'job-name' }, account.name),
-        h('span', { class: 'job-meta' }, `${account.entry_period} · ${entryCount(account)}`),
+        h('span', { class: 'job-meta' }, account.entry_period),
         latestBalance(account),
         h(
           'span',
@@ -69,7 +63,6 @@ function renderTotals(totals) {
         {},
         h('th', { scope: 'row' }, String(t.year)),
         h('td', { class: 'num' }, formatAmount(t.closing_balance)),
-        h('td', { class: 'num' }, String(t.entry_count)),
       ),
     ),
   );
@@ -158,10 +151,7 @@ async function submitAccount(event) {
 async function deleteAccount(account) {
   const confirmed = await confirmAction({
     title: `Delete ${account.name}?`,
-    message:
-      account.entry_count === 0
-        ? 'This account will be deleted.'
-        : `This account and its ${entryCount(account)} will be deleted.`,
+    message: 'This account and all its entries will be deleted.',
     confirmLabel: 'Delete account',
     danger: true,
   });

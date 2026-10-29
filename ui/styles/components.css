@@ -137,11 +137,10 @@
 }
 .job-name { font-size: 14px; font-weight: 600; }
 .job-meta { flex: 1; font-size: 12px; color: var(--muted); min-width: 0; }
-.job-count { font-size: 12px; color: var(--muted); white-space: nowrap; }
 .job-actions { display: flex; gap: 8px; flex-shrink: 0; }
 .field textarea { resize: vertical; min-height: 72px; }
-.account-balance { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.account-balance small { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 6px; }
+.account-amount { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.account-amount small { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 6px; }
 .account-total { border-top: 1px solid var(--border); background: var(--bg); }
 .note-cell { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
 .field-action { margin: -2px 0 12px; }

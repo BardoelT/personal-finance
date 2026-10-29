@@ -157,7 +157,7 @@
       <!-- Income -->
       <section class="section" id="income" aria-labelledby="income-title">
         <div class="section-header">
-          <h1 class="section-title" id="income-title">Employment income</h1>
+          <h1 class="section-title" id="income-title">Income</h1>
         </div>
 
         <div class="placeholder" id="income-empty" hidden>
@@ -192,7 +192,6 @@
                     <th scope="col" class="num">Holiday pay</th>
                     <th scope="col" class="num">Bonus</th>
                     <th scope="col" class="num">Total gross</th>
-                    <th scope="col" class="num">Entries</th>
                   </tr>
                 </thead>
                 <tbody id="totals-rows"></tbody>
@@ -229,11 +228,7 @@
             <div class="panel">
               <div class="panel-header">
                 <span class="panel-title">Income per year</span>
-                <ul class="legend" id="income-insights-legend" aria-label="Legend">
-                  <li data-legend="salary"><span class="swatch salary"></span><span class="legend-label" data-text="Gross salary">Gross salary</span></li>
-                  <li data-legend="holiday"><span class="swatch holiday"></span><span class="legend-label" data-text="Holiday pay">Holiday pay</span></li>
-                  <li data-legend="bonus"><span class="swatch bonus"></span><span class="legend-label" data-text="Bonus">Bonus</span></li>
-                </ul>
+                <ul class="legend" id="income-insights-legend" aria-label="Legend"></ul>
               </div>
               <p class="empty-note" id="income-insights-empty" hidden>No income yet. The chart appears once there is a paycheck or an annual statement.</p>
               <div class="chart-scroll" id="income-insights-scroll" hidden>
@@ -271,7 +266,7 @@
             <div class="job-row account-total" id="account-total" hidden>
               <span class="job-name">Total of latest balances</span>
               <span class="job-meta"></span>
-              <span class="account-balance" id="account-total-value"></span>
+              <span class="account-amount" id="account-total-value"></span>
             </div>
           </div>
 
@@ -286,7 +281,6 @@
                     <th scope="col" class="num">Closing balance</th>
                     <th scope="col" class="num">Net deposits</th>
                     <th scope="col" class="num">Capital growth</th>
-                    <th scope="col" class="num">Statements</th>
                   </tr>
                 </thead>
                 <tbody id="investment-totals-rows"></tbody>
@@ -323,13 +317,7 @@
             <div class="panel">
               <div class="panel-header">
                 <span class="panel-title">Investments per year</span>
-                <ul class="legend" id="investments-insights-legend" aria-label="Legend">
-                  <li data-legend="opening"><span class="swatch opening"></span><span class="legend-label" data-text="Opening balance">Opening balance</span></li>
-                  <li data-legend="deposits"><span class="swatch deposits"></span><span class="legend-label" data-text="Net deposits">Net deposits</span></li>
-                  <li data-legend="growth-up"><span class="swatch growth-up"></span><span class="legend-label" data-text="Capital growth (gain)">Capital growth (gain)</span></li>
-                  <li data-legend="growth-down"><span class="swatch growth-down"></span><span class="legend-label" data-text="Capital growth (loss)">Capital growth (loss)</span></li>
-                  <li data-legend="marker"><span class="swatch marker"></span><span class="legend-label" data-text="Closing balance">Closing balance</span></li>
-                </ul>
+                <ul class="legend" id="investments-insights-legend" aria-label="Legend"></ul>
               </div>
               <p class="empty-note" id="investments-insights-empty" hidden>No statements yet. The chart appears once there is a statement.</p>
               <div class="chart-scroll" id="investments-insights-scroll" hidden>
@@ -367,7 +355,7 @@
             <div class="job-row account-total" id="bank-account-total" hidden>
               <span class="job-name">Total of latest balances</span>
               <span class="job-meta"></span>
-              <span class="account-balance" id="bank-account-total-value"></span>
+              <span class="account-amount" id="bank-account-total-value"></span>
             </div>
           </div>
 
@@ -380,7 +368,6 @@
                   <tr>
                     <th scope="col">Year</th>
                     <th scope="col" class="num">Closing balance</th>
-                    <th scope="col" class="num">Entries</th>
                   </tr>
                 </thead>
                 <tbody id="bank-totals-rows"></tbody>
@@ -453,7 +440,7 @@
             <div class="job-row account-total" id="asset-total" hidden>
               <span class="job-name">Total value</span>
               <span class="job-meta"></span>
-              <span class="account-value" id="asset-total-value"></span>
+              <span class="account-amount" id="asset-total-value"></span>
             </div>
           </div>
 
@@ -467,7 +454,6 @@
                     <th scope="col">Year</th>
                     <th scope="col" class="num">Closing value</th>
                     <th scope="col" class="num">Change</th>
-                    <th scope="col" class="num">Valuations</th>
                   </tr>
                 </thead>
                 <tbody id="asset-totals-rows"></tbody>
@@ -541,7 +527,7 @@
             <div class="job-row account-total" id="debt-total" hidden>
               <span class="job-name">Total debt</span>
               <span class="job-meta"></span>
-              <span class="account-balance" id="debt-total-value"></span>
+              <span class="account-amount" id="debt-total-value"></span>
             </div>
           </div>
 
@@ -555,7 +541,6 @@
                     <th scope="col">Year</th>
                     <th scope="col" class="num">Closing balance</th>
                     <th scope="col" class="num">Repaid</th>
-                    <th scope="col" class="num">Statements</th>
                   </tr>
                 </thead>
                 <tbody id="debt-totals-rows"></tbody>
@@ -623,7 +608,6 @@
                   <tr>
                     <th scope="col">Year</th>
                     <th scope="col" class="num">Total</th>
-                    <th scope="col" class="num">Expenses</th>
                     <th scope="col" class="num">Largest</th>
                   </tr>
                 </thead>
@@ -636,8 +620,6 @@
             <div class="panel-header">
               <span class="panel-title">Expenses</span>
               <div class="panel-actions">
-                <select class="filter-select" id="expense-filter-year" aria-label="Year"></select>
-                <select class="filter-select" id="expense-filter-month" aria-label="Month"></select>
                 <button type="button" class="btn primary" id="expense-add">Add expense</button>
               </div>
             </div>

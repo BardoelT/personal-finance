@@ -100,7 +100,7 @@ async function start() {
       await reloadDebtsInsightsIfOpen();
       await reloadAssetsOverview();
       await reloadAssetsInsightsIfOpen();
-      await reloadExpensesOverview({ resetFilter: true });
+      await reloadExpensesOverview();
       await reloadExpensesInsightsIfOpen();
       await reloadDashboard();
     },
