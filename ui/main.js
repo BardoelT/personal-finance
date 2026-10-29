@@ -1,4 +1,4 @@
-// Entry point: wires the project controls, the income, investments, bank accounts, assets, debts and expenses views (each with an insights chart), the net worth chart, the settings and the dashboard.
+// Entry point: wires the project controls, the income, investments, bank accounts, assets, debts and expenses views (each with an insights chart), the net worth chart, the ratios table, the settings and the dashboard.
 import { errorText, listen } from './shared/ipc.js';
 import { showToast } from './shared/dom.js';
 import { initProject, refreshProjectStatus } from './pages/project.js';
@@ -17,6 +17,7 @@ import { initExpensesOverview, reloadExpensesOverview } from './pages/expenses-o
 import { initSettings, loadPreferences, reloadSettings } from './pages/settings.js';
 import { reloadDashboard } from './pages/dashboard.js';
 import { initNetWorth, reloadNetWorthIfOpen } from './pages/net-worth.js';
+import { initRatios, reloadRatiosIfOpen } from './pages/ratios.js';
 
 async function start() {
   // The theme comes first: the page stays hidden until it is applied (CSD-008 REQ-6).
@@ -84,6 +85,7 @@ async function start() {
     },
   });
   initNetWorth();
+  initRatios();
   initSettings({
     onChanged: async () => {
       await refreshProjectStatus();
@@ -105,6 +107,7 @@ async function start() {
       await reloadExpensesOverview();
       await reloadExpensesInsightsIfOpen();
       await reloadNetWorthIfOpen();
+      await reloadRatiosIfOpen();
       await reloadDashboard();
     },
   });

@@ -113,6 +113,15 @@
           </svg>
           Net worth
         </button>
+
+        <button class="nav-item" data-section="ratios">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M19 5 5 19"/>
+            <circle cx="7" cy="7" r="2.5"/>
+            <circle cx="17" cy="17" r="2.5"/>
+          </svg>
+          Ratios
+        </button>
       </nav>
 
       <div class="sidebar-settings">
@@ -718,6 +727,24 @@
             <div class="chart-scroll" id="net-worth-insights-scroll" hidden>
               <div class="chart-inner" id="net-worth-insights-chart"></div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Ratios -->
+      <section class="section" id="ratios" aria-labelledby="ratios-title">
+        <div class="section-header">
+          <h1 class="section-title" id="ratios-title">Ratios</h1>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">Ratios per year</span></div>
+          <p class="empty-note" id="ratios-empty" hidden>No data yet. The table appears once there is income, an asset, an investment, a bank account entry, a debt or an expense.</p>
+          <div class="table-wrap">
+            <table class="data-table ratios-table" id="ratios-table" hidden>
+              <thead id="ratios-head"></thead>
+              <tbody id="ratios-rows"></tbody>
+            </table>
           </div>
         </div>
       </section>
