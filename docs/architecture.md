@@ -26,6 +26,7 @@ Two rules shape everything:
 |---|---|
 | `domain/income/` | Jobs, paychecks, annual statements, yearly totals, dashboard overview, insights |
 | `domain/investments/` | Accounts, statements, net deposits, capital growth, yearly totals, insights |
+| `domain/assets/` | Assets, valuations with non-negative values, the change per valuation, colour slots, yearly values with the change, insights per asset. Reuses the investments' `Period` and `Note` |
 | `domain/debts/` | Debts, statements with non-negative balances, the change per statement, colour slots, yearly totals with the amount repaid, insights per debt. Reuses the investments' `Period` and `Note` |
 | `domain/expenses/` | Expenses (dated, with a fixed category and a note), the year and month filter, yearly totals with the largest expense, insights per category. Reuses the investments' `Note` |
 | `domain/bank_accounts/` | Bank accounts, entries with signed balances, colour slots, yearly totals, insights per bank. Reuses the investments' `Period` and `Note` |
@@ -54,7 +55,7 @@ shared/             helpers pages share
 styles/             CSS by area
 ```
 
-**`pages/`** files are named `<page>-<view>.js`: `income-overview.js`, `income-insights.js`, `investments-overview.js`, `investments-insights.js`, `bank-overview.js`, `bank-insights.js`, `debts-overview.js`, `debts-insights.js`, `expenses-overview.js`, `expenses-insights.js`. Each exports `init<Page><View>()` (wire the events once) and `reload<Page><View>()` (fetch from Rust and render). `dashboard.js`, `settings.js` and `project.js` are pages without views.
+**`pages/`** files are named `<page>-<view>.js`: `income-overview.js`, `income-insights.js`, `investments-overview.js`, `investments-insights.js`, `bank-overview.js`, `bank-insights.js`, `assets-overview.js`, `assets-insights.js`, `debts-overview.js`, `debts-insights.js`, `expenses-overview.js`, `expenses-insights.js`. Each exports `init<Page><View>()` (wire the events once) and `reload<Page><View>()` (fetch from Rust and render). `dashboard.js`, `settings.js` and `project.js` are pages without views.
 
 **Element ids** follow `<page>-<view>-<part>`: `income-insights-chart`, `investments-insights-legend`, `investments-tab-insights`. The shared chart code finds its parts from the one id it is given.
 
