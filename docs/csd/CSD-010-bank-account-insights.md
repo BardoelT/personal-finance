@@ -3,8 +3,8 @@ id: CSD-010
 title: Bank account insights
 status: approved
 owner: Thijs Bardoel
-version: 0.2
-last_updated: 28/10/2026
+version: 0.3
+last_updated: 29/10/2026
 related: [CSD-007, CSD-009]
 ---
 
@@ -22,7 +22,7 @@ The Bank accounts page lists accounts, entries and a table of yearly totals, but
 ### 2.2 Non-goals
 - NG-1: A monthly view, or any granularity other than a calendar year.
 - NG-2: A filter, a selection or a hiding of banks.
-- NG-3: Growth, a percentage, a year-over-year change, a forecast, or any other figure than the balances, the closing balance and the entry count.
+- NG-3: Growth, a percentage, a year-over-year change, a forecast, or any other figure than the balances and the closing balance. The number of entries is never displayed.
 - NG-4: Click-through, zooming, or exporting the chart.
 - NG-5: Charts on the Dashboard or on the Reports page.
 - NG-6: A chart library or any other new dependency.
@@ -82,7 +82,7 @@ Scenario: No accounts yet
 ```
 
 **REQ-2: Year series** *(ubiquitous)*
-The app shall return one set of figures for every calendar year from the year of the earliest entry up to and including the current year, oldest year first, holding the closing balance, the number of entries and, per bank with an entry in that year, its segment.
+The app shall return one set of figures for every calendar year from the year of the earliest entry up to and including the current year, oldest year first, holding the closing balance, the number of entries (returned, not displayed) and, per bank with an entry in that year, its segment.
 
 ```gherkin
 @AC-2.1
@@ -143,7 +143,7 @@ Scenario: Current year without entries is still in the series and marked
 ```
 
 **REQ-5: Segments are the latest balances per bank** *(ubiquitous)*
-The app shall give each year one segment per bank that has an entry in that year, equal to the balance of that bank's latest entry in that year, ordered by the creation of the banks, and the segments shall add up to the closing balance, which equals the closing balance and the entry count of the yearly totals of CSD-009 REQ-19.
+The app shall give each year one segment per bank that has an entry in that year, equal to the balance of that bank's latest entry in that year, ordered by the creation of the banks, and the segments shall add up to the closing balance, which equals the closing balance and the entry count of the yearly totals of CSD-009 REQ-19. The entry count is a returned data field and is never displayed; "entries" in the ACs of this requirement and of REQ-2 to REQ-4 refers to it.
 
 ```gherkin
 @AC-5.1
@@ -329,14 +329,15 @@ Scenario: A deleted bank leaves the legend
 ```
 
 **REQ-10: Details of a year** *(event-driven)*
-When the user hovers over or moves keyboard focus to a year, the Insights tab shall show a tooltip with the year, one row per segment with the bank's swatch, full name and balance, the closing balance, the number of entries and, for the current year, that it is partial, beside the year's bar as CSD-007 REQ-14 places a tooltip, and shall give the same values to screen readers.
+When the user hovers over or moves keyboard focus to a year, the Insights tab shall show a tooltip with the year, one row per segment with the bank's swatch, full name and balance in the order the bar shows them from top to bottom (the highest segment first, the segments below the zero line last), then the closing balance and, for the current year, that it is partial, beside the year's bar as CSD-007 REQ-14 places a tooltip, and shall give the same values to screen readers. The tooltip and the screen-reader description show no number of entries, and a year without entries shows the note "No entries".
 
 ```gherkin
 @AC-10.1
 Scenario: Tooltip on hover
-  Given 2026 has the segments "Example Current Account" 2500.00 and "Example Savings" 8000.00, closing balance 10500.00 and 3 entries
+  Given 2026 has the segments "Example Current Account" 2500.00 and "Example Savings" 8000.00 and closing balance 10500.00
   When the user hovers over the 2026 bar
-  Then a tooltip shows both banks with their swatch and balance, the closing balance 10500.00 and 3 entries
+  Then a tooltip shows both banks with their swatch and balance and the closing balance 10500.00
+  And it shows no number of entries
 
 @AC-10.2
 Scenario: Tooltip on keyboard focus
@@ -349,7 +350,8 @@ Scenario: Tooltip on keyboard focus
 Scenario: Accessible label
   Given 2026 has a segment "Example Overdraft" with balance -1000.00
   When a screen reader reads the 2026 bar
-  Then it announces the year, each bank with its balance, the closing balance and the number of entries
+  Then it announces the year, each bank with its balance and the closing balance
+  And it announces no number of entries
   And it announces that "Example Overdraft" is negative
 
 @AC-10.4
@@ -372,6 +374,21 @@ Scenario: Year without a bar
   When the user hovers over its slot
   Then the tooltip is centred over that slot
   And it shows no bank rows
+  And it shows the note "No entries"
+
+@AC-10.7
+Scenario: Rows follow the bar from top to bottom
+  Given 2026 has the segments "Example Current Account" 2500.00, "Example Savings" 8000.00 and "Example Overdraft" -1000.00 in creation order
+  When the user hovers over the 2026 bar
+  Then the tooltip rows are listed "Example Savings", "Example Current Account", "Example Overdraft"
+  And the closing balance 9500.00 is listed after them
+
+@AC-10.8
+Scenario: Only positive segments
+  Given 2025 has the segments "Example Current Account" 2000.00 and "Example Savings" 8000.00
+  When the user hovers over the 2025 bar
+  Then the tooltip rows are listed "Example Savings" first and "Example Current Account" second
+  And the closing balance is listed last
 ```
 
 **REQ-11: Highlight one bank** *(event-driven)*
@@ -447,7 +464,7 @@ Scenario: Reduced motion
 ```
 
 **REQ-13: Refined look and accessible segments** *(ubiquitous)*
-The Insights tab shall draw the chart with bars at most 50% of the width of their slot and at most 44 px wide, with the top corners of the topmost positive segment and the bottom corners of the lowest negative segment rounded by 3 px and a 1 px gap between stacked segments in place of an outline, so that neighbouring segments of the same hue stay apart, with 1 px gridlines at 55% opacity of the border colour and a 1 px zero line in the muted text colour at 70% opacity, with axis and year labels in the muted text colour at regular font weight, with marker values in 10 px medium weight, and with tooltips of 10 px corner radius, 12 px by 14 px padding, a shadow of at least 16 px blur and at most 12% opacity, a 12 px title in semibold and row labels in the muted text colour, in light and in dark mode. Every segment shall carry an accessible label with the bank, the year and the balance.
+The Insights tab shall draw the chart with bars at most 50% of the width of their slot and at most 44 px wide, with the top corners of the topmost positive segment and the bottom corners of the lowest negative segment rounded by 3 px and a 1 px gap between stacked segments in place of an outline, so that neighbouring segments of the same hue stay apart, with a plot height of 260 px and a year slot at least 64 px wide, the same size and behaviour as every other yearly chart of the app, with 1 px gridlines at 55% opacity of the border colour and a 1 px zero line in the muted text colour at 70% opacity that is always drawn, also when no segment is negative, with axis and year labels in the muted text colour at regular font weight, with marker values in 10 px medium weight, and with tooltips of 10 px corner radius, 12 px by 14 px padding, a shadow of at least 16 px blur and at most 12% opacity, a 12 px title in semibold and row labels in the muted text colour, in light and in dark mode. Every segment shall carry an accessible label with the bank, the year and the balance.
 
 ```gherkin
 @AC-13.1
@@ -476,6 +493,18 @@ Scenario: Segment labels
   Given 2026 has a segment of "Example Savings" with balance 8000.00
   When a screen reader reads that segment
   Then it announces "Example Savings", 2026 and 8000.00
+
+@AC-13.5
+Scenario: The zero line is always drawn
+  Given every segment of every year is positive
+  When the user opens the Insights tab
+  Then a 1 px zero line in the muted text colour at 70% opacity is drawn at 0
+
+@AC-13.6
+Scenario: Same size as the other yearly charts
+  Given the Insights tab shows the chart
+  Then the plot is 260 px high
+  And each year slot is at least 64 px wide
 ```
 
 **REQ-14: No entries yet** *(state-driven)*
@@ -534,7 +563,7 @@ Command: `get_bank_insights()` returns the banks that have at least one entry, i
 }
 ```
 
-`banks` and `years` are empty when there are no entries. `segments` follow the creation order of the banks and are empty for a gap year. Amounts are decimal strings. Rust decides "today" (local time), the years, the partial flag and the segments, and the frontend only displays what it receives. Error codes are those of CSD-009.
+`entry_count` is returned but never displayed. `banks` and `years` are empty when there are no entries. `segments` follow the creation order of the banks and are empty for a gap year. Amounts are decimal strings. Rust decides "today" (local time), the years, the partial flag and the segments, and the frontend only displays what it receives. Error codes are those of CSD-009.
 
 ## 6. Constraints
 - CON-1: The chart reuses the shared chart code of the frontend (`ui/shared/yearly-chart.js`) and adds no chart library or other dependency. Rationale: NG-6, and `CLAUDE.md` asks before adding dependencies.
@@ -550,7 +579,7 @@ The series is computed in Rust, so REQ-2 to REQ-5 are proven by `cargo test`. Te
 | Requirement | Command |
 |---|---|
 | REQ-2 to REQ-5, AC-15.1 to AC-15.3 (the data) | `cargo test test_csd010_` |
-| REQ-1, REQ-6 to REQ-14 (all ACs), AC-15.1 to AC-15.3 (the screen) | Manual checklist: tabs, stacking and negative segments, axis range, markers, colours of both modes and of the ninth bank, legend order, wrapping and ellipsis, tooltip placement, highlight from a segment and from the legend including keyboard, motion and reduced motion, the look, accessible labels and the empty note. There is no frontend test setup |
+| REQ-1, REQ-6 to REQ-14 (all ACs, including AC-10.7, AC-10.8, AC-13.5 and AC-13.6), AC-15.1 to AC-15.3 (the screen) | Manual checklist: tabs, tooltip row order and no entry count, plot height 260 px and slot width of at least 64 px, zero line always drawn, stacking and negative segments, axis range, markers, colours of both modes and of the ninth bank, legend order, wrapping and ellipsis, tooltip placement, highlight from a segment and from the legend including keyboard, motion and reduced motion, the look, accessible labels and the empty note. There is no frontend test setup |
 | One requirement, e.g. REQ-5 | `cargo test test_csd010_ac_5_` |
 
 Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
@@ -559,5 +588,6 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 - OQ-1: (resolved in v0.2) The legend lists only banks that have at least one entry (REQ-9), because a bank without entries has no segment to identify.
 
 ## 9. Changelog
+- 0.3 (29/10/2026): Entry counts are no longer displayed: REQ-10 (AC-10.1, AC-10.3 amended) drops the count from the tooltip and the screen-reader description, an empty year shows "No entries" (AC-10.6), NG-3 and REQ-5 say the count is returned but never shown. REQ-10 orders the tooltip rows as the bar shows them, top to bottom, segments below the zero line last (AC-10.7, AC-10.8 added). REQ-13 sets the shared chart size (plot height 260 px, slot at least 64 px) and an always-drawn zero line (AC-13.5, AC-13.6 added). The legend hover and focus highlight of REQ-11 is unchanged. New ACs are manual checklist items.
 - 0.2 (28/10/2026): Resolved OQ-1: the legend lists only banks with at least one entry, as REQ-9 says.
 - 0.1 (28/10/2026): initial draft, from GitHub issue 13 and the grill-me interview. It follows CSD-007 (tabs, year series, partial year, marker, tooltip, highlight, motion, look), with one segment per bank instead of opening balance, deposits and growth.

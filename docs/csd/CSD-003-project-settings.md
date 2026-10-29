@@ -3,7 +3,7 @@ id: CSD-003
 title: Project settings
 status: approved
 owner: Thijs Bardoel
-version: 0.10
+version: 0.11
 last_updated: 29/10/2026
 related: [CSD-001, CSD-002, CSD-005, CSD-008, CSD-009, CSD-011, CSD-013, CSD-015]
 ---
@@ -135,7 +135,7 @@ Scenario: Choosing the current currency changes nothing
 ```
 
 **REQ-5: Confirm when amounts exist** *(event-driven)*
-While the project has entries (paychecks, annual statements, investment statements, bank entries, debt statements, expenses or asset valuations), when the user chooses another currency, the app shall ask for confirmation, explaining that amounts are not converted, before changing the currency.
+While the project has entries (paychecks, annual statements, investment statements, bank entries, debt statements, expenses or asset valuations), when the user chooses another currency, the app shall ask for confirmation before changing the currency, with the text "Existing amounts keep their values and only the currency changes. Amounts are not converted.", without stating a number of entries.
 
 ```gherkin
 @AC-5.1
@@ -233,6 +233,18 @@ Scenario: An asset without valuations needs no confirmation
   When the user chooses "USD"
   Then no confirmation is asked
   And the project currency is "USD"
+
+@AC-5.15
+Scenario Outline: The confirmation states no number of entries
+  Given a project in "EUR" with <entries>
+  When the user chooses "USD"
+  Then the confirmation reads "Existing amounts keep their values and only the currency changes. Amounts are not converted."
+  And it states no number of entries
+
+  Examples:
+    | entries                                |
+    | 1 paycheck                             |
+    | 3 debt statements and 2 asset valuations |
 ```
 
 **REQ-6: Unsupported currency** *(unwanted behaviour)*
@@ -289,7 +301,7 @@ Scenario: Other views show no currency
 
 ## 5. Interfaces and contracts
 
-Commands: `get_settings()` returns `{ currency, entry_count }` (the frontend reads the currency only for the Settings page), and `set_currency(currency)` returns the same. `entry_count` (paychecks, annual statements, investment statements, bank entries, debt statements, expenses and asset valuations) lets the frontend decide whether REQ-5 applies.
+Commands: `get_settings()` returns `{ currency, entry_count }` (the frontend reads the currency only for the Settings page), and `set_currency(currency)` returns the same. `entry_count` (paychecks, annual statements, investment statements, bank entries, debt statements, expenses and asset valuations) lets the frontend decide whether REQ-5 applies; the number is not displayed.
 
 Menu: the item `open-settings` is added to the app menu, below About, with the accelerator ⌘,. Choosing it emits the event `menu-action` with that id, as the File menu items do (CSD-002 REQ-9).
 
@@ -311,7 +323,7 @@ All behaviour except the screens is proven by `cargo test`. Tests are named `tes
 |---|---|
 | REQ-3, REQ-4, REQ-6, REQ-7, and the data of REQ-5 and REQ-8 | `cargo test test_csd003_` |
 | AC-2.1 | `cargo test test_csd003_ac_2_1` checks the table the menu item is built from. Native menus can only be created on the main thread, so the built menu is on the manual checklist |
-| AC-1.1, AC-1.2, AC-2.2, AC-3.2 (display), AC-4.2 (indicator), AC-5.1 to AC-5.6 (dialogs), AC-8.1 | Manual checklist: the left pane order, the Settings page, ⌘, and the app menu item, the confirmation, and the titles without a currency. There is no frontend test setup |
+| AC-1.1, AC-1.2, AC-2.2, AC-3.2 (display), AC-4.2 (indicator), AC-5.1 to AC-5.6, AC-5.15 (dialogs), AC-8.1 | Manual checklist: the left pane order, the Settings page, ⌘, and the app menu item, the confirmation, and the titles without a currency. There is no frontend test setup |
 
 Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 
@@ -319,6 +331,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.11 (29/10/2026): The currency confirmation states no number of entries: it reads "Existing amounts keep their values and only the currency changes. Amounts are not converted." and is still shown only when the project has at least one entry (REQ-5, new AC-5.15, manual checklist). `entry_count` stays in IPC and is not displayed.
 - 0.10 (29/10/2026): Asset valuations (CSD-015) also count as entries for the currency confirmation: REQ-5 reworded, AC-5.13 and AC-5.14 added, `entry_count` counts them. Back to `draft` until the owner approves.
 - 0.9 (29/10/2026): Wording only: "major expenses" (CSD-013) is now "expenses" in REQ-5, AC-5.11, AC-5.12 and section 5. No behaviour change.
 - 0.8 (29/10/2026): Major expenses (CSD-013) also count as entries for the currency confirmation: REQ-5 reworded, AC-5.11 and AC-5.12 added, `entry_count` counts them. Back to `draft` until the owner approves.

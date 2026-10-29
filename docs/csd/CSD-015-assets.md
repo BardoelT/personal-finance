@@ -3,7 +3,7 @@ id: CSD-015
 title: Assets
 status: approved
 owner: Thijs Bardoel
-version: 0.1
+version: 0.2
 last_updated: 29/10/2026
 related: [CSD-000, CSD-002, CSD-003, CSD-009, CSD-011, CSD-016]
 ---
@@ -20,7 +20,7 @@ The app tracks bank accounts, investments and debts, but has no view of what the
 - Change the period of an existing valuation (REQ-12).
 - Copy the previous valuation into the add form.
 - The change per valuation: its value minus the value of the previous valuation (REQ-19).
-- Yearly values per calendar year over all assets: closing value, change and the number of valuations.
+- Yearly values per calendar year over all assets: closing value and change.
 - One Assets view (tab Overview) with the assets, their latest values, the total value, the yearly values and the valuations of all assets. The Insights tab is CSD-016.
 - Asset data is part of the project file (CSD-002). Valuations count for the currency confirmation of CSD-003 (REQ-25).
 
@@ -50,7 +50,7 @@ The app tracks bank accounts, investments and debts, but has no view of what the
 | **Change** | For a valuation: its value minus the value of its previous valuation. Positive when the value grew, negative when it fell. It is derived and never stored. A first valuation has no change. |
 | **Latest value** | The value of the valuation with the most recent period of an asset. |
 | **Total value** | The sum of the latest values of all assets that have at least one valuation. |
-| **Yearly value** | One row per calendar year: the closing value, the change and the number of valuations of that year, over all assets. See REQ-20. |
+| **Yearly value** | One row per calendar year: the closing value and the change of that year, over all assets. See REQ-20. |
 | **Closing value (of a year)** | The sum, over the assets that have a valuation in that year, of the value of each asset's latest valuation in that year. |
 | **Opening value (of an asset in a year)** | The value of the latest valuation of the asset before that year. An asset without an earlier valuation has none. |
 | **Change (in a year)** | The sum, over the assets that have a valuation in that year and an opening value in it, of the closing value minus the opening value of that asset. It is negative when those assets lost value. It is none when no asset has an opening value in that year. |
@@ -229,7 +229,7 @@ Scenario: Period change allowed again after deleting the last valuation
 ```
 
 **REQ-6: Delete an asset** *(event-driven)*
-When the user confirms deletion of an asset, the app shall remove the asset and all of its valuations.
+When the user confirms deletion of an asset, the app shall remove the asset and all of its valuations. The confirmation reads "This asset and all its valuations will be deleted.", the same whether or not the asset has valuations, and states no number of valuations.
 
 ```gherkin
 @AC-6.1
@@ -250,6 +250,18 @@ Scenario: An asset at 0.00 is deleted like any other
   Given an asset "Example Car" whose latest value is 0.00
   When the user deletes the asset and confirms
   Then the asset and its valuations no longer exist
+
+@AC-6.4
+Scenario Outline: The confirmation states no count
+  Given an asset "Example House" with <valuations>
+  When the user starts deleting the asset
+  Then the confirmation reads "This asset and all its valuations will be deleted."
+  And it states no number of valuations
+
+  Examples:
+    | valuations     |
+    | 3 valuations   |
+    | no valuations  |
 ```
 
 ### 4.2 Valuations
@@ -445,8 +457,8 @@ Scenario: Move a yearly valuation
 Scenario: The yearly values follow the move
   Given a monthly asset with valuations 2025-11 (value 10000.00), 2025-12 (value 10200.00) and 2026-05 (value 11000.00)
   When the user changes the period of the valuation for 2025-12 to 2026-01
-  Then 2025 shows closing value 10000.00 and valuations 1
-  And 2026 shows closing value 11000.00 and valuations 2
+  Then 2025 shows closing value 10000.00
+  And 2026 shows closing value 11000.00
 
 @AC-12.7
 Scenario Outline: The edit form offers the period
@@ -713,15 +725,15 @@ Scenario: Editing an earlier valuation changes the later change
 ```
 
 **REQ-20: Yearly values** *(event-driven)*
-When the user views the Assets overview, the app shall show, for each calendar year with at least one valuation of any asset and newest year first, in Rust: the closing value, the change and the number of valuations of that year, without extrapolating partial years and without carrying values forward. A valuation counts in the year of its own period only.
+When the user views the Assets overview, the app shall show, for each calendar year with at least one valuation of any asset and newest year first, in Rust: the closing value and the change of that year, without extrapolating partial years and without carrying values forward. A valuation counts in the year of its own period only.
 
 ```gherkin
 @AC-20.1
 Scenario: Values per calendar year
   Given a monthly asset with valuations 2025-11 (value 10000.00), 2025-12 (value 10200.00) and 2026-05 (value 11000.00)
   When the user views the yearly values
-  Then 2026 shows closing value 11000.00, change 800.00, valuations 1
-  And 2025 shows closing value 10200.00, change none, valuations 2
+  Then 2026 shows closing value 11000.00, change 800.00
+  And 2025 shows closing value 10200.00, change none
 
 @AC-20.2
 Scenario: No valuations
@@ -734,7 +746,7 @@ Scenario: Values add up all assets
   Given asset "Example House" with valuations 2026-08 (value 300000.00) and 2026-09 (value 301000.00)
   And asset "Example Land" with a valuation 2026-09 (value 50000.00)
   When the user views the yearly values
-  Then there is one row for 2026 with closing value 351000.00, change none, valuations 3
+  Then there is one row for 2026 with closing value 351000.00, change none
 
 @AC-20.4
 Scenario: Closing value is the latest value of the year, not a sum over months
@@ -747,16 +759,16 @@ Scenario: Monthly and yearly assets add up together
   Given a monthly asset "Example House" with a valuation 2025-12 (value 300000.00)
   And a yearly asset "Example Land" with valuations 2024 (value 50000.00) and 2025 (value 55000.00)
   When the user views the yearly values
-  Then 2025 shows closing value 355000.00, change 5000.00, valuations 2
-  And 2024 shows closing value 50000.00, change none, valuations 1
+  Then 2025 shows closing value 355000.00, change 5000.00
+  And 2024 shows closing value 50000.00, change none
 
 @AC-20.6
 Scenario: An asset without a valuation in a year does not count in it
   Given a monthly asset "Example House" with valuations 2025-12 (value 300000.00) and 2026-03 (value 310000.00)
   And a yearly asset "Example Land" with a valuation 2025 (value 55000.00)
   When the user views the yearly values
-  Then 2026 shows closing value 310000.00, change 10000.00, valuations 1
-  And 2025 shows closing value 355000.00, change none, valuations 2
+  Then 2026 shows closing value 310000.00, change 10000.00
+  And 2025 shows closing value 355000.00, change none
 
 @AC-20.7
 Scenario: An asset that lost value shows a negative change
@@ -769,7 +781,7 @@ Scenario: An asset without an opening value adds no change
   Given a monthly asset "Example House" with valuations 2025-12 (value 300000.00) and 2026-03 (value 310000.00)
   And a monthly asset "Example Car" with a first valuation 2026-03 (value 15000.00)
   When the user views the yearly values
-  Then 2026 shows closing value 325000.00, change 10000.00, valuations 2
+  Then 2026 shows closing value 325000.00, change 10000.00
 
 @AC-20.9
 Scenario: Change after a gap counts in the later year
@@ -782,7 +794,7 @@ Scenario: Change after a gap counts in the later year
 Scenario: A new valuation updates the yearly values
   Given a monthly asset with valuations 2025-12 (value 10000.00) and 2026-09 (value 11000.00)
   When the user adds a valuation for 2026-10 with value 11500.00
-  Then 2026 shows closing value 11500.00, change 1500.00, valuations 2
+  Then 2026 shows closing value 11500.00, change 1500.00
 
 @AC-20.11
 Scenario: Newest year first
@@ -792,7 +804,7 @@ Scenario: Newest year first
 ```
 
 **REQ-21: Assets view layout** *(ubiquitous)*
-The app shall offer Assets as its own item in the left pane with a house icon at the position of REQ-26, and shall show the Overview tab as the sections Assets, Yearly values and Valuations in that order, with the valuation period, the valuation count, the latest value with its period and the icon buttons Edit (pencil) and Delete (trash) (flush right) on each asset row, the button "Add asset" in the header of the Assets section, the button "Add valuation" in the header of the Valuations section, the icon buttons Edit (pencil) and Delete (trash) flush right on each valuation row, the total value in a footer row of the Assets section labelled "Total value", the columns Year, Closing value, Change and Valuations and no actions in the Yearly values section, the columns Period, Asset, Value, Change and Note in the Valuations section, and no asset selection that changes what the sections show. A note longer than one line is cut to one line in the table and shown in full when the valuation is edited. A change of none is shown as a dash. The page shall use the same layout, components and styles as the Debts page.
+The app shall offer Assets as its own item in the left pane with a house icon at the position of REQ-26, and shall show the Overview tab as the sections Assets, Yearly values and Valuations in that order, with the valuation period, the latest value with its period in smaller muted text beside it (as on the Debts rows) and the icon buttons Edit (pencil) and Delete (trash) (flush right) on each asset row, the button "Add asset" in the header of the Assets section, the button "Add valuation" in the header of the Valuations section, the icon buttons Edit (pencil) and Delete (trash) flush right on each valuation row, the total value in a footer row of the Assets section labelled "Total value", the columns Year, Closing value and Change and no actions in the Yearly values section, no count of valuations anywhere in the view, the columns Period, Asset, Value, Change and Note in the Valuations section, and no asset selection that changes what the sections show. A note longer than one line is cut to one line in the table and shown in full when the valuation is edited. A change of none is shown as a dash. The page shall use the same layout, components and styles as the Debts page.
 
 ```gherkin
 @AC-21.1
@@ -802,11 +814,13 @@ Scenario: Sections in order
   And Assets is an item with a house icon in the left pane at the position of REQ-26
 
 @AC-21.2
-Scenario: Asset rows carry their period, count, latest value and actions
+Scenario: Asset rows carry their period, latest value and actions
   Given monthly asset "Example House" with 2 valuations, the latest for 2026-09 with value 300000.00
   And yearly asset "Example Land" with 1 valuation for 2025 with value 80000.00
-  Then the row of "Example House" shows "Monthly", "2 valuations" and "300000.00" for 2026-09
-  And the row of "Example Land" shows "Yearly", "1 valuation" and "80000.00" for 2025
+  Then the row of "Example House" shows "Monthly" and "300000.00" for 2026-09
+  And the row of "Example Land" shows "Yearly" and "80000.00" for 2025
+  And in each row the value is followed by its period in smaller muted text
+  And no row shows a number of valuations
   And each row has the icon buttons Edit (pencil) and Delete (trash) at its right edge, each named for screen readers and in a tooltip, such as "Edit Example Land"
   And the footer row reads "Total value" with "380000.00"
 
@@ -844,14 +858,15 @@ Scenario: Add buttons sit in the section headers
 @AC-21.8
 Scenario: Yearly values section
   Given a monthly asset "Example House" with valuations for 2025-12 and 2026-09
-  Then the Yearly values section shows the columns Year, Closing value, Change and Valuations in that order
+  Then the Yearly values section shows the columns Year, Closing value and Change in that order
+  And the section has no column with a number of valuations
   And a year with change none shows a dash
   And its header holds no button and its rows hold no Edit or Delete button
   And the section is not shown while no assets exist
 ```
 
 **REQ-22: Empty states** *(state-driven)*
-While no assets exist, the app shall show an "Add your first asset" prompt and no valuation form, while an asset has no valuations, the app shall show "No valuations yet" and a dash as its latest value, and while no asset has a valuation, the app shall show "No yearly values yet. They appear once there is a valuation." in the Yearly values section, with no error.
+While no assets exist, the app shall show an "Add your first asset" prompt and no valuation form, while an asset has no valuations, the app shall show a dash as its latest value and no count or "No valuations yet" on its row, while no asset has a valuation, the app shall show "No valuations yet." in the Valuations section, and while no asset has a valuation, the app shall show "No yearly values yet. They appear once there is a valuation." in the Yearly values section, with no error.
 
 ```gherkin
 @AC-22.1
@@ -864,7 +879,8 @@ Scenario: No assets
 Scenario: Asset without valuations
   Given an asset with no valuations
   Then its row shows a dash as latest value
-  And the Valuations section shows "No valuations yet"
+  And its row shows its valuation period and no "No valuations yet"
+  And the Valuations section shows "No valuations yet."
   And no error is shown
 
 @AC-22.3
@@ -974,7 +990,7 @@ The change per valuation, the opening value and the change in a year are not par
 
 The project file gets a new section `assets` with the lists `assets` and `valuations`, assets in the order they were created. Values are decimal strings. `format_version` stays 1 and nothing is migrated: a file without the section opens with no assets, as the app is not released yet.
 
-Commands (all inputs validated in Rust; amounts cross IPC as decimal strings): `list_assets()` (each asset with its valuation count, latest value and period and colour slot, plus the total value), `create_asset`, `update_asset`, `delete_asset`, `list_asset_valuations()` (valuations of all assets, each with its asset name and its change, or null), `add_asset_valuation`, `update_asset_valuation` (keeps the period that identifies the valuation as an argument and takes the new period as an extra one, equal to it when the period does not change, and applies the edit as a whole or not at all, REQ-13), `delete_asset_valuation`, `copy_previous_asset_valuation(asset_id)` and `yearly_asset_values()` (over all assets; each row has the year, closing value, change or null and valuation count, newest year first). The insights command is in CSD-016. Project commands (save, open, new) are in CSD-002.
+Commands (all inputs validated in Rust; amounts cross IPC as decimal strings): `list_assets()` (each asset with its valuation count, latest value and period and colour slot, plus the total value; the count is used to lock the period (REQ-5) and is not displayed), `create_asset`, `update_asset`, `delete_asset`, `list_asset_valuations()` (valuations of all assets, each with its asset name and its change, or null), `add_asset_valuation`, `update_asset_valuation` (keeps the period that identifies the valuation as an argument and takes the new period as an extra one, equal to it when the period does not change, and applies the edit as a whole or not at all, REQ-13), `delete_asset_valuation`, `copy_previous_asset_valuation(asset_id)` and `yearly_asset_values()` (over all assets; each row has the year, closing value, change or null and valuation count, newest year first; the count is not displayed). The insights command is in CSD-016. Project commands (save, open, new) are in CSD-002.
 
 Error codes (returned as code plus safe message): `ASSET_NAME_REQUIRED`, `ASSET_NAME_TOO_LONG`, `ASSET_NAME_DUPLICATE`, `ASSET_NOT_FOUND`, `ASSET_PERIOD_UNSUPPORTED`, `ASSET_PERIOD_LOCKED`, `ASSET_PERIOD_MISMATCH`, `ASSET_VALUATION_IN_FUTURE`, `ASSET_VALUATION_PERIOD_INVALID`, `ASSET_VALUATION_DUPLICATE`, `ASSET_VALUATION_NOT_FOUND`, `ASSET_VALUATION_VALUE_INVALID`, `ASSET_VALUATION_VALUE_NEGATIVE`, `ASSET_VALUATION_VALUE_PRECISION`, `ASSET_VALUATION_VALUE_TOO_LARGE`, `ASSET_VALUATION_NOTE_TOO_LONG`. `ASSET_NOT_FOUND` and `ASSET_VALUATION_NOT_FOUND` are returned for an asset or a valuation that does not exist (a stale screen). Project error codes are in CSD-002.
 
@@ -997,7 +1013,7 @@ All ACs are proven by `cargo test`, with domain logic tested in `domain/`. Tests
 |---|---|
 | REQ-1 to REQ-20, REQ-24, REQ-25 (data) | `cargo test test_csd015_` |
 | AC-17.1 to AC-17.4, AC-21.2, AC-21.3 (data of the assets and valuations tables) | `cargo test test_csd015_ac_17_` and `cargo test test_csd015_ac_21_` |
-| AC-12.7, AC-16.1 to AC-16.3, REQ-21 (all ACs), REQ-22, REQ-23, REQ-26, AC-25.1 (the dialog) | Manual checklist: form labels, period field in the edit form, section order and contents, titles without a currency, button placement, left-pane item and its position, empty states, note cut-off, plain-text note, dashes for none, the currency confirmation dialog. There is no frontend test setup |
+| AC-6.4, AC-12.7, AC-16.1 to AC-16.3, REQ-21 (all ACs), REQ-22, REQ-23, REQ-26, AC-25.1 (the dialog) | Manual checklist: form labels, period field in the edit form, section order and contents, no counts anywhere, the latest value with its period in muted text, delete confirmation text, titles without a currency, button placement, left-pane item and its position, empty states, note cut-off, plain-text note, dashes for none, the currency confirmation dialog. There is no frontend test setup |
 | The currency confirmation for asset valuations | Governed by CSD-003 REQ-5 (AC-5.13, AC-5.14), verified there |
 | One requirement, e.g. REQ-7 | `cargo test test_csd015_ac_7_` |
 
@@ -1008,3 +1024,4 @@ None. (OQ-1, the position in the left pane, was resolved on 29/10/2026: directly
 
 ## 9. Changelog
 - 0.1 (29/10/2026): initial draft, from GitHub issue 17 and the grill-me interview. It follows CSD-011 (assets, colour slot, period lock, valuations, changing the period, copy previous, yearly values, layout), with a value of 0.00 or more, a change per valuation (REQ-19) counted as growth, and a yearly change in the yearly values. The Insights tab is CSD-016.
+- 0.2 (29/10/2026): No counts are displayed any more: the yearly values have the columns Year, Closing value and Change (REQ-20, REQ-21, AC-12.6, AC-20.x, AC-21.2, AC-21.8), asset rows show only the period and the latest value with its period in smaller muted text (REQ-21, AC-21.2), the "No valuations yet." note stays in the Valuations section only (REQ-22, AC-22.2), and the delete confirmation states no count (REQ-6, new AC-6.4, manual checklist). The count fields stay in IPC but are not displayed (section 5).

@@ -3,7 +3,7 @@ id: CSD-013
 title: Expenses
 status: approved
 owner: Thijs Bardoel
-version: 0.2
+version: 0.3
 last_updated: 29/10/2026
 related: [CSD-000, CSD-002, CSD-003, CSD-009, CSD-011, CSD-014]
 ---
@@ -11,14 +11,14 @@ related: [CSD-000, CSD-002, CSD-003, CSD-009, CSD-011, CSD-014]
 # CSD-013: Expenses
 
 ## 1. Intent
-The app tracks what the user owns and owes, but has no view of what the user spends money on: a new roof, a car, a holiday, a washing machine. This capability lets the user log expenses, each on a specific date, with an amount, a category and an optional note. From these the app derives, per calendar year, the total spent, the number of expenses and the largest expense, and lets the user look at one year or one month at a time. It is for a single person keeping a private, local history of their purchases. It is a log of what was spent: it has no budgets, no recurrence and no link to bank accounts. The result is a dated history of expenses that the Insights chart of CSD-014 builds on. It follows the structure of Debts (CSD-011), but an expense is one dated record on its own and does not belong to a parent item such as a debt.
+The app tracks what the user owns and owes, but has no view of what the user spends money on: a new roof, a car, a holiday, a washing machine. This capability lets the user log expenses, each on a specific date, with an amount, a category and an optional note. From these the app derives, per calendar year, the total spent and the largest expense, and lists all expenses with their total. It is for a single person keeping a private, local history of their purchases. It is a log of what was spent: it has no budgets, no recurrence and no link to bank accounts. The result is a dated history of expenses that the Insights chart of CSD-014 builds on. It follows the structure of Debts (CSD-011), but an expense is one dated record on its own and does not belong to a parent item such as a debt.
 
 ## 2. Scope
 ### 2.1 In scope
 - Create, edit and delete expenses, each with a name, an amount above 0.00, a date, a category and an optional note.
 - Copy the previous expense into the add form.
-- Filter the expenses by year and by month.
-- Yearly totals per calendar year: total spent, number of expenses and the largest expense.
+- List all expenses, newest first, with their total.
+- Yearly totals per calendar year: total spent and the largest expense.
 - One Expenses view (tab Overview) with the yearly totals and the list of expenses. The Insights tab is CSD-014.
 - Expense data is part of the project file (CSD-002). Expenses count for the currency confirmation of CSD-003 (REQ-17).
 
@@ -33,7 +33,7 @@ The app tracks what the user owns and owes, but has no view of what the user spe
 - NG-8: Expenses dated in the future, planned expenses and forecasts.
 - NG-9: Import of expenses (CSV, PDF, bank export), and data fetched from any service.
 - NG-10: Attachments such as receipts or photos, and rich text in notes.
-- NG-11: Changing several expenses at once, and searching or sorting by anything other than the filters of REQ-11.
+- NG-11: Changing several expenses at once, and filtering, searching or sorting by anything.
 - NG-12: Refunds and negative amounts.
 
 ## 3. Definitions
@@ -45,9 +45,8 @@ The app tracks what the user owns and owes, but has no view of what the user spe
 | **Category** | One of the fixed values Home, Vehicle, Holiday, Sport, Study, Appliances, Hobby and Other, in that order. |
 | **Today** | The calendar date of the user's local time. |
 | **Previous expense** | The expense with the latest date, and among expenses with that date the one added last. |
-| **Yearly total** | One row per calendar year with at least one expense: the total spent, the number of expenses and the largest expense of that year. See REQ-12. |
+| **Yearly total** | One row per calendar year with at least one expense: the total spent and the largest expense of that year (and, in the data only, the number of expenses, which is not displayed). See REQ-12. |
 | **Largest expense (of a year)** | The highest amount of a single expense in that year. |
-| **Filter** | A choice of a year, and within a year of a month, that limits the list of expenses and its total. See REQ-11. |
 | **Note** | Optional plain text, up to 2,000 characters, that goes with one expense. |
 | **Project file** | The single user-chosen file holding all app data (CSD-002). Expenses are one of its sections. |
 
@@ -65,9 +64,9 @@ sequenceDiagram
     CMD->>DOM: validate and add
     DOM-->>CMD: Expense or validation error
     CMD-->>UI: serialised response (amount as decimal string)
-    UI->>CMD: list_expenses(year, month)
-    CMD->>DOM: filter, order and total
-    DOM-->>CMD: expenses, total, years with expenses
+    UI->>CMD: list_expenses()
+    CMD->>DOM: order and total
+    DOM-->>CMD: expenses, total
     CMD-->>UI: serialised response
     UI->>CMD: yearly_expense_totals()
     CMD->>DOM: totals per year
@@ -274,7 +273,7 @@ Scenario: Line breaks are kept
 ```
 
 **REQ-7: Edit an expense** *(event-driven)*
-When the user edits an expense in the edit form and saves, the app shall give it the edited name, amount, date, category and note under REQ-2 to REQ-6 as one change, without asking for confirmation, and if any edited value is invalid, then the app shall reject the whole edit with the error code of the violated rule and leave the expense as it was. The list, the filters, the yearly totals and the insights show the expense under its new values.
+When the user edits an expense in the edit form and saves, the app shall give it the edited name, amount, date, category and note under REQ-2 to REQ-6 as one change, without asking for confirmation, and if any edited value is invalid, then the app shall reject the whole edit with the error code of the violated rule and leave the expense as it was. The list, the yearly totals and the insights show the expense under its new values.
 
 ```gherkin
 @AC-7.1
@@ -296,7 +295,7 @@ Scenario: Move an expense to another year
   Given the current date is 29/10/2026
   And an expense "Example Bike" with amount 900.00 and date 10/01/2026
   When the user changes its date to 20/12/2025
-  Then 2025 shows total 900.00 and 1 expense
+  Then 2025 shows total 900.00
   And 2026 is not listed in the yearly totals
 
 @AC-7.4
@@ -403,82 +402,38 @@ Scenario: Equal expenses keep the order they were added
   Then the one added first is listed first
 ```
 
-**REQ-11: Filter by year and month** *(event-driven)*
-When the user views the Expenses overview or changes a filter, the app shall list only the expenses of the chosen year and, when a month is chosen, of that month of the year, together with the total amount of the listed expenses, computed in Rust, and shall offer as years "All years" and every year with at least one expense, newest first, and as months "All months" and the twelve months of the chosen year, with the month filter available only while a year is chosen. Initially the app shall choose the latest year with an expense and "All months", or "All years" while no expenses exist, and shall keep a chosen filter while expenses change, falling back to the latest year with an expense when the chosen year no longer has one.
+**REQ-11: List and total** *(event-driven)*
+When the user views the Expenses overview, the app shall list all expenses, newest first as in REQ-10, together with the total amount of all expenses, computed in Rust. The overview has no filter: it always lists every expense, whatever the year or month.
 
 ```gherkin
 @AC-11.1
-Scenario: Initial filter
-  Given expenses dated 15/09/2025 and 10/03/2026
-  When the user opens the Expenses overview
-  Then the year filter shows 2026 and the month filter shows "All months"
-  And only the expense of 10/03/2026 is listed
+Scenario: The total is the sum of all expenses
+  Given expenses "Example Bike" 900.00 dated 10/09/2025, "Example Helmet" 80.00 dated 12/09/2026 and "Example Sofa" 1200.00 dated 03/10/2026
+  When the user views the Expenses overview
+  Then all three expenses are listed, newest first
+  And the total of the list is 2180.00
 
 @AC-11.2
-Scenario: Filter by month
-  Given expenses "Example Bike" 900.00 dated 10/09/2026, "Example Helmet" 80.00 dated 12/09/2026 and "Example Sofa" 1200.00 dated 03/10/2026
-  When the user chooses the year 2026 and the month September
-  Then "Example Bike" and "Example Helmet" are listed
-  And the total of the list is 980.00
-
-@AC-11.3
-Scenario: All years
-  Given expenses 900.00 dated 10/09/2025 and 1200.00 dated 03/10/2026
-  When the user chooses "All years"
-  Then both expenses are listed
-  And the total of the list is 2100.00
-  And the month filter is not available
-
-@AC-11.4
-Scenario: Only years with expenses are offered
-  Given expenses dated 15/09/2024 and 10/03/2026
-  Then the year filter offers "All years", 2026 and 2024 in that order
-  And 2025 is not offered
-
-@AC-11.5
-Scenario: A month without expenses
-  Given an expense dated 10/09/2026
-  When the user chooses the year 2026 and the month October
-  Then the list is empty
-  And the total of the list is 0.00
-
-@AC-11.6
-Scenario: The month is the month of the date
-  Given an expense dated 31/10/2026 and an expense dated 01/11/2026
-  When the user chooses the year 2026 and the month October
-  Then only the expense dated 31/10/2026 is listed
-
-@AC-11.7
-Scenario: The filter survives an edit
-  Given expenses dated 15/09/2025 and 10/03/2026
-  And the user chose the year 2025
-  When the user adds an expense dated 01/02/2026
-  Then the year filter still shows 2025
-
-@AC-11.8
-Scenario: The chosen year no longer has an expense
-  Given the user chose the year 2025 with one expense, and another expense is dated 10/03/2026
-  When the user deletes the expense of 2025 and confirms
-  Then the year filter shows 2026
-
-@AC-11.9
 Scenario: No expenses
   Given no expenses exist
-  When the user opens the Expenses overview
-  Then the year filter shows "All years"
+  When the user views the Expenses overview
+  Then the list is empty
   And the total of the list is 0.00
 ```
 
+AC-11.3 to AC-11.9 (removed in v0.3): the year and month filter no longer exists, so there is nothing to choose, keep or fall back to.
+
 **REQ-12: Yearly totals** *(event-driven)*
-When the user views the Expenses overview, the app shall show, for each calendar year with at least one expense and newest year first, in Rust: the total amount spent, the number of expenses and the largest expense of that year, without extrapolating partial years and regardless of the filter of REQ-11.
+When the user views the Expenses overview, the app shall show, for each calendar year with at least one expense and newest year first, in Rust: the total amount spent, and the largest expense of that year, without extrapolating partial years. Rust still returns the number of expenses of each year over IPC (`expense_count`), for internal use, but the app does not display it.
 
 ```gherkin
 @AC-12.1
 Scenario: Totals per calendar year
   Given expenses 900.00 dated 10/09/2025, 80.00 dated 12/09/2025 and 1200.00 dated 03/10/2026
   When the user views the yearly totals
-  Then 2026 shows total 1200.00, expenses 1 and largest 1200.00
-  And 2025 shows total 980.00, expenses 2 and largest 900.00
+  Then 2026 shows total 1200.00 and largest 1200.00
+  And 2025 shows total 980.00 and largest 900.00
+  And no row shows a number of expenses
 
 @AC-12.2
 Scenario: No expenses
@@ -486,11 +441,7 @@ Scenario: No expenses
   When the user views the yearly totals
   Then the yearly totals list is empty
 
-@AC-12.3
-Scenario: The filter does not change the totals
-  Given expenses 900.00 dated 10/09/2025 and 1200.00 dated 03/10/2026
-  When the user chooses the year 2026 and the month October
-  Then the yearly totals still show 2026 and 2025
+AC-12.3 (removed in v0.3): there is no filter that could change the totals.
 
 @AC-12.4
 Scenario: A gap year is not listed
@@ -508,7 +459,7 @@ Scenario: Largest ignores the other categories
 Scenario: Totals follow changes
   Given an expense 900.00 dated 10/09/2026
   When the user adds an expense 1200.00 dated 03/10/2026
-  Then 2026 shows total 2100.00, expenses 2 and largest 1200.00
+  Then 2026 shows total 2100.00 and largest 1200.00
 
 @AC-12.7
 Scenario: The 1900 and the current year
@@ -519,7 +470,7 @@ Scenario: The 1900 and the current year
 ```
 
 **REQ-13: Expenses view layout** *(ubiquitous)*
-The app shall offer "Expenses" as its own item in the left pane directly under Debts with a receipt icon, and shall show the Overview tab as the sections Yearly totals and Expenses in that order, with the columns Year, Total, Expenses and Largest and no actions in the Yearly totals section, the year and month filters and the button "Add expense" in the header of the Expenses section, the columns Date, Name, Category, Amount and Note and the icon buttons Edit (pencil) and Delete (trash) flush right on each row in the Expenses section, and the total of the listed expenses in a footer row labelled "Total". A note longer than one line is cut to one line in the table and shown in full when the expense is edited. Dates are shown as `dd/mm/yyyy`. The page offers the tabs "Overview" and "Insights" (CSD-014), with Overview shown first.
+The app shall offer "Expenses" as its own item in the left pane directly under Debts with a receipt icon, and shall show the Overview tab as the sections Yearly totals and Expenses in that order, with the columns Year, Total and Largest and no actions in the Yearly totals section, only the button "Add expense" in the header of the Expenses section (no filters), all expenses in the Expenses section, the columns Date, Name, Category, Amount and Note and the icon buttons Edit (pencil) and Delete (trash) flush right on each row in the Expenses section, and the total of the listed expenses in a footer row labelled "Total". A note longer than one line is cut to one line in the table and shown in full when the expense is edited. Dates are shown as `dd/mm/yyyy`. The page offers the tabs "Overview" and "Insights" (CSD-014), with Overview shown first.
 
 ```gherkin
 @AC-13.1
@@ -543,18 +494,21 @@ Scenario: Expense rows
 
 @AC-13.4
 Scenario: Footer total
-  Given the list shows expenses 900.00 and 80.00
-  Then the footer row reads "Total" with "980.00"
+  Given expenses 900.00 dated 10/09/2025 and 80.00 dated 12/09/2026
+  Then the list shows both expenses
+  And the footer row reads "Total" with "980.00"
 
 @AC-13.5
 Scenario: Header of the Expenses section
-  Then the header of the Expenses section holds the year filter, the month filter and the button "Add expense"
+  Then the header of the Expenses section holds only the button "Add expense"
+  And it holds no year or month filter
   And the page title row holds no button
 
 @AC-13.6
 Scenario: Yearly totals section
   Given an expense in 2026
-  Then the Yearly totals section shows the columns Year, Total, Expenses and Largest in that order
+  Then the Yearly totals section shows the columns Year, Total and Largest in that order
+  And it shows no column with a number of expenses
   And its header holds no button and its rows hold no Edit or Delete button
 
 @AC-13.7
@@ -576,7 +530,7 @@ Scenario: Tabs
 ```
 
 **REQ-14: Empty states** *(state-driven)*
-While no expenses exist, the app shall show "No expenses yet. Add your first expense." in the Expenses section and "No totals yet. Totals appear once there is an expense." in the Yearly totals section, with the button "Add expense" still available and no error, and while expenses exist but none matches the filter, the app shall show "No expenses in this period" in the Expenses section.
+While no expenses exist, the app shall show "No expenses yet. Add your first expense." in the Expenses section and "No totals yet. Totals appear once there is an expense." in the Yearly totals section, with the button "Add expense" still available and no error.
 
 ```gherkin
 @AC-14.1
@@ -587,12 +541,7 @@ Scenario: No expenses
   And the button "Add expense" is available
   And no error is shown
 
-@AC-14.2
-Scenario: Nothing in the filter
-  Given an expense dated 10/09/2026
-  When the user chooses the year 2026 and the month October
-  Then the Expenses section shows "No expenses in this period"
-  And the Yearly totals section still shows 2026
+AC-14.2 (removed in v0.3): there is no filter, so the list is never empty while expenses exist.
 ```
 
 **REQ-15: No currency outside Settings** *(ubiquitous)*
@@ -684,24 +633,24 @@ erDiagram
     }
 ```
 
-The expense has no parent entity. The month and year of an expense, the yearly totals, the largest expense and the total of a filtered list are not part of the model: they are derived (REQ-11, REQ-12).
+The expense has no parent entity. The month and year of an expense, the yearly totals, the largest expense and the total of the list are not part of the model: they are derived (REQ-11, REQ-12).
 
 The project file gets a new section `expenses` with the list `expenses`, in the order the expenses were added. Amounts are decimal strings. `format_version` stays 1 and nothing is migrated: a file without the section opens with no expenses, as the app is not released yet.
 
-Commands (all inputs validated in Rust; amounts cross IPC as decimal strings): `list_expenses(year, month)` (both optional, `month` only together with `year`; returns the expenses in the order of REQ-10, each with its id, name, amount, ISO date, category and note, plus the total of the returned expenses and the years with at least one expense, newest first), `add_expense`, `update_expense` (applies the edit as a whole or not at all, REQ-7), `delete_expense`, `copy_previous_expense()` (returns name, amount and category, or nothing) and `yearly_expense_totals()` (one row per year with the year, total, expense count and largest, newest year first). The insights command is in CSD-014. Project commands (save, open, new) are in CSD-002.
+Commands (all inputs validated in Rust; amounts cross IPC as decimal strings): `list_expenses()` (no arguments; returns `{ expenses, total }`: all expenses in the order of REQ-10, each with its id, name, amount, ISO date, category and note, plus their total), `add_expense`, `update_expense` (applies the edit as a whole or not at all, REQ-7), `delete_expense`, `copy_previous_expense()` (returns name, amount and category, or nothing) and `yearly_expense_totals()` (one row per year with the year, total, expense count and largest, newest year first; the count is returned but not displayed). The insights command is in CSD-014. Project commands (save, open, new) are in CSD-002.
 
 Error codes (returned as code plus safe message): `EXPENSE_NAME_REQUIRED`, `EXPENSE_NAME_TOO_LONG`, `EXPENSE_CATEGORY_UNSUPPORTED`, `EXPENSE_DATE_INVALID`, `EXPENSE_DATE_IN_FUTURE`, `EXPENSE_AMOUNT_INVALID`, `EXPENSE_AMOUNT_NOT_POSITIVE`, `EXPENSE_AMOUNT_PRECISION`, `EXPENSE_AMOUNT_TOO_LARGE`, `EXPENSE_NOTE_TOO_LONG`, `EXPENSE_NOT_FOUND`. `EXPENSE_NOT_FOUND` is returned for an expense that does not exist (a stale screen). Project error codes are in CSD-002.
 
 ## 6. Constraints
 - CON-1: Amounts use `rust_decimal::Decimal` and are in the project currency (CSD-003), so adding amounts never mixes currencies. Rationale: `CLAUDE.md` money rules.
-- CON-2: The frontend displays figures computed in Rust, including the total of a filtered list, the yearly totals and the largest expenses, and computes none itself. Rationale: `CLAUDE.md` layout rule.
+- CON-2: The frontend displays figures computed in Rust, including the total of the list, the yearly totals and the largest expenses, and computes none itself. Rationale: `CLAUDE.md` layout rule.
 - CON-3: No network access. Rationale: `CLAUDE.md` Tauri security rules, and NG-9.
 - CON-4: Errors shown to the user never contain file paths or OS details. Rationale: `CLAUDE.md` error rules.
 - CON-5: Amounts, expense names and notes are not logged at `info` or above. Rationale: `CLAUDE.md` privacy rules.
 - CON-6: Tests and fixtures use synthetic data only ("Example Roof Repair", round amounts). Rationale: the repo is public.
 - CON-7: Names and notes are stored as typed and displayed as plain text, never as HTML. Rationale: the frontend must not run markup typed by the user.
 - CON-8: The length of a name or a note is counted in characters (Unicode scalar values), not bytes. Rationale: names and notes in any language must fit the stated limits.
-- CON-9: The totals, the largest expenses and the filtered total are computed in Rust each time they are needed and are never stored in the project file. Rationale: CON-2, and stored figures would go stale when an expense changes.
+- CON-9: The totals, the largest expenses and the total of the list are computed in Rust each time they are needed and are never stored in the project file. Rationale: CON-2, and stored figures would go stale when an expense changes.
 - CON-10: Expenses get their own module, commands and page. Shared helpers may be reused or extracted when that is small, and Debts, Bank accounts and Investments are not refactored. Rationale: `CLAUDE.md` asks before large refactors across modules.
 - CON-11: "Today" is the local calendar date and is decided in Rust. Rationale: the rule against future dates (REQ-4) must not depend on the webview.
 
@@ -711,8 +660,8 @@ All ACs are proven by `cargo test`, with domain logic tested in `domain/`, excep
 | Requirement | Command |
 |---|---|
 | REQ-1 to REQ-12, REQ-16, REQ-17 (data) | `cargo test test_csd013_` |
-| AC-11.1 to AC-11.6, AC-11.9, AC-12.1 to AC-12.7 (the data of the list, its total and the yearly totals) | `cargo test test_csd013_ac_11_` and `cargo test test_csd013_ac_12_` |
-| AC-1.3, AC-1.5, AC-7.6, AC-11.7, AC-11.8, REQ-13 (all ACs), REQ-14, REQ-15, AC-17.1 (the dialog) | Manual checklist: form labels and the default category, the unsaved indicator, filter behaviour after edits, section order and contents, left-pane item and icon, titles without a currency, button placement, empty states, note cut-off, plain-text name and note, the currency confirmation dialog. There is no frontend test setup |
+| AC-11.1 `test_csd013_ac_11_1_the_total_is_the_sum_of_all_expenses` (total of all expenses across years), AC-11.2 `test_csd013_ac_11_2_no_expenses` (empty list, total 0.00), AC-12.1, AC-12.2, AC-12.4 to AC-12.7 (the yearly totals) | `cargo test test_csd013_ac_11_` and `cargo test test_csd013_ac_12_` |
+| AC-1.3, AC-1.5, AC-7.6, REQ-13 (all ACs), REQ-14, REQ-15, AC-17.1 (the dialog) | Manual checklist: form labels and the default category, the unsaved indicator, section order and contents, left-pane item and icon, titles without a currency, button placement (only "Add expense" in the section header, no filters), no counts, empty states, note cut-off, plain-text name and note, the currency confirmation dialog. There is no frontend test setup |
 | The currency confirmation for expenses | Governed by CSD-003 REQ-5, verified there |
 | One requirement, e.g. REQ-4 | `cargo test test_csd013_ac_4_` |
 
@@ -722,5 +671,6 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.3 (29/10/2026): The year and month filter is removed. The overview always lists all expenses, newest first, with their total. REQ-11 is now "List and total" (AC-11.1 and AC-11.2 rewritten, AC-11.3 to AC-11.9 removed), AC-12.3 and AC-14.2 removed, the Filter definition, the filter wording in NG-11, REQ-7, REQ-12, REQ-13, REQ-14, the flow, CON-2 and CON-9 removed or reworded. `list_expenses()` takes no arguments and returns `{ expenses, total }` (no `years`). The number of expenses is no longer displayed (the Expenses column of the yearly totals is gone, REQ-12, REQ-13, AC-12.1, AC-12.6, AC-7.3); `expense_count` stays in the IPC data.
 - 0.2 (29/10/2026): Renamed from "Major expenses" to "Expenses": title, file name, page and navigation labels, and wording. No behaviour change. NG-4 is reworded: there is no minimum amount.
 - 0.1 (29/10/2026): initial draft, from GitHub issue 16 and the grill-me interview. It follows CSD-011 (layout, validation, copy previous, yearly totals, project file, currency confirmation), with a dated expense that has no parent item, a fixed category list, a year and month filter and no future dates.

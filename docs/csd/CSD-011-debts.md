@@ -3,8 +3,8 @@ id: CSD-011
 title: Debts
 status: approved
 owner: Thijs Bardoel
-version: 0.1
-last_updated: 28/10/2026
+version: 0.2
+last_updated: 29/10/2026
 related: [CSD-000, CSD-002, CSD-003, CSD-005, CSD-009, CSD-012]
 ---
 
@@ -20,7 +20,7 @@ The app tracks wealth, but has no view of what the user owes: a mortgage, a stud
 - Change the period of an existing statement (REQ-12).
 - Copy the previous statement into the add form.
 - The change per statement: the balance of the previous statement minus this one (REQ-25).
-- Yearly totals per calendar year over all debts: closing balance, amount repaid and the number of statements.
+- Yearly totals per calendar year over all debts: closing balance and amount repaid.
 - One Debts view (tab Overview) with the debts, their latest balances, the total debt, the yearly totals and the statements of all debts. The Insights tab is CSD-012.
 - Debt data is part of the project file (CSD-002). Statements count for the currency confirmation of CSD-003 (REQ-24).
 
@@ -51,7 +51,7 @@ The app tracks wealth, but has no view of what the user owes: a mortgage, a stud
 | **Change** | For a statement: the balance of its previous statement minus its own balance. Positive when the debt was repaid, negative when it grew. It is derived and never stored. A first statement has no change. |
 | **Latest balance** | The balance of the statement with the most recent period of a debt. |
 | **Total debt** | The sum of the latest balances of all debts that have at least one statement. |
-| **Yearly total** | One row per calendar year: the closing balance, the amount repaid and the number of statements of that year, over all debts. See REQ-19. |
+| **Yearly total** | One row per calendar year: the closing balance and the amount repaid of that year, over all debts. See REQ-19. |
 | **Closing balance (of a year)** | The sum, over the debts that have a statement in that year, of the balance of each debt's latest statement in that year. |
 | **Opening balance (of a debt in a year)** | The balance of the latest statement of the debt before that year. A debt without an earlier statement has none. |
 | **Repaid (in a year)** | The sum, over the debts that have a statement in that year and an opening balance in it, of the opening balance minus the closing balance of that debt. It is negative when those debts grew. It is none when no debt has an opening balance in that year. |
@@ -230,7 +230,7 @@ Scenario: Period change allowed again after deleting the last statement
 ```
 
 **REQ-6: Delete a debt** *(event-driven)*
-When the user confirms deletion of a debt, the app shall remove the debt and all of its statements.
+When the user confirms deletion of a debt, the app shall remove the debt and all of its statements. The confirmation reads "This debt and all its statements will be deleted.", the same whether or not the debt has statements, and states no number of statements.
 
 ```gherkin
 @AC-6.1
@@ -251,6 +251,18 @@ Scenario: A debt at 0.00 is deleted like any other
   Given a debt "Example Student Loan" whose latest balance is 0.00
   When the user deletes the debt and confirms
   Then the debt and its statements no longer exist
+
+@AC-6.4
+Scenario Outline: The confirmation states no count
+  Given a debt "Example Mortgage" with <statements>
+  When the user starts deleting the debt
+  Then the confirmation reads "This debt and all its statements will be deleted."
+  And it states no number of statements
+
+  Examples:
+    | statements   |
+    | 3 statements |
+    | no statements |
 ```
 
 ### 4.2 Statements
@@ -446,8 +458,8 @@ Scenario: Move a yearly statement
 Scenario: The yearly totals follow the move
   Given a monthly debt with statements 2025-11 (balance 10000.00), 2025-12 (balance 9800.00) and 2026-05 (balance 9000.00)
   When the user changes the period of the statement for 2025-12 to 2026-01
-  Then 2025 shows closing balance 10000.00 and statements 1
-  And 2026 shows closing balance 9000.00 and statements 2
+  Then 2025 shows closing balance 10000.00
+  And 2026 shows closing balance 9000.00
 
 @AC-12.7
 Scenario Outline: The edit form offers the period
@@ -714,15 +726,15 @@ Scenario: Editing an earlier statement changes the later change
 ```
 
 **REQ-19: Yearly totals** *(event-driven)*
-When the user views the Debts overview, the app shall show, for each calendar year with at least one statement of any debt and newest year first, in Rust: the closing balance, the amount repaid and the number of statements of that year, without extrapolating partial years and without carrying balances forward. A statement counts in the year of its own period only.
+When the user views the Debts overview, the app shall show, for each calendar year with at least one statement of any debt and newest year first, in Rust: the closing balance and the amount repaid of that year, without extrapolating partial years and without carrying balances forward. A statement counts in the year of its own period only.
 
 ```gherkin
 @AC-19.1
 Scenario: Totals per calendar year
   Given a monthly debt with statements 2025-11 (balance 10000.00), 2025-12 (balance 9800.00) and 2026-05 (balance 9000.00)
   When the user views the yearly totals
-  Then 2026 shows closing balance 9000.00, repaid 800.00, statements 1
-  And 2025 shows closing balance 9800.00, repaid none, statements 2
+  Then 2026 shows closing balance 9000.00, repaid 800.00
+  And 2025 shows closing balance 9800.00, repaid none
 
 @AC-19.2
 Scenario: No statements
@@ -735,7 +747,7 @@ Scenario: Totals add up all debts
   Given debt "Example Mortgage" with statements 2026-08 (balance 150000.00) and 2026-09 (balance 149500.00)
   And debt "Example Student Loan" with a statement 2026-09 (balance 5000.00)
   When the user views the yearly totals
-  Then there is one row for 2026 with closing balance 154500.00, repaid none, statements 3
+  Then there is one row for 2026 with closing balance 154500.00, repaid none
 
 @AC-19.4
 Scenario: Closing balance is the latest balance of the year, not a sum over months
@@ -748,16 +760,16 @@ Scenario: Monthly and yearly debts add up together
   Given a monthly debt "Example Mortgage" with a statement 2025-12 (balance 10000.00)
   And a yearly debt "Example Student Loan" with statements 2024 (balance 7000.00) and 2025 (balance 6000.00)
   When the user views the yearly totals
-  Then 2025 shows closing balance 16000.00, repaid 1000.00, statements 2
-  And 2024 shows closing balance 7000.00, repaid none, statements 1
+  Then 2025 shows closing balance 16000.00, repaid 1000.00
+  And 2024 shows closing balance 7000.00, repaid none
 
 @AC-19.6
 Scenario: A debt without a statement in a year does not count in it
   Given a monthly debt "Example Mortgage" with statements 2025-12 (balance 10000.00) and 2026-03 (balance 9500.00)
   And a yearly debt "Example Student Loan" with a statement 2025 (balance 6000.00)
   When the user views the yearly totals
-  Then 2026 shows closing balance 9500.00, repaid 500.00, statements 1
-  And 2025 shows closing balance 16000.00, repaid none, statements 2
+  Then 2026 shows closing balance 9500.00, repaid 500.00
+  And 2025 shows closing balance 16000.00, repaid none
 
 @AC-19.7
 Scenario: A debt that grew shows a negative amount repaid
@@ -770,7 +782,7 @@ Scenario: A debt without an opening balance adds no repaid amount
   Given a monthly debt "Example Mortgage" with statements 2025-12 (balance 10000.00) and 2026-03 (balance 9000.00)
   And a monthly debt "Example Car Loan" with a first statement 2026-03 (balance 4000.00)
   When the user views the yearly totals
-  Then 2026 shows closing balance 13000.00, repaid 1000.00, statements 2
+  Then 2026 shows closing balance 13000.00, repaid 1000.00
 
 @AC-19.9
 Scenario: Repaid after a gap counts in the later year
@@ -783,7 +795,7 @@ Scenario: Repaid after a gap counts in the later year
 Scenario: A new statement updates the totals
   Given a monthly debt with statements 2025-12 (balance 10000.00) and 2026-09 (balance 9000.00)
   When the user adds a statement for 2026-10 with balance 8500.00
-  Then 2026 shows closing balance 8500.00, repaid 1500.00, statements 2
+  Then 2026 shows closing balance 8500.00, repaid 1500.00
 
 @AC-19.11
 Scenario: Newest year first
@@ -793,7 +805,7 @@ Scenario: Newest year first
 ```
 
 **REQ-20: Debts view layout** *(ubiquitous)*
-The app shall offer Debts as its own item in the left pane next to Bank accounts, and shall show the Overview tab as the sections Debts, Yearly totals and Statements in that order, with the statement period, the statement count, the latest balance with its period and the icon buttons Edit (pencil) and Delete (trash) (flush right) on each debt row, the button "Add debt" in the header of the Debts section, the button "Add statement" in the header of the Statements section, the icon buttons Edit (pencil) and Delete (trash) flush right on each statement row, the total debt in a footer row of the Debts section labelled "Total debt", the columns Year, Closing balance, Repaid and Statements and no actions in the Yearly totals section, the columns Period, Debt, Balance, Change and Note in the Statements section, and no debt selection that changes what the sections show. A note longer than one line is cut to one line in the table and shown in full when the statement is edited. A change of none and a repaid of none are shown as a dash.
+The app shall offer Debts as its own item in the left pane next to Bank accounts, and shall show the Overview tab as the sections Debts, Yearly totals and Statements in that order, with the statement period, the latest balance with its period and the icon buttons Edit (pencil) and Delete (trash) (flush right) on each debt row, the button "Add debt" in the header of the Debts section, the button "Add statement" in the header of the Statements section, the icon buttons Edit (pencil) and Delete (trash) flush right on each statement row, the total debt in a footer row of the Debts section labelled "Total debt", the columns Year, Closing balance and Repaid and no actions in the Yearly totals section, and no count of statements anywhere in the view, the columns Period, Debt, Balance, Change and Note in the Statements section, and no debt selection that changes what the sections show. A note longer than one line is cut to one line in the table and shown in full when the statement is edited. A change of none and a repaid of none are shown as a dash.
 
 ```gherkin
 @AC-20.1
@@ -803,11 +815,12 @@ Scenario: Sections in order
   And Debts is an item in the left pane next to Bank accounts
 
 @AC-20.2
-Scenario: Debt rows carry their period, count, latest balance and actions
+Scenario: Debt rows carry their period, latest balance and actions
   Given monthly debt "Example Mortgage" with 2 statements, the latest for 2026-09 with balance 150000.00
   And yearly debt "Example Student Loan" with 1 statement for 2025 with balance 8000.00
-  Then the row of "Example Mortgage" shows "Monthly", "2 statements" and "150000.00" for 2026-09
-  And the row of "Example Student Loan" shows "Yearly", "1 statement" and "8000.00" for 2025
+  Then the row of "Example Mortgage" shows "Monthly" and "150000.00" for 2026-09
+  And the row of "Example Student Loan" shows "Yearly" and "8000.00" for 2025
+  And no row shows a number of statements
   And each row has the icon buttons Edit (pencil) and Delete (trash) at its right edge, each named for screen readers and in a tooltip, such as "Edit Example Student Loan"
   And the footer row reads "Total debt" with "158000.00"
 
@@ -845,14 +858,15 @@ Scenario: Add buttons sit in the section headers
 @AC-20.8
 Scenario: Yearly totals section
   Given a monthly debt "Example Mortgage" with statements for 2025-12 and 2026-09
-  Then the Yearly totals section shows the columns Year, Closing balance, Repaid and Statements in that order
+  Then the Yearly totals section shows the columns Year, Closing balance and Repaid in that order
+  And the section has no column with a number of statements
   And a year with repaid none shows a dash
   And its header holds no button and its rows hold no Edit or Delete button
   And the section is not shown while no debts exist
 ```
 
 **REQ-21: Empty states** *(state-driven)*
-While no debts exist, the app shall show an "Add your first debt" prompt and no statement form, while a debt has no statements, the app shall show "No statements yet" and a dash as its latest balance, and while no debt has a statement, the app shall show "No totals yet. Totals appear once there is a statement." in the Yearly totals section, with no error.
+While no debts exist, the app shall show an "Add your first debt" prompt and no statement form, while a debt has no statements, the app shall show a dash as its latest balance and no count or "No statements yet" on its row, while no debt has a statement, the app shall show "No statements yet." in the Statements section, and while no debt has a statement, the app shall show "No totals yet. Totals appear once there is a statement." in the Yearly totals section, with no error.
 
 ```gherkin
 @AC-21.1
@@ -865,7 +879,8 @@ Scenario: No debts
 Scenario: Debt without statements
   Given a debt with no statements
   Then its row shows a dash as latest balance
-  And the Statements section shows "No statements yet"
+  And its row shows its statement period and no "No statements yet"
+  And the Statements section shows "No statements yet."
   And no error is shown
 
 @AC-21.3
@@ -966,7 +981,7 @@ The change per statement, the opening balance and the amount repaid are not part
 
 The project file gets a new section `debts` with the lists `debts` and `statements`, debts in the order they were created. Balances are decimal strings. `format_version` stays 1 and nothing is migrated: a file without the section opens with no debts, as the app is not released yet.
 
-Commands (all inputs validated in Rust; amounts cross IPC as decimal strings): `list_debts()` (each debt with its statement count, latest balance and period and colour slot, plus the total debt), `create_debt`, `update_debt`, `delete_debt`, `list_debt_statements()` (statements of all debts, each with its debt name and its change, or null), `add_debt_statement`, `update_debt_statement` (keeps the period that identifies the statement as an argument and takes the new period as an extra one, equal to it when the period does not change, and applies the edit as a whole or not at all, REQ-13), `delete_debt_statement`, `copy_previous_debt_statement(debt_id)` and `yearly_debt_totals()` (over all debts; each row has the year, closing balance, repaid or null and statement count, newest year first). The insights command is in CSD-012. Project commands (save, open, new) are in CSD-002.
+Commands (all inputs validated in Rust; amounts cross IPC as decimal strings): `list_debts()` (each debt with its statement count, latest balance and period and colour slot, plus the total debt; the count is used to lock the period (REQ-5) and is not displayed), `create_debt`, `update_debt`, `delete_debt`, `list_debt_statements()` (statements of all debts, each with its debt name and its change, or null), `add_debt_statement`, `update_debt_statement` (keeps the period that identifies the statement as an argument and takes the new period as an extra one, equal to it when the period does not change, and applies the edit as a whole or not at all, REQ-13), `delete_debt_statement`, `copy_previous_debt_statement(debt_id)` and `yearly_debt_totals()` (over all debts; each row has the year, closing balance, repaid or null and statement count, newest year first; the count is not displayed). The insights command is in CSD-012. Project commands (save, open, new) are in CSD-002.
 
 Error codes (returned as code plus safe message): `DEBT_NAME_REQUIRED`, `DEBT_NAME_TOO_LONG`, `DEBT_NAME_DUPLICATE`, `DEBT_NOT_FOUND`, `DEBT_PERIOD_UNSUPPORTED`, `DEBT_PERIOD_LOCKED`, `DEBT_PERIOD_MISMATCH`, `DEBT_STATEMENT_IN_FUTURE`, `DEBT_STATEMENT_PERIOD_INVALID`, `DEBT_STATEMENT_DUPLICATE`, `DEBT_STATEMENT_NOT_FOUND`, `DEBT_STATEMENT_BALANCE_INVALID`, `DEBT_STATEMENT_BALANCE_NEGATIVE`, `DEBT_STATEMENT_BALANCE_PRECISION`, `DEBT_STATEMENT_BALANCE_TOO_LARGE`, `DEBT_STATEMENT_NOTE_TOO_LONG`. `DEBT_NOT_FOUND` and `DEBT_STATEMENT_NOT_FOUND` are returned for a debt or a statement that does not exist (a stale screen). Project error codes are in CSD-002.
 
@@ -989,7 +1004,7 @@ All ACs are proven by `cargo test`, with domain logic tested in `domain/`. Tests
 |---|---|
 | REQ-1 to REQ-19, REQ-23, REQ-24 (data) and REQ-25 | `cargo test test_csd011_` |
 | AC-17.1 to AC-17.4, AC-20.2, AC-20.3 (data of the debts and statements tables) | `cargo test test_csd011_ac_17_` and `cargo test test_csd011_ac_20_` |
-| AC-12.7, AC-16.1 to AC-16.3, REQ-20 (all ACs), REQ-21, REQ-22, AC-24.1 (the dialog) | Manual checklist: form labels, period field in the edit form, section order and contents, titles without a currency, button placement, left-pane item, empty states, note cut-off, plain-text note, dashes for none, the currency confirmation dialog. There is no frontend test setup |
+| AC-6.4, AC-12.7, AC-16.1 to AC-16.3, REQ-20 (all ACs), REQ-21, REQ-22, AC-24.1 (the dialog) | Manual checklist: form labels, period field in the edit form, section order and contents, no counts anywhere, delete confirmation text, titles without a currency, button placement, left-pane item, empty states, note cut-off, plain-text note, dashes for none, the currency confirmation dialog. There is no frontend test setup |
 | The currency confirmation for debt statements | Governed by CSD-003 REQ-5 (AC-5.9, AC-5.10), verified there |
 | One requirement, e.g. REQ-7 | `cargo test test_csd011_ac_7_` |
 
@@ -1000,3 +1015,4 @@ None.
 
 ## 9. Changelog
 - 0.1 (28/10/2026): initial draft, from GitHub issue 15 and the grill-me interview. It follows CSD-009 (debts, colour slot, period lock, statements, changing the period, copy previous, yearly totals, layout), with a balance of 0.00 or more, a change per statement (REQ-25) and an amount repaid in the yearly totals.
+- 0.2 (29/10/2026): No counts are displayed any more: the yearly totals have the columns Year, Closing balance and Repaid (REQ-19, REQ-20, AC-12.6, AC-19.x, AC-20.2, AC-20.8), debt rows show only the period (REQ-20, REQ-21, AC-21.2), and the delete confirmation states no count (REQ-6, new AC-6.4). The count fields stay in IPC but are not displayed (section 5). The Statements section keeps its "No statements yet." note.

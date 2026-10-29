@@ -3,8 +3,8 @@ id: CSD-009
 title: Bank accounts
 status: approved
 owner: Thijs Bardoel
-version: 0.2
-last_updated: 28/10/2026
+version: 0.3
+last_updated: 29/10/2026
 related: [CSD-000, CSD-002, CSD-003, CSD-005, CSD-010]
 ---
 
@@ -19,7 +19,7 @@ The app tracks wealth, but has no view of the money the user keeps in bank accou
 - Create, edit and delete one entry per account per period: a closing balance (which may be negative) and an optional note.
 - Change the period of an existing entry (REQ-12).
 - Copy the previous entry into the add form.
-- Yearly totals per calendar year over all accounts: closing balance and the number of entries.
+- Yearly totals per calendar year over all accounts: the closing balance. Rust also returns the number of entries per year, but the app does not display it.
 - One Bank accounts view (tab Overview) with the accounts, their latest balances, the total of the latest balances, the yearly totals and the entries of all accounts. The Insights tab is CSD-010.
 - Bank account data is part of the project file (CSD-002). Entries count for the currency confirmation of CSD-003 (REQ-24).
 
@@ -45,7 +45,7 @@ The app tracks wealth, but has no view of the money the user keeps in bank accou
 | **Balance** | The value of the account at the end of the period (its closing balance), as one signed amount in the project currency. Negative when the account is overdrawn. |
 | **Latest balance** | The balance of the entry with the most recent period of an account. |
 | **Total** | The sum of the latest balances of all accounts that have at least one entry. It can be negative. |
-| **Yearly total** | One row per calendar year: the closing balance and the number of entries of that year, over all accounts. See REQ-19. |
+| **Yearly total** | One row per calendar year: the closing balance of that year, over all accounts. Rust also returns the number of entries of that year, which is not displayed. See REQ-19. |
 | **Closing balance (of a year)** | The sum, over the accounts that have an entry in that year, of the balance of each account's latest entry in that year. |
 | **Colour slot** | A number from 0 to 7 stored with an account. CSD-010 draws the account in the colour of its slot. |
 | **Note** | Optional plain text, up to 2,000 characters, that goes with one entry. |
@@ -215,7 +215,7 @@ Scenario: Period change allowed again after deleting the last entry
 ```
 
 **REQ-6: Delete an account** *(event-driven)*
-When the user confirms deletion of a bank account, the app shall remove the account and all of its entries.
+When the user confirms deletion of a bank account, the app shall remove the account and all of its entries. The confirmation reads "This account and all its entries will be deleted.", the same whether or not the account has entries, and states no number.
 
 ```gherkin
 @AC-6.1
@@ -230,6 +230,18 @@ Scenario: Cancelled deletion changes nothing
   Given an account "Example Current Account" with 3 entries
   When the user starts deleting the account and cancels
   Then the account and its 3 entries still exist
+
+@AC-6.3
+Scenario Outline: The deletion confirmation states no count
+  Given an account "Example Current Account" with <entries> entries
+  When the user starts deleting the account
+  Then the confirmation reads "This account and all its entries will be deleted."
+  And it shows no number
+
+  Examples:
+    | entries |
+    | 0       |
+    | 3       |
 ```
 
 ### 4.2 Entries
@@ -653,7 +665,7 @@ Scenario: Same period is ordered by account
 ```
 
 **REQ-19: Yearly totals** *(event-driven)*
-When the user views the Bank accounts overview, the app shall show, for each calendar year with at least one entry of any account and newest year first, in Rust: the closing balance and the number of entries of that year, without extrapolating partial years and without carrying balances forward. An entry counts in the year of its own period only.
+When the user views the Bank accounts overview, the app shall show, for each calendar year with at least one entry of any account and newest year first, in Rust: the closing balance of that year, and shall return the number of entries of that year without displaying it, without extrapolating partial years and without carrying balances forward. An entry counts in the year of its own period only. In the ACs of this requirement and in AC-12.6, "entries" is that returned count field, which the screen does not show.
 
 ```gherkin
 @AC-19.1
@@ -719,7 +731,7 @@ Scenario: Newest year first
 ```
 
 **REQ-20: Bank accounts view layout** *(ubiquitous)*
-The app shall offer Bank accounts as its own item in the left pane next to Investments, and shall show the Overview tab as the sections Accounts, Yearly totals and Entries in that order, with the entry period, the entry count, the latest balance with its period and the icon buttons Edit (pencil) and Delete (trash) (flush right) on each account row, the button "Add account" in the header of the Accounts section, the button "Add entry" in the header of the Entries section, the icon buttons Edit (pencil) and Delete (trash) flush right on each entry row, the total in a footer row of the Accounts section, the columns Year, Closing balance and Entries and no actions in the Yearly totals section, the columns Period, Account, Balance and Note in the Entries section, and no account selection that changes what the sections show. A note longer than one line is cut to one line in the table and shown in full when the entry is edited, and a negative balance is shown with a minus sign.
+The app shall offer Bank accounts as its own item in the left pane next to Investments, and shall show the Overview tab as the sections Accounts, Yearly totals and Entries in that order, with the entry period (and no entry count), the latest balance with its period and the icon buttons Edit (pencil) and Delete (trash) (flush right) on each account row, the button "Add account" in the header of the Accounts section, the button "Add entry" in the header of the Entries section, the icon buttons Edit (pencil) and Delete (trash) flush right on each entry row, the total in a footer row of the Accounts section, the column Year and the column Closing balance, and no entries column and no actions, in the Yearly totals section, the columns Period, Account, Balance and Note in the Entries section, and no account selection that changes what the sections show. A note longer than one line is cut to one line in the table and shown in full when the entry is edited, and a negative balance is shown with a minus sign. The app shall display no count of entries anywhere on the page: not in the yearly totals, on the account rows, in a confirmation, in a chart tooltip or in the screen-reader description of a chart.
 
 ```gherkin
 @AC-20.1
@@ -729,11 +741,12 @@ Scenario: Sections in order
   And Bank accounts is an item in the left pane next to Investments
 
 @AC-20.2
-Scenario: Account rows carry their period, count, latest balance and actions
+Scenario: Account rows carry their period, latest balance and actions
   Given monthly account "Example Current Account" with 2 entries, the latest for 2026-09 with balance 2500.00
   And yearly account "Example Savings" with 1 entry for 2025 with balance 8000.00
-  Then the row of "Example Current Account" shows "Monthly", "2 entries" and "2500.00" for 2026-09
-  And the row of "Example Savings" shows "Yearly", "1 entry" and "8000.00" for 2025
+  Then the row of "Example Current Account" shows "Monthly" and "2500.00" for 2026-09
+  And the row of "Example Savings" shows "Yearly" and "8000.00" for 2025
+  And no row shows a number of entries
   And each row has the icon buttons Edit (pencil) and Delete (trash) at its right edge, each named for screen readers and in a tooltip, such as "Edit Example Savings"
   And the footer row shows the total "10500.00"
 
@@ -772,7 +785,8 @@ Scenario: Add buttons sit in the section headers
 @AC-20.8
 Scenario: Yearly totals section
   Given a monthly account "Example Current Account" with an entry for 2026-09
-  Then the Yearly totals section shows the columns Year, Closing balance and Entries in that order
+  Then the Yearly totals section shows the columns Year and Closing balance in that order
+  And it shows no column with a number of entries
   And its header holds no button and its rows hold no Edit or Delete button
   And the section is not shown while no accounts exist
 
@@ -795,7 +809,7 @@ Scenario: No accounts
 @AC-21.2
 Scenario: Account without entries
   Given an account with no entries
-  Then its row shows a dash as latest balance
+  Then its row shows a dash as latest balance and only its period as meta, without "No entries yet"
   And the Entries section shows "No entries yet"
   And no error is shown
 
@@ -889,7 +903,7 @@ erDiagram
 
 The project file gets a new section `bank_accounts` with the lists `accounts` and `entries`, accounts in the order they were created. Balances are decimal strings. `format_version` stays 1 and nothing is migrated: a file without the section opens with no accounts, as the app is not released yet.
 
-Commands (all inputs validated in Rust; amounts cross IPC as decimal strings): `list_bank_accounts()` (each account with its entry count, latest balance and period and colour slot, plus the total), `create_bank_account`, `update_bank_account`, `delete_bank_account`, `list_bank_entries()` (entries of all accounts, each with its account name), `add_bank_entry`, `update_bank_entry` (keeps the period that identifies the entry as an argument and takes the new period as an extra one, equal to it when the period does not change, and applies the edit as a whole or not at all, REQ-13), `delete_bank_entry`, `copy_previous_bank_entry(account_id)` and `yearly_bank_totals()` (over all accounts; each row has the year, closing balance and entry count, newest year first). The insights command is in CSD-010. Project commands (save, open, new) are in CSD-002.
+Commands (all inputs validated in Rust; amounts cross IPC as decimal strings): `list_bank_accounts()` (each account with its entry count, which is not displayed, latest balance and period and colour slot, plus the total), `create_bank_account`, `update_bank_account`, `delete_bank_account`, `list_bank_entries()` (entries of all accounts, each with its account name), `add_bank_entry`, `update_bank_entry` (keeps the period that identifies the entry as an argument and takes the new period as an extra one, equal to it when the period does not change, and applies the edit as a whole or not at all, REQ-13), `delete_bank_entry`, `copy_previous_bank_entry(account_id)` and `yearly_bank_totals()` (over all accounts; each row has the year, closing balance and entry count, newest year first; the count is not displayed, but the frontend may use it, for example to lock the period or to detect an empty year). The insights command is in CSD-010. Project commands (save, open, new) are in CSD-002.
 
 Error codes (returned as code plus safe message): `BANK_ACCOUNT_NAME_REQUIRED`, `BANK_ACCOUNT_NAME_TOO_LONG`, `BANK_ACCOUNT_NAME_DUPLICATE`, `BANK_ACCOUNT_PERIOD_UNSUPPORTED`, `BANK_ACCOUNT_PERIOD_LOCKED`, `BANK_ACCOUNT_NOT_FOUND`, `BANK_ENTRY_PERIOD_MISMATCH`, `BANK_ENTRY_IN_FUTURE`, `BANK_ENTRY_PERIOD_INVALID`, `BANK_ENTRY_DUPLICATE`, `BANK_ENTRY_BALANCE_INVALID`, `BANK_ENTRY_BALANCE_PRECISION`, `BANK_ENTRY_BALANCE_TOO_LARGE`, `BANK_ENTRY_NOTE_TOO_LONG`, `BANK_ENTRY_NOT_FOUND`. The two NOT_FOUND codes are returned for an account or an entry that does not exist (a stale screen). Project error codes are in CSD-002.
 
@@ -910,9 +924,9 @@ All ACs are proven by `cargo test`, with domain logic tested in `domain/`. Tests
 
 | Requirement | Command |
 |---|---|
-| REQ-1 to REQ-19, REQ-23 and REQ-24 (data) | `cargo test test_csd009_` |
+| REQ-1 to REQ-19 (except AC-6.3), REQ-23 and REQ-24 (data) | `cargo test test_csd009_` |
 | AC-17.1 to AC-17.4, AC-20.2 and AC-20.3 (data of the accounts and entries tables) | `cargo test test_csd009_ac_17_` and `cargo test test_csd009_ac_20_` |
-| AC-12.7, AC-16.1 to AC-16.3, REQ-20 (all ACs), REQ-21, REQ-22, AC-24.1 (the dialog) | Manual checklist: form labels, period field in the edit form, section order and contents, titles without a currency, button placement, left-pane item, empty states, note cut-off, plain-text note, negative balance display, the currency confirmation dialog. There is no frontend test setup |
+| AC-6.3 (confirmation text), AC-12.7, AC-16.1 to AC-16.3, REQ-20 (all ACs, including that no count is displayed), REQ-21, REQ-22, AC-24.1 (the dialog) | Manual checklist: form labels, period field in the edit form, section order and contents, titles without a currency, button placement, left-pane item, empty states, note cut-off, plain-text note, no entry counts anywhere, the delete confirmation text, negative balance display, the currency confirmation dialog. There is no frontend test setup |
 | The currency confirmation for bank entries | Governed by CSD-003 REQ-5 (AC-5.7, AC-5.8), verified there |
 | One requirement, e.g. REQ-7 | `cargo test test_csd009_ac_7_` |
 
@@ -923,5 +937,6 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 - OQ-2: Whether `docs/architecture.md` and the layout line of `CLAUDE.md` ("money, income, investments") get a bank accounts mention when this CSD is implemented. Owner: Thijs. Blocks: none.
 
 ## 9. Changelog
+- 0.3 (29/10/2026): Entry counts are no longer displayed. REQ-20 drops the count from the account rows and the Entries column from the yearly totals (AC-20.2, AC-20.8 amended) and says no count is shown anywhere, REQ-6 gets a fixed delete confirmation text without a number (AC-6.3 added), AC-21.2 amended, REQ-19 and the definitions say the count is still returned over IPC (used for the period lock and empty-year detection) but not shown. Verification marks AC-6.3 and the amended ACs as manual checklist items.
 - 0.2 (28/10/2026): Resolved OQ-1: CSD-003 0.6 covers bank entries in the currency confirmation. REQ-24 and its verification row point to CSD-003 AC-5.7 and AC-5.8.
 - 0.1 (28/10/2026): initial draft, from GitHub issue 13 and the grill-me interview. It follows CSD-005 (accounts, period lock, entries, changing the period, copy previous, yearly totals, layout), with signed balances, no net deposits or growth, and a stored colour slot per account for the insights chart of CSD-010.

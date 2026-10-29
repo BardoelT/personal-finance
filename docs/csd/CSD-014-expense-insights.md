@@ -3,7 +3,7 @@ id: CSD-014
 title: Expense insights
 status: approved
 owner: Thijs Bardoel
-version: 0.2
+version: 0.3
 last_updated: 29/10/2026
 related: [CSD-010, CSD-012, CSD-013]
 ---
@@ -21,8 +21,8 @@ The Expenses page lists expenses and a table of yearly totals, but a table does 
 
 ### 2.2 Non-goals
 - NG-1: A monthly view, or any granularity other than a calendar year.
-- NG-2: A filter, a selection or a hiding of categories or years, and any link with the filters of the Overview tab.
-- NG-3: Any figure other than the amount per category, the total and the number of expenses of a year: no average, no percentage, no comparison with income and no forecast.
+- NG-2: A filter, a selection or a hiding of categories or years, and any link with the Overview tab.
+- NG-3: Any figure other than the amount per category and the total of a year (the number of expenses is not displayed): no average, no percentage, no comparison with income and no forecast.
 - NG-4: A list of the largest expenses, and a view of single expenses.
 - NG-5: Click-through, zooming, or exporting the chart.
 - NG-6: Charts on the Dashboard or on the Reports page.
@@ -58,7 +58,7 @@ sequenceDiagram
 ```
 
 **REQ-1: Year series** *(ubiquitous)*
-The app shall return one set of figures for every calendar year from the year of the earliest expense up to and including the current year, oldest year first, holding the total, the number of expenses and, per category with an expense in that year, its segment.
+The app shall return one set of figures for every calendar year from the year of the earliest expense up to and including the current year, oldest year first, holding the total, the number of expenses (data only: the Insights tab does not display it) and, per category with an expense in that year, its segment.
 
 ```gherkin
 @AC-1.1
@@ -183,7 +183,7 @@ Scenario: An edit moves the segment
 ```
 
 **REQ-5: Chart** *(ubiquitous)*
-The Insights tab shall draw one bar per year in the order received, stacked upwards from the zero line from one segment per category in the order received, on a y-axis that starts at 0 and ends at a rounded-up value of at least the highest total, with gridlines, compact axis labels (such as "10k"), a gap year as a labelled slot without a bar, and no currency.
+The Insights tab shall draw, at the size of every yearly chart (REQ-14), one bar per year in the order received, stacked upwards from the zero line from one segment per category in the order received, on a y-axis that starts at 0 and ends at a rounded-up value of at least the highest total, with gridlines, compact axis labels (such as "10k"), a gap year as a labelled slot without a bar, and no currency.
 
 ```gherkin
 @AC-5.1
@@ -270,14 +270,16 @@ Scenario: Narrow window
 ```
 
 **REQ-8: Details of a year** *(event-driven)*
-When the user hovers over or moves keyboard focus to a year, the Insights tab shall show a tooltip with the year, one row per segment with the category's swatch, name and amount in the order of REQ-4, the total, the number of expenses and, for the current year, that it is partial, beside the year's bar as CSD-007 REQ-14 places a tooltip, and shall give the same values to screen readers.
+When the user hovers over or moves keyboard focus to a year, the Insights tab shall show a tooltip with the year, one row per segment with the category's swatch, name and amount, listed in the order the bar shows the segments, top to bottom (the highest segment first), followed by the row Total and, for the current year, that it is partial, beside the year's bar as CSD-007 REQ-14 places a tooltip, and shall give the same values to screen readers. The tooltip shows no number of expenses, and for a year without expenses it shows the note "No expenses" and no Total row.
 
 ```gherkin
 @AC-8.1
 Scenario: Tooltip on hover
   Given 2026 has the segments "Home" 5700.00 and "Hobby" 900.00, total 6600.00 and 3 expenses
   When the user hovers over the 2026 bar
-  Then a tooltip shows both categories with their swatch and amount, the total 6600.00 and 3 expenses
+  Then a tooltip shows both categories with their swatch and amount, and the total 6600.00
+  And the rows are, from top to bottom, "Hobby", "Home", Total, the same order as in the bar
+  And it shows no number of expenses
   And it shows no row for the other six categories
 
 @AC-8.2
@@ -291,7 +293,7 @@ Scenario: Tooltip on keyboard focus
 Scenario: Accessible label
   Given 2026 has the segments "Home" 5700.00 and "Hobby" 900.00 and 3 expenses
   When a screen reader reads the 2026 bar
-  Then it announces the year, each category with its amount, the total and the number of expenses
+  Then it announces the year, each category with its amount and the total
 
 @AC-8.4
 Scenario: Partial year
@@ -312,13 +314,20 @@ Scenario: Year without a bar
   Given the year 2023 has no expenses
   When the user hovers over its slot
   Then the tooltip is centred over that slot
-  And it shows the total 0.00, 0 expenses and no category rows
+  And it shows the note "No expenses", no Total row and no category rows
 
 @AC-8.7
 Scenario: One expense
   Given 2026 has one expense of 650.00 in "Appliances"
   When the user hovers over the 2026 bar
-  Then the tooltip shows "Appliances" 650.00, the total 650.00 and 1 expense
+  Then the tooltip shows "Appliances" 650.00 and the total 650.00
+  And it shows no number of expenses
+
+@AC-8.8
+Scenario: Highest segment first
+  Given 2026 has the segments "Home" 100.00, "Sport" 200.00 and "Other" 300.00
+  When the user hovers over the 2026 bar
+  Then the rows are, from top to bottom, "Other", "Sport", "Home" and Total
 ```
 
 **REQ-9: Highlight one category** *(event-driven)*
@@ -468,12 +477,25 @@ Scenario: A moved expense follows to its new year
   When the user changes its date to 20/12/2025 and opens the Insights tab
   Then the series holds 2025 and 2026, and the segment is in 2025
 
-@AC-13.4
-Scenario: The Overview filter has no effect
-  Given expenses in 2025 and 2026
-  And the Overview tab has the year 2026 and the month October chosen
+AC-13.4 (removed in v0.3): the Overview tab has no filter any more, so there is nothing that could affect the chart.
+```
+
+**REQ-14: One size for every yearly chart** *(ubiquitous)*
+The Insights tab shall draw the chart with a plot height of 260 px and a minimum slot width of 64 px, with the zero line styled as on the bank accounts chart, and with a legend of one item per series (REQ-7), the same as the bank accounts chart (CSD-010), so that the yearly charts of all pages have the same size and behaviour.
+
+```gherkin
+@AC-14.1
+Scenario: Same plot height and slot width as the bank accounts chart
+  Given the Insights tab shows the chart
+  Then the plot is 260 px high
+  And each year's slot is at least 64 px wide
+  And the zero line is styled as on the bank accounts chart
+
+@AC-14.2
+Scenario: Many years scroll
+  Given the series holds more years than fit at 64 px per slot
   When the user opens the Insights tab
-  Then the chart still shows 2025 and 2026
+  Then the chart scrolls sideways and no slot is narrower than 64 px
 ```
 
 ## 5. Interfaces and contracts
@@ -501,7 +523,7 @@ Command: `get_expense_insights()` returns the fixed list of categories with thei
 }
 ```
 
-`categories` always holds the eight categories. `years` is empty when there are no expenses. `segments` follow the fixed category order and are empty for a gap year, where `total` is "0.00". Amounts are decimal strings. Rust decides "today" (local time), the years, the partial flag and the sums, and the frontend only displays what it receives. Error codes are those of CSD-013.
+`categories` always holds the eight categories. `expense_count` stays in the payload but the frontend does not display it, not in the tooltip and not elsewhere. `years` is empty when there are no expenses. `segments` follow the fixed category order and are empty for a gap year, where `total` is "0.00". Amounts are decimal strings. Rust decides "today" (local time), the years, the partial flag and the sums, and the frontend only displays what it receives. Error codes are those of CSD-013.
 
 ## 6. Constraints
 - CON-1: The chart reuses the shared chart code of the frontend (`ui/shared/yearly-chart.js`) and adds no chart library or other dependency. Rationale: NG-7, and `CLAUDE.md` asks before adding dependencies.
@@ -517,8 +539,8 @@ The series is computed in Rust, so REQ-1 to REQ-4 are proven by `cargo test`. Te
 
 | Requirement | Command |
 |---|---|
-| REQ-1 to REQ-4, AC-13.3 and AC-13.4 (the data) | `cargo test test_csd014_` |
-| REQ-5 to REQ-12 (all ACs), AC-13.1, AC-13.2 (the screen) | Manual checklist: stacking, axis range, no marker, colours of both modes, legend order and wrapping, tooltip placement and rows, highlight from a segment and from the legend including keyboard and a category without expenses, motion and reduced motion, the look, accessible labels and the empty note. There is no frontend test setup |
+| REQ-1 to REQ-4 and AC-13.3 (the data) | `cargo test test_csd014_` |
+| REQ-5 to REQ-12 and REQ-14 (all ACs), AC-13.1, AC-13.2 (the screen) | Manual checklist: stacking, axis range, no marker, colours of both modes, legend order and wrapping, chart size (260 px plot, 64 px slots), tooltip placement, rows in the order of the bar and the "No expenses" note without a count, highlight from a segment and from the legend including keyboard and a category without expenses, motion and reduced motion, the look, accessible labels and the empty note. There is no frontend test setup |
 | One requirement, e.g. REQ-4 | `cargo test test_csd014_ac_4_` |
 
 Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
@@ -527,5 +549,6 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.3 (29/10/2026): The yearly charts share one size and behaviour with the bank accounts chart (CSD-010): new REQ-14 (plot height 260 px, minimum slot width 64 px, zero line; AC-14.1, AC-14.2), REQ-5 refers to it. REQ-8: the tooltip lists the rows in the order of the bar (highest segment first, then Total, AC-8.1, AC-8.8), shows no number of expenses and shows the note "No expenses" without a Total row for an empty year (AC-8.3, AC-8.6, AC-8.7 amended). AC-13.4 removed (the Overview filter is gone, CSD-013 0.3); NG-2 and NG-3 reworded. `expense_count` stays in the payload but is not displayed. The legend highlight of REQ-9 is unchanged.
 - 0.2 (29/10/2026): Renamed from "Major expenses" to "Expenses": title, file name, page and navigation labels, and wording. No behaviour change. The file is now `CSD-014-expense-insights.md`.
 - 0.1 (29/10/2026): initial draft, from GitHub issue 16 and the grill-me interview. It follows CSD-012 (year series, partial year, tooltip, highlight, motion, look), with one segment per fixed category holding a sum, a legend of all eight categories and no total marker.

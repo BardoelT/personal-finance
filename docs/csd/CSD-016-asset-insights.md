@@ -3,7 +3,7 @@ id: CSD-016
 title: Asset insights
 status: approved
 owner: Thijs Bardoel
-version: 0.1
+version: 0.2
 last_updated: 29/10/2026
 related: [CSD-010, CSD-012, CSD-015]
 ---
@@ -22,7 +22,7 @@ The Assets page lists assets, valuations and a table of yearly values, but a tab
 ### 2.2 Non-goals
 - NG-1: A monthly view, or any granularity other than a calendar year.
 - NG-2: A filter, a selection or a hiding of assets.
-- NG-3: A percentage of growth, a value forecast, and any figure other than the values, the total value, the change and the valuation count.
+- NG-3: A percentage of growth, a value forecast, and any figure other than the values, the total value and the change.
 - NG-4: Click-through, zooming, or exporting the chart.
 - NG-5: Charts on the Dashboard or on the Reports page, and a combined chart of assets and debts.
 - NG-6: Letting the user choose the colour of an asset.
@@ -83,7 +83,7 @@ Scenario: No assets yet
 ```
 
 **REQ-2: Year series** *(ubiquitous)*
-The app shall return one set of figures for every calendar year from the year of the earliest valuation up to and including the current year, oldest year first, holding the total value, the change, the number of valuations and, per asset with a valuation in that year, its segment.
+The app shall return one set of figures for every calendar year from the year of the earliest valuation up to and including the current year, oldest year first, holding the total value, the change, the number of valuations (used to detect an empty year, not displayed) and, per asset with a valuation in that year, its segment.
 
 ```gherkin
 @AC-2.1
@@ -144,7 +144,7 @@ Scenario: Current year without valuations is still in the series and marked
 ```
 
 **REQ-5: Segments are the latest values per asset** *(ubiquitous)*
-The app shall give each year one segment per asset that has a valuation in that year, equal to the value of that asset's latest valuation in that year, ordered by the creation of the assets, and the segments shall add up to the total value, which equals the closing value of the yearly values of CSD-015 REQ-20, and the change and the valuation count shall equal those of the yearly values.
+The app shall give each year one segment per asset that has a valuation in that year, equal to the value of that asset's latest valuation in that year, ordered by the creation of the assets, and the segments shall add up to the total value, which equals the closing value of the yearly values of CSD-015 REQ-20, and the change shall equal that of the yearly values.
 
 ```gherkin
 @AC-5.1
@@ -154,7 +154,7 @@ Scenario: Segments of a year
   And asset "Example Land" with a valuation 2026-06 (value 50000.00)
   When the insights are requested
   Then 2026 has the segments "Example House" 300000.00 and "Example Land" 50000.00
-  And 2026 has total value 350000.00 and 3 valuations
+  And 2026 has total value 350000.00
 
 @AC-5.2
 Scenario: An asset without a valuation in the year has no segment
@@ -172,7 +172,7 @@ Scenario: An asset at 0.00 has no visible segment
   And asset "Example Car" with a valuation 2026-09 (value 0.00)
   When the insights are requested
   Then 2026 has the segments 300000.00 and 0.00
-  And 2026 has total value 300000.00 and 2 valuations
+  And 2026 has total value 300000.00
 
 @AC-5.4
 Scenario: Segments are ordered by creation, not by name
@@ -187,7 +187,7 @@ Scenario: The insights equal the yearly values
   And a monthly asset with valuations 2025-11 (value 10000.00), 2025-12 (value 10200.00) and 2026-03 (value 11000.00)
   And a yearly asset with valuations 2024 (value 70000.00) and 2025 (value 75000.00)
   When the insights and the yearly values are requested
-  Then for every year the total value, the change and the number of valuations of the insights equal those of the yearly values
+  Then for every year the total value and the change of the insights equal those of the yearly values
 ```
 
 **REQ-6: Chart** *(ubiquitous)*
@@ -325,14 +325,15 @@ Scenario: A deleted asset leaves the legend
 ```
 
 **REQ-10: Details of a year** *(event-driven)*
-When the user hovers over or moves keyboard focus to a year, the Insights tab shall show a tooltip with the year, one row per segment with the asset's swatch, full name and value, the total value, the change (a dash for none), the number of valuations and, for the current year, that it is partial, beside the year's bar as CSD-007 REQ-14 places a tooltip, and shall give the same values to screen readers.
+When the user hovers over or moves keyboard focus to a year, the Insights tab shall show a tooltip with the year, its rows in the order the bar shows them, top to bottom (one row per segment with the asset's swatch, full name and value, the highest segment first, which is the last in stacking order, then the Total value row, then the Change row, a dash for none), no number of valuations, for the current year that it is partial and for a year without valuations the note "No valuations", beside the year's bar as CSD-007 REQ-14 places a tooltip, and shall give the same values to screen readers, also without a number of valuations.
 
 ```gherkin
 @AC-10.1
 Scenario: Tooltip on hover
-  Given 2026 has the segments "Example House" 300000.00 and "Example Land" 50000.00, total value 350000.00, change 10000.00 and 3 valuations
+  Given 2026 has the segments "Example House" 300000.00 and "Example Land" 50000.00, total value 350000.00, and change 10000.00
   When the user hovers over the 2026 bar
-  Then a tooltip shows both assets with their swatch and value, the total value 350000.00, change 10000.00 and 3 valuations
+  Then a tooltip shows both assets with their swatch and value, the total value 350000.00 and change 10000.00
+  And it shows no number of valuations
 
 @AC-10.2
 Scenario: Tooltip on keyboard focus
@@ -345,7 +346,8 @@ Scenario: Tooltip on keyboard focus
 Scenario: Accessible label
   Given 2026 has the segments "Example House" 300000.00 and "Example Land" 50000.00 and change -200.00
   When a screen reader reads the 2026 bar
-  Then it announces the year, each asset with its value, the total value, the change and that it is negative, and the number of valuations
+  Then it announces the year, each asset with its value, the total value and the change and that it is negative
+  And it announces no number of valuations
 
 @AC-10.4
 Scenario: Partial year
@@ -372,7 +374,20 @@ Scenario: Year without a bar
   Given the year 2023 has no valuations
   When the user hovers over its slot
   Then the tooltip is centred over that slot
-  And it shows no asset rows
+  And it shows the note "No valuations" and no asset rows
+  And it shows no row with a number of valuations
+
+@AC-10.8
+Scenario: Rows follow the bar from top to bottom
+  Given 2026 has the segments "Example House" 300000.00 (first in stacking order) and "Example Land" 50000.00 (second, so at the top of the bar), total value 350000.00 and change 10000.00
+  When the user hovers over the 2026 bar
+  Then the tooltip rows are listed "Example Land", "Example House", "Total value", "Change" in that order
+
+@AC-10.9
+Scenario: Same order in the accessible label
+  Given the same year as in AC-10.8
+  When a screen reader reads the 2026 bar
+  Then it announces the assets, the total value and the change without a number of valuations
 ```
 
 **REQ-11: Highlight one asset** *(event-driven)*
@@ -448,7 +463,7 @@ Scenario: Reduced motion
 ```
 
 **REQ-13: Refined look and accessible segments** *(ubiquitous)*
-The Insights tab shall draw the chart as CSD-010 REQ-13 describes the look of the bank chart: bars at most 50% of the width of their slot and at most 44 px wide, the top corners of the highest segment rounded by 3 px and a 1 px gap between stacked segments in place of an outline, 1 px gridlines at 55% opacity of the border colour, a 1 px zero line in the muted text colour at 70% opacity, axis and year labels in the muted text colour at regular font weight, marker values in 10 px medium weight, and tooltips of 10 px corner radius, 12 px by 14 px padding, a shadow of at least 16 px blur and at most 12% opacity, a 12 px title in semibold and row labels in the muted text colour, in light and in dark mode. Every segment shall carry an accessible label with the asset, the year and the value.
+The Insights tab shall draw the chart as CSD-010 REQ-13 describes the look of the bank chart: bars at most 50% of the width of their slot and at most 44 px wide, the top corners of the highest segment rounded by 3 px and a 1 px gap between stacked segments in place of an outline, 1 px gridlines at 55% opacity of the border colour, a 1 px zero line in the muted text colour at 70% opacity, axis and year labels in the muted text colour at regular font weight, marker values in 10 px medium weight, and a plot height of 260 px and a minimum slot width of 64 px per year, the same as the bank accounts chart (CSD-010) so that all yearly charts have one size, and tooltips of 10 px corner radius, 12 px by 14 px padding, a shadow of at least 16 px blur and at most 12% opacity, a 12 px title in semibold and row labels in the muted text colour, in light and in dark mode. Every segment shall carry an accessible label with the asset, the year and the value.
 
 ```gherkin
 @AC-13.1
@@ -477,6 +492,12 @@ Scenario: Segment labels
   Given 2026 has a segment of "Example Land" with value 50000.00
   When a screen reader reads that segment
   Then it announces "Example Land", 2026 and 50000.00
+
+@AC-13.5
+Scenario: Same size as the bank accounts chart
+  Given the Insights tab of the Assets page and that of the Bank accounts page
+  Then both plots are 260 px high
+  And both give every year a slot of at least 64 px
 ```
 
 **REQ-14: No valuations yet** *(state-driven)*
@@ -535,7 +556,7 @@ Command: `get_asset_insights()` returns the assets that have at least one valuat
 }
 ```
 
-`assets` and `years` are empty when there are no valuations. `segments` follow the creation order of the assets and are empty for a gap year, where `closing_value` is "0.00" and `change` is null. Amounts are decimal strings. Rust decides "today" (local time), the years, the partial flag, the segments and the changes, and the frontend only displays what it receives. Error codes are those of CSD-015.
+`valuation_count` is used to detect a year without valuations and is not displayed. `assets` and `years` are empty when there are no valuations. `segments` follow the creation order of the assets and are empty for a gap year, where `closing_value` is "0.00" and `change` is null. Amounts are decimal strings. Rust decides "today" (local time), the years, the partial flag, the segments and the changes, and the frontend only displays what it receives. Error codes are those of CSD-015.
 
 ## 6. Constraints
 - CON-1: The chart reuses the shared chart code of the frontend (`ui/shared/yearly-chart.js`) and adds no chart library or other dependency, and the Debts and Bank accounts charts keep working unchanged. Rationale: NG-7, and `CLAUDE.md` asks before adding dependencies.
@@ -551,7 +572,7 @@ The series is computed in Rust, so REQ-2 to REQ-5 are proven by `cargo test`. Te
 | Requirement | Command |
 |---|---|
 | REQ-2 to REQ-5, AC-15.3 (the data) | `cargo test test_csd016_` |
-| REQ-1, REQ-6 to REQ-14 (all ACs), AC-15.1 to AC-15.3 (the screen) | Manual checklist: tabs, stacking, axis range, markers, colours of both modes and of the ninth asset, legend order, wrapping and ellipsis, tooltip placement and its change row, highlight from a segment and from the legend including keyboard, motion and reduced motion, the look, accessible labels and the empty note, and that the Debts chart is unchanged. There is no frontend test setup |
+| REQ-1, REQ-6 to REQ-14 (all ACs), AC-15.1 to AC-15.3 (the screen) | Manual checklist: tabs, stacking, axis range, markers, colours of both modes and of the ninth asset, legend order, wrapping and ellipsis, tooltip placement, the order of its rows from top to bottom (AC-10.8, AC-10.9), no counts, its change row, the plot height and slot width, highlight from a segment and from the legend including keyboard, motion and reduced motion, the look, accessible labels and the empty note, and that the Debts chart is unchanged. There is no frontend test setup |
 | One requirement, e.g. REQ-5 | `cargo test test_csd016_ac_5_` |
 
 Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
@@ -561,3 +582,4 @@ None.
 
 ## 9. Changelog
 - 0.1 (29/10/2026): initial draft, from GitHub issue 17 and the grill-me interview. It follows CSD-012 (tabs, year series, partial year, marker, tooltip, highlight, motion, look), with one segment per asset, no negative values, and the change in the tooltip.
+- 0.2 (29/10/2026): No valuation count is displayed any more (NG-3, REQ-10, AC-10.1, AC-10.3, AC-10.7, AC-5.x; the count stays in IPC, section 5). The tooltip lists its rows in the order the bar shows them, top to bottom (REQ-10, new AC-10.8 and AC-10.9, manual checklist), and an empty year shows the note "No valuations". The chart has the size of the bank accounts chart: plot height 260 px, minimum slot width 64 px (REQ-13, new AC-13.5, manual checklist).

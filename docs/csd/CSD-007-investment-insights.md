@@ -3,8 +3,8 @@ id: CSD-007
 title: Investment insights
 status: approved
 owner: Thijs Bardoel
-version: 0.4
-last_updated: 27/10/2026
+version: 0.5
+last_updated: 29/10/2026
 related: [CSD-003, CSD-005, CSD-006]
 ---
 
@@ -81,7 +81,7 @@ Scenario: No accounts yet
 ```
 
 **REQ-2: Year series** *(ubiquitous)*
-The app shall return one set of figures for every calendar year from the year of the earliest statement up to and including the current year, oldest year first, holding the opening balance, the net deposits, the capital growth, the closing balance and the number of statements.
+The app shall return one set of figures for every calendar year from the year of the earliest statement up to and including the current year, oldest year first, holding the opening balance, the net deposits, the capital growth, the closing balance and the number of statements (returned, never displayed).
 
 ```gherkin
 @AC-2.1
@@ -257,7 +257,7 @@ Scenario: The current year has a percentage
 ```
 
 **REQ-8: Chart** *(ubiquitous)*
-The Insights tab shall draw one bar per year in the order received, stacked from the bottom as opening balance, net deposits and capital growth, in which a positive segment rises from the running total and a negative segment hangs down from it, with capital growth in a positive colour when it is positive and a negative colour when it is negative and a negative net deposit in a lighter tint of the net deposits colour with a thin dashed outline, on a y-axis that starts at 0 (or at a rounded-down negative value if a running total is negative) and ends at a rounded-up value of at least the highest running total, with gridlines, compact axis labels (such as "10k"), a legend naming the segments (opening balance, net deposits, capital growth as gain and as loss) and the closing-balance marker, and no currency.
+The Insights tab shall draw one bar per year in the order received, stacked from the bottom as opening balance, net deposits and capital growth, in which a positive segment rises from the running total and a negative segment hangs down from it, with capital growth in a positive colour when it is positive and a negative colour when it is negative and a negative net deposit in a lighter tint of the net deposits colour with a thin dashed outline, on a y-axis that starts at 0 (or at a rounded-down negative value if a running total is negative) and ends at a rounded-up value of at least the highest running total, with gridlines, compact axis labels (such as "10k"), a legend with one item for each piece (Opening balance, Net deposits, Capital growth (gain), Capital growth (loss)) and one for the closing-balance marker, and no currency.
 
 ```gherkin
 @AC-8.1
@@ -266,7 +266,7 @@ Scenario: Stacked bars per year
   When the user opens the Insights tab
   Then two bars are drawn, 2025 on the left and 2026 on the right
   And each bar is stacked from opening balance, net deposits and capital growth
-  And the legend names Opening balance, Net deposits, Capital growth and the closing balance marker
+  And the legend has the items Opening balance, Net deposits, Capital growth (gain), Capital growth (loss) and Closing balance
 
 @AC-8.2
 Scenario: Growth colour follows the sign
@@ -356,14 +356,15 @@ Scenario: Only decreases are red
 ```
 
 **REQ-11: Details of a year** *(event-driven)*
-When the user hovers over or moves keyboard focus to a year, the Insights tab shall show a tooltip with the year's opening balance, net deposits, capital growth, growth percentage, closing balance and number of statements, as REQ-14 lays out, and shall give the same values to screen readers.
+When the user hovers over or moves keyboard focus to a year, the Insights tab shall show a tooltip with the year's opening balance, net deposits, capital growth, growth percentage and closing balance, in the order and with the empty-year note that REQ-14 lays out, and shall give the same values to screen readers. The tooltip and the screen-reader description show no number of statements.
 
 ```gherkin
 @AC-11.1
 Scenario: Tooltip on hover
-  Given 2026 has opening balance 11500.00, net deposits 300.00, capital growth 700.00, closing balance 12500.00, 1 statement and growth percentage 6.1
+  Given 2026 has opening balance 11500.00, net deposits 300.00, capital growth 700.00, closing balance 12500.00 and growth percentage 6.1
   When the user hovers over the 2026 bar
-  Then a tooltip shows those six values
+  Then a tooltip shows those five values
+  And it shows no number of statements
 
 @AC-11.2
 Scenario: Tooltip on keyboard focus
@@ -376,7 +377,8 @@ Scenario: Tooltip on keyboard focus
 Scenario: Accessible label
   Given 2026 has capital growth -500.00
   When a screen reader reads the 2026 bar
-  Then it announces the year, the six values and that the capital growth is negative
+  Then it announces the year, the five values and that the capital growth is negative
+  And it announces no number of statements
 ```
 
 **REQ-12: No statements yet** *(state-driven)*
@@ -413,7 +415,7 @@ Scenario: Last statement deleted
 ### 4.1 Legend and highlight
 
 **REQ-14: Legend with the selected year** *(event-driven)*
-When the user hovers over or moves keyboard focus to a year, the Insights tab shall show in the tooltip of that year the colour swatch of the legend on the rows of opening balance, net deposits, capital growth and closing balance, with, on the capital growth row, the swatch of a gain when the capital growth is not negative and the swatch of a loss when it is, and shall place the tooltip beside the year's bar, to its right with its top aligned to the top of the bar, to its left when there is no room on the right, and inside the chart area, or centred over its slot when the year has no bar. The legend in the panel header stays.
+When the user hovers over or moves keyboard focus to a year, the Insights tab shall show in the tooltip of that year the colour swatch of the legend on the rows of opening balance, net deposits, capital growth and closing balance, with, on the capital growth row, the swatch of a gain when the capital growth is not negative and the swatch of a loss when it is, and shall list the rows of the tooltip in the order the bar shows them, top to bottom: Capital growth, Net deposits, Opening balance, then Closing balance, then Growth (%), and shall place the tooltip beside the year's bar, to its right with its top aligned to the top of the bar, to its left when there is no room on the right, and inside the chart area, or centred over its slot when the year has no bar, where it shows the note "No statements" in place of the rows. The legend in the panel header stays.
 
 ```gherkin
 @AC-14.1
@@ -422,7 +424,7 @@ Scenario: Swatches match the legend
   When the user hovers over the 2025 bar
   Then the tooltip rows Opening balance, Net deposits, Capital growth and Closing balance each show the swatch of the same colour or line as in the legend
   And the Capital growth row shows the gain swatch
-  And the rows Growth and Statements show no swatch
+  And the row Growth (%) shows no swatch
 
 @AC-14.2
 Scenario: A loss shows the loss swatch
@@ -450,12 +452,20 @@ Scenario: Tooltip flips near the right edge
   Then the tooltip is shown to the left of that bar
   And it stays inside the chart area
 
+@AC-14.9
+Scenario: Rows follow the bar from top to bottom
+  Given 2025 has opening balance 10700.00, net deposits 500.00, capital growth 3800.00, closing balance 15000.00 and growth percentage 35.5
+  When the user hovers over the 2025 bar
+  Then the tooltip rows are listed Capital growth, Net deposits, Opening balance, Closing balance, Growth (%) in that order
+  And no row is listed above Capital growth
+
 @AC-14.6
 Scenario: Year without a bar
   Given the year 2023 has no statements
   When the user hovers over its slot
   Then the tooltip is centred over that slot
   And it shows no swatch
+  And it shows the note "No statements" and no rows
 
 @AC-14.7
 Scenario: Header legend stays
@@ -471,7 +481,7 @@ Scenario: Keyboard focus shows the same tooltip
 ```
 
 **REQ-15: Highlight while hovering** *(event-driven)*
-When the mouse is over a segment of a bar or over a closing-balance marker, the Insights tab shall keep that segment at full colour and ease the other segments of that bar down to 70% opacity (for a marker: thicken it from 2 px to 3 px), set the legend item of that segment or marker in the full text colour and a heavier font weight in the tooltip and in the panel header legend, ease the other items of the panel header legend down to 70% opacity, and while the mouse is over no segment or marker, or keyboard focus is on a year, the Insights tab shall highlight nothing. Where segments overlap, the one drawn on top is the one hovered.
+When the mouse is over a segment of a bar, a closing-balance marker or an item of the panel header legend, or keyboard focus is on a legend item, the Insights tab shall keep that series (opening balance, net deposits, capital growth as gain, capital growth as loss, or the closing-balance marker) at full colour in every year of the chart and ease the other segments in every year down to 70% opacity (for the marker: thicken it from 2 px to 3 px in every year), set the legend item of that series in the full text colour and a heavier font weight in the tooltip and in the panel header legend, ease the other items of the panel header legend down to 70% opacity, and while the mouse is over no segment, marker or legend item, and no legend item has keyboard focus, or keyboard focus is on a year, the Insights tab shall highlight nothing. Where segments overlap, the one drawn on top is the one hovered.
 
 ```gherkin
 @AC-15.1
@@ -480,14 +490,14 @@ Scenario: Hovering a segment
   When the user hovers over the net deposits segment
   Then the Net deposits item is set in the full text colour and a heavier font weight in the tooltip and in the header legend
   And the other items of the header legend are eased down to 70% opacity
-  And the net deposits segment keeps its full colour and the other segments of that bar are eased down to 70% opacity
+  And the net deposits segments of every year keep their full colour and all other segments of every year are eased down to 70% opacity
 
 @AC-15.2
 Scenario: Hovering the closing-balance marker
   Given 2025 has closing balance 15000.00
   When the user hovers over its marker
   Then the Closing balance item is set in the full text colour and a heavier font weight in the tooltip and in the header legend
-  And the marker thickens from 2 px to 3 px
+  And the markers of every year thicken from 2 px to 3 px
 
 @AC-15.3
 Scenario: Gain and loss are separate legend items
@@ -495,6 +505,7 @@ Scenario: Gain and loss are separate legend items
   When the user hovers over the capital growth segment of 2023
   Then the Capital growth (loss) item is highlighted in the header legend
   And the Capital growth (gain) item is not highlighted
+  And only the loss segments, in every year, keep their full colour, so the gain segment of 2025 is eased down to 70% opacity
 
 @AC-15.4
 Scenario: Leaving the segment
@@ -517,10 +528,32 @@ Scenario: Not colour alone
   And no outline and no background chip is drawn
 
 @AC-15.7
-Scenario: Keyboard focus highlights nothing
+Scenario: Keyboard focus on a year highlights nothing
   Given the Insights tab shows the chart
   When the user moves focus to the 2025 bar with the Tab key
   Then no legend item is highlighted
+
+@AC-15.8
+Scenario: Hovering a legend item highlights that series in every year
+  Given the series holds 2024, 2025 and 2026
+  When the user hovers over the legend item "Net deposits"
+  Then the net deposits segments of 2024, 2025 and 2026 keep their full colour
+  And all other segments of those years are eased down to 70% opacity
+  And the other legend items are eased down to 70% opacity
+
+@AC-15.9
+Scenario: Focusing a legend item
+  Given the Insights tab shows the chart
+  When the user moves keyboard focus to the legend item "Opening balance"
+  Then the highlight is the same as when hovering over it
+  And it ends when focus leaves the legend item
+
+@AC-15.10
+Scenario: Every legend item highlights
+  Given the legend has the items Opening balance, Net deposits, Capital growth (gain), Capital growth (loss) and Closing balance
+  When the user hovers over each item in turn
+  Then each time the matching series is highlighted in every year
+  And hovering the Closing balance item thickens the markers of every year from 2 px to 3 px
 ```
 
 **REQ-16: Motion** *(event-driven)*
@@ -559,7 +592,7 @@ Scenario: Reduced motion
 ```
 
 **REQ-18: Refined look** *(ubiquitous)*
-The Insights tab shall draw the chart with bars at most 50% of the width of their slot and at most 44 px wide, with the top corners of the topmost segment rounded by 3 px and a 1 px gap between stacked segments in place of an outline, with 1 px gridlines at 55% opacity of the border colour and a 1 px zero line in the muted text colour at 70% opacity, with axis and year labels in the muted text colour at regular font weight, with marker values in 10 px medium weight, with tooltips of 10 px corner radius, 12 px by 14 px padding, a shadow of at least 16 px blur and at most 12% opacity, a 12 px title in semibold and row labels in the muted text colour, and with series colours of at most 60% HSL saturation and gain and loss colours of at most 55% HSL saturation, in light and in dark mode.
+The Insights tab shall draw the chart with bars at most 50% of the width of their slot and at most 44 px wide, with the top corners of the topmost segment rounded by 3 px and a 1 px gap between stacked segments in place of an outline, with 1 px gridlines at 55% opacity of the border colour and a 1 px zero line in the muted text colour at 70% opacity, with a plot height of 260 px and a year slot at least 64 px wide, the same size and behaviour as every other yearly chart of the app, the zero line always drawn, with axis and year labels in the muted text colour at regular font weight, with marker values in 10 px medium weight, with tooltips of 10 px corner radius, 12 px by 14 px padding, a shadow of at least 16 px blur and at most 12% opacity, a 12 px title in semibold and row labels in the muted text colour, and with series colours of at most 60% HSL saturation and gain and loss colours of at most 55% HSL saturation, in light and in dark mode, in which the opening balance is a neutral slate blue-grey, the net deposits the accent blue, a capital gain green and a capital loss coral red, so that neighbouring series can be told apart.
 
 ```gherkin
 @AC-18.1
@@ -596,6 +629,22 @@ Scenario: Colours in both modes
   When the app is in light mode and then in dark mode
   Then the series colours have at most 60% HSL saturation
   And the gain and loss colours have at most 55% HSL saturation
+
+@AC-18.6
+Scenario: Colour roles in both modes
+  Given the Insights tab shows a chart with a gain year and a loss year
+  When the app is in light mode and then in dark mode
+  Then the opening balance is drawn in a neutral slate blue-grey
+  And the net deposits are drawn in the accent blue
+  And the capital gain is drawn in green and the capital loss in coral red
+  And each segment is clearly distinguishable from the segment next to it
+
+@AC-18.7
+Scenario: Size and zero line
+  Given every running total of every year is positive
+  When the user opens the Insights tab
+  Then the plot is 260 px high and each year slot is at least 64 px wide
+  And the 1 px zero line is drawn at 0
 ```
 
 ## 5. Interfaces and contracts
@@ -611,7 +660,7 @@ Command: `get_investment_insights()` returns the series, oldest year first:
 }
 ```
 
-`years` is empty when there are no statements. `growth_percent` is a decimal string or `null`. Amounts are decimal strings. Rust decides "today" (local time), the years, the partial flag and the growth percentage, and the frontend only displays what it receives.
+`statement_count` is returned but never displayed. `years` is empty when there are no statements. `growth_percent` is a decimal string or `null`. Amounts are decimal strings. Rust decides "today" (local time), the years, the partial flag and the growth percentage, and the frontend only displays what it receives.
 
 ## 6. Constraints
 - CON-1: Figures and the growth percentage are computed in Rust and displayed as received; the frontend only scales values to positions on the chart. Rationale: `CLAUDE.md` layout rule.
@@ -630,7 +679,7 @@ The figures are proven by `cargo test`. Tests are named `test_csd007_ac_<n>_<m>_
 | Requirement | Command |
 |---|---|
 | REQ-2 to REQ-7 (data) | `cargo test test_csd007_` |
-| AC-1.1 to AC-1.3, REQ-8 to REQ-18 (display) | Manual checklist: motion of the tooltip and the dimming, reduced motion, bar shape, gridlines, labels, tooltip look and colours in both modes, tabs, stacked and hanging segments, dashed withdrawal tint, growth colours, axis, gap and YTD years, closing markers, growth percentage labels and colours, tooltip by mouse and keyboard, swatches and placement of the tooltip, legend, segment and marker highlight on hover, no highlight on keyboard focus, empty note, refresh after a change, light and dark mode, and the income chart unchanged. There is no frontend test setup |
+| AC-1.1 to AC-1.3, REQ-8 to REQ-18 (display, including AC-14.9, AC-15.8 to AC-15.10, AC-18.6 and AC-18.7) | Manual checklist: tooltip row order and no statement count, legend items and legend hover and focus highlight in every year, colour roles of the series in both modes, plot height 260 px, slot width of at least 64 px, zero line always drawn, motion of the tooltip and the dimming, reduced motion, bar shape, gridlines, labels, tooltip look and colours in both modes, tabs, stacked and hanging segments, dashed withdrawal tint, growth colours, axis, gap and YTD years, closing markers, growth percentage labels and colours, tooltip by mouse and keyboard, swatches and placement of the tooltip, legend, segment and marker highlight on hover, no highlight on keyboard focus, empty note, refresh after a change, light and dark mode, and the income chart unchanged. There is no frontend test setup |
 
 Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 
@@ -638,6 +687,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.5 (29/10/2026): Statement counts are no longer displayed: REQ-11 (AC-11.1, AC-11.3) and REQ-14 (AC-14.1, AC-14.6) drop the count from the tooltip and the screen-reader description, an empty year shows "No statements"; the count stays in the data (REQ-2, section 5). REQ-14 orders the tooltip rows as the bar shows them, top to bottom (AC-14.9 added). REQ-8 (AC-8.1) and REQ-15 (AC-15.1 to AC-15.3 amended, AC-15.8 to AC-15.10 added): the legend has one hoverable and focusable item per piece, and hovering or focusing a legend item, or hovering a segment, highlights that series in every year. REQ-18 sets the shared chart size, an always-drawn zero line and the colour roles (AC-18.6, AC-18.7 added). New ACs are manual checklist items.
 - 0.4 (27/10/2026): Quieter and more refined charts. REQ-8 (AC-8.3) and REQ-9: the hatch becomes a lighter tint with a dashed outline and the marker a 2 px muted line. REQ-15 (AC-15.1, AC-15.2, AC-15.6) replaces the chip and outline by a full-colour segment, eased dimming of the rest and a heavier legend label. New REQ-16 motion, REQ-17 reduced motion, REQ-18 refined look (AC-16.1 to AC-18.5), CON-9. The tooltip placement of REQ-14 is unchanged. Approved by the owner. Same change for the income chart in CSD-006 0.3.
 - 0.3 (27/10/2026): The first statement of an account has a capital growth (CSD-005 0.8), so the "New accounts" segment is gone: it is removed from the definitions, REQ-2, REQ-3, REQ-5, REQ-8, REQ-11, REQ-14, REQ-15, the legend, the tooltip and the `get_investment_insights()` payload. REQ-5 gets AC-5.6, the growth percentage counts only accounts with an opening balance (REQ-6, AC-6.2). Approved by the owner.
 - 0.2 (27/10/2026): Legend with the selected year and highlight on hover. New section 4.1 with REQ-14 (swatches in the tooltip, tooltip beside the bar, AC-14.1 to AC-14.8) and REQ-15 (AC-15.1 to AC-15.7), CON-8. REQ-11 points to REQ-14. Approved by the owner. Same change for the income chart in CSD-006 0.2.
