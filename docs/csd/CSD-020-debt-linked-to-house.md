@@ -3,7 +3,7 @@ id: CSD-020
 title: Debt linked to a house
 status: draft
 owner: Thijs Bardoel
-version: 0.3
+version: 0.4
 last_updated: 30/10/2026
 related: [CSD-000, CSD-002, CSD-011, CSD-012, CSD-015, CSD-017, CSD-018, CSD-019]
 ---
@@ -349,7 +349,7 @@ Scenario: More cancelled than repaid
 ### 4.5 Display and file
 
 **REQ-13: The Houses view shows the linked debts** *(ubiquitous)*
-The app shall show, under each house in the Overview of CSD-015, its linked debts with their latest balance and, for a settled debt, the badge Repaid or Cancelled with the settled amount, and shall show the Add and Edit house forms without any selection of debts.
+The app shall show, under each house in the Overview of CSD-015, its linked debts with their latest balance and, for a settled debt, the badge Repaid or Cancelled with the settled amount, and shall show in the Edit house form a read-only list of its linked debts (name, category, latest balance and, for a settled debt, the badge), without any way to add or remove a debt there.
 
 ```gherkin
 @AC-13.1
@@ -359,10 +359,16 @@ Scenario: Linked debts under the house
   Then the house shows "Example Mortgage 190000.00" and "Example Loan 0.00, Cancelled 10000.00"
 
 @AC-13.2
-Scenario: The house form has no debts
-  Given debts "A" and "B" and a house "Example House"
-  When the user opens the Add house form and the Edit house form of "Example House"
-  Then neither form has a field to select debts
+Scenario: The Edit house form lists the linked debts read-only
+  Given "Example House" with linked "Example Mortgage" (category Mortgage, latest balance 190000.00) and "Example Loan" (category Loan, settled as Cancelled), and an unlinked debt "Example Card"
+  When the user opens the Edit house form of "Example House"
+  Then it lists "Example Mortgage Mortgage 190000.00" and "Example Loan Loan 0.00 Cancelled 10000.00" and not "Example Card"
+  And the list has no checkbox, button or field to add or remove a debt
+
+@AC-13.3
+Scenario: The Add house form has no list
+  When the user opens the Add house form
+  Then it shows no list of debts
 ```
 
 **REQ-14: The debt form and the Debts view** *(ubiquitous)*
@@ -507,6 +513,7 @@ Done means fmt, clippy (`-D warnings`), `cargo test --all-features` and `cargo d
 - OQ-1: Should the yearly totals of the Debts overview (CSD-011 REQ-19) show the Cancelled-adjusted repaid amount, or the raw drop as today? This CSD adjusts only the wealth accumulation (REQ-12). Owner: Thijs. Blocks: none (default: raw in the Debts overview).
 
 ## 9. Changelog
+- 0.4 (30/10/2026): The Edit house form shows a read-only list of the linked debts (REQ-13, AC-13.2, AC-13.3). Back to `draft` until re-approved.
 - 0.3 (30/10/2026): A debt can be linked to a house that is already sold, with the Repaid or Cancelled choice in the debt form (new REQ-17; REQ-2, REQ-14, REQ-15 changed), because debts that predate a sale could not be linked. Back to `draft` until re-approved.
 - 0.2 (30/10/2026): The link is made in the debt form, not in the house forms: every debt gets a category (Mortgage, Loan, Other) and only a Mortgage or Loan can be linked to a house (REQ-1, REQ-2, REQ-13, REQ-14, REQ-16, NG-1, NG-3). The house forms keep only the settlement prompt on a sale and the undo confirmation. Back to `draft` until re-approved.
 - 0.1 (30/10/2026): initial draft, from GitHub issue 31 and the grill-me interview. It replaces the earlier CSD-020 draft that was removed.
