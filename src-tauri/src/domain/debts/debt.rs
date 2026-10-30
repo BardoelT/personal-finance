@@ -6,7 +6,10 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::domain::error::DomainError;
+use crate::domain::houses::HouseId;
 use crate::domain::income::PayPeriod;
+
+use super::settlement::Settlement;
 
 pub(super) const MAX_NAME_CHARS: usize = 100;
 
@@ -40,6 +43,39 @@ impl fmt::Display for DebtId {
     }
 }
 
+/// The kind of a debt: Mortgage, Loan, Scholarship or Other. Only a Mortgage
+/// or a Loan can be linked to a house (CSD-020 section 3).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Category {
+    Mortgage,
+    Loan,
+    Scholarship,
+    #[default]
+    Other,
+}
+
+impl Category {
+    /// Parses `Mortgage`, `Loan`, `Scholarship` or `Other`.
+    ///
+    /// # Errors
+    /// Returns `DebtCategoryInvalid` for any other text.
+    pub fn parse(text: &str) -> Result<Self, DomainError> {
+        match text.trim() {
+            "Mortgage" => Ok(Self::Mortgage),
+            "Loan" => Ok(Self::Loan),
+            "Scholarship" => Ok(Self::Scholarship),
+            "Other" => Ok(Self::Other),
+            _ => Err(DomainError::DebtCategoryInvalid),
+        }
+    }
+
+    /// Whether a debt of this category may be linked to a house.
+    #[must_use]
+    pub fn can_link(self) -> bool {
+        matches!(self, Self::Mortgage | Self::Loan)
+    }
+}
+
 /// One amount the user owes to one party (CSD-011 REQ-1).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Debt {
@@ -48,6 +84,15 @@ pub struct Debt {
     pub statement_period: PayPeriod,
     /// 0 to 7, fixed when the debt is created (CSD-011 REQ-3).
     pub colour_slot: u8,
+    /// Mortgage, Loan or Other (CSD-020 REQ-1).
+    #[serde(default)]
+    pub category: Category,
+    /// The house this debt is linked to (CSD-020 REQ-1).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub house_id: Option<HouseId>,
+    /// How the debt was settled on the sale of its house (CSD-020 REQ-5).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub settlement: Option<Settlement>,
 }
 
 /// Debt fields as typed by the user, before validation.

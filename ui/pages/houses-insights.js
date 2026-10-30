@@ -1,18 +1,18 @@
-// Asset insights: the yearly stacked chart on the Assets page (CSD-016), one
-// segment per asset. Its frame (axis, bars, tooltip, loading) is shared with the
+// House insights: the yearly stacked chart on the Houses page (CSD-016), one
+// segment per house. Its frame (axis, bars, tooltip, loading) is shared with the
 // other charts in shared/yearly-chart.js; this file supplies what is specific
-// to assets: the segments, the legend of assets and the total value marker.
+// to houses: the segments, the legend of houses and the total value marker.
 import { h } from '../shared/dom.js';
 import { formatAmount } from '../shared/format.js';
 import { swatch, noSwatch, legendLabel, nameLabel, legendItem, tooltipRow, topToBottom } from '../shared/chart.js';
 import { createYearlyChart, levelMarker, isNegative, yearLabel } from '../shared/yearly-chart.js';
 import { initTabs } from '../shared/tabs.js';
 
-/** The assets of the series by id, as Rust returned them (creation order). */
+/** The houses of the series by id, as Rust returned them (creation order). */
 let items = new Map();
 
-const keyOf = (id) => `asset-${id}`;
-const nameOf = (segment) => items.get(segment.asset_id)?.name ?? '';
+const keyOf = (id) => `house-${id}`;
+const nameOf = (segment) => items.get(segment.house_id)?.name ?? '';
 const slotOf = (id) => items.get(id)?.colour_slot ?? 0;
 /** The change amount as shown: a dash when Rust has none. */
 const deltaText = (row) => (row.change === null ? '–' : formatAmount(row.change));
@@ -31,7 +31,7 @@ function tooltipContent(row) {
       ? []
       : [
           ...topToBottom(row.segments, (segment) => segment.value).flatMap((segment) =>
-            tooltipRow(keyOf(segment.asset_id), swatch(`slot-${slotOf(segment.asset_id)}`), nameOf(segment), formatAmount(segment.value)),
+            tooltipRow(keyOf(segment.house_id), swatch(`slot-${slotOf(segment.house_id)}`), nameOf(segment), formatAmount(segment.value)),
           ),
           ...tooltipRow('marker', swatch('marker'), 'Total value', formatAmount(row.closing_value)),
           ...tooltipRow(null, noSwatch(), 'Change', deltaText(row), row.change !== null && isNegative(row.change) ? 'negative' : ''),
@@ -47,7 +47,7 @@ function tooltipContent(row) {
 /**
  * The segments of a year, stacked upwards from the zero line in the order
  * received (CSD-016 REQ-6). A value is never negative, so nothing hangs down;
- * a asset at 0.00 adds no height. The top corners of the highest segment are rounded.
+ * a house at 0.00 adds no height. The top corners of the highest segment are rounded.
  */
 function piecesOf(row) {
   let level = 0;
@@ -56,8 +56,8 @@ function piecesOf(row) {
     const value = Number(segment.value);
     if (value === 0) continue;
     pieces.push({
-      key: keyOf(segment.asset_id),
-      cssClass: `bar-slot-${slotOf(segment.asset_id)}`,
+      key: keyOf(segment.house_id),
+      cssClass: `bar-slot-${slotOf(segment.house_id)}`,
       label: `${nameOf(segment)}, ${row.year}, ${formatAmount(segment.value)}`,
       low: level,
       high: level + value,
@@ -71,11 +71,11 @@ function piecesOf(row) {
   return pieces;
 }
 
-/** The legend: a swatch and the name of every asset in the series, and the total value marker (CSD-016 REQ-9). */
-function buildLegend({ assets: list }) {
+/** The legend: a swatch and the name of every house in the series, and the total value marker (CSD-016 REQ-9). */
+function buildLegend({ houses: list }) {
   items = new Map(list.map((item) => [item.id, item]));
-  const legendList = document.getElementById('assets-insights-legend');
-  const scopes = () => [legendList, document.getElementById('assets-insights-chart')];
+  const legendList = document.getElementById('houses-insights-legend');
+  const scopes = () => [legendList, document.getElementById('houses-insights-chart')];
   legendList.replaceChildren(
     ...list.map((item) => legendItem(keyOf(item.id), swatch(`slot-${item.colour_slot}`), nameLabel(item.name), scopes)),
     legendItem('marker', swatch('marker'), legendLabel('Total value'), scopes),
@@ -83,9 +83,9 @@ function buildLegend({ assets: list }) {
 }
 
 const chart = createYearlyChart({
-  id: 'assets-insights',
-  command: 'get_asset_insights',
-  ariaLabel: 'Assets per year',
+  id: 'houses-insights',
+  command: 'get_house_insights',
+  ariaLabel: 'Houses per year',
   onLoaded: buildLegend,
   piecesOf,
   extraLevels: (row) => [Number(row.closing_value)],
@@ -96,15 +96,15 @@ const chart = createYearlyChart({
   labelLines: (row) => [{ text: yearLabel(row), className: 'chart-year' }],
 });
 
-export const reloadAssetsInsights = chart.reload;
+export const reloadHousesInsights = chart.reload;
 /** Reloads the chart only while the Insights tab is showing (after a project is opened). */
-export const reloadAssetsInsightsIfOpen = chart.reloadIfOpen;
+export const reloadHousesInsightsIfOpen = chart.reloadIfOpen;
 
-export function initAssetsInsights() {
+export function initHousesInsights() {
   chart.init();
   initTabs([
-    { tab: 'assets-tab-overview', panel: 'assets-overview' },
+    { tab: 'houses-tab-overview', panel: 'houses-overview' },
     // Opening Insights recomputes it, so it never shows stale figures (CSD-016 REQ-15).
-    { tab: 'assets-tab-insights', panel: 'assets-insights', onOpen: chart.reload },
+    { tab: 'houses-tab-insights', panel: 'houses-insights', onOpen: chart.reload },
   ]);
 }

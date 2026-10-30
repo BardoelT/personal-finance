@@ -11,9 +11,9 @@ The left pane groups the pages as **Overview**, **Finance**, **Wealth**, **Liabi
 - **Expenses:** dated expenses with a name, amount, category (a fixed list) and a note, with yearly totals and the largest expense of each year. Insights charts the spending per year, stacked by category.
 - **Bank accounts:** any number of accounts, each recorded monthly or yearly as a closing balance (negative when overdrawn) and a note. Yearly totals and the total of the latest balances. Insights charts the balance per bank per year with a closing-balance marker.
 - **Investments:** any number of investment accounts, each recorded monthly or yearly. A statement holds the closing balance, the net deposits (money put in minus money taken out) and a note; the capital growth is derived from them, and the form calculates the balance or the growth from the other. Yearly totals show closing balance, net deposits and capital growth. Insights charts opening balance, net deposits and capital growth with a closing-balance marker and the growth percentage. Individual stocks, prices and trades are not tracked.
-- **Assets:** things you own (a house, a car), each valued monthly or yearly, with the change since the previous valuation and yearly values. Insights charts the value per asset per year.
+- **Houses:** the houses you own, each bought once and possibly sold, valued monthly or yearly, with the change since the previous valuation and yearly values. A sold house stops counting from its sale year. A debt has a category (Mortgage, Loan, Scholarship or Other), and a Mortgage or Loan can be linked to a house in the debt form; when the house is sold, each open debt is marked Repaid or Cancelled and drops to 0.00. A Repaid debt counts in full in the wealth accumulation from cash, the settled amount of a Cancelled one is taken out of that year's repaid amount. Insights charts the value per house per year.
 - **Debts:** what you owe, each recorded monthly or yearly as a remaining balance, with the amount repaid per year. Insights charts the debt per debt per year.
-- **Net worth:** one chart of your overall financial state: a stacked bar per year with assets, investments and cash above the zero line and debts below it, and a marker at the net worth. Every figure is the one the chart of its own area shows.
+- **Net worth:** one chart of your overall financial state: a stacked bar per year with houses, investments and cash above the zero line and debts below it, and a marker at the net worth. Every figure is the one the chart of its own area shows.
 - **Ratios:** one table with the years as columns: total income, how much of it became wealth (bank increase, investment net deposits and debt repaid), the growth of the investments and of the total wealth, and the disposable income with its share of the income.
 - **Settings:** the currency (EUR, USD or GBP) of the whole project, and the theme (System, Light or Dark). Changing the currency does not convert any amount.
 - **Project file:** everything is saved in one file you choose, and the app reopens the last one you used.
@@ -84,13 +84,13 @@ ui/                 frontend (HTML, CSS, JS; no build step)
   main.js           entry point: wires the pages and reloads them
   navigation.js     left-pane navigation
   pages/            one file per page or view (income-overview, income-insights, ...)
-  shared/           helpers pages share (ipc, dom, format, chart, yearly-chart, tabs)
+  shared/           helpers pages share (ipc, dom, format, date-mask, chart, yearly-chart, tabs)
   styles/           CSS by area (base, layout, components, pages, charts)
 src-tauri/
   src/lib.rs        app setup, command registration
   src/menu.rs       native macOS menu bar (File menu, Settings…)
   src/commands/     thin #[tauri::command] handlers
-  src/domain/       pure business logic (money, income, expenses, bank accounts, investments, assets, debts, net worth, ratios, settings), unit-tested
+  src/domain/       pure business logic (money, income, expenses, bank accounts, investments, houses, debts, net worth, ratios, settings), unit-tested
   src/storage/      project file persistence (JSON, atomic write)
   src/error.rs      app error type
   capabilities/     Tauri permission files
@@ -119,10 +119,12 @@ Behaviour is defined in Capability Specification Documents in [`docs/csd/`](docs
 | [CSD-012](docs/csd/CSD-012-debt-insights.md) | Debt insights chart |
 | [CSD-013](docs/csd/CSD-013-expenses.md) | Expenses |
 | [CSD-014](docs/csd/CSD-014-expense-insights.md) | Expense insights chart |
-| [CSD-015](docs/csd/CSD-015-assets.md) | Assets |
-| [CSD-016](docs/csd/CSD-016-asset-insights.md) | Asset insights chart |
+| [CSD-015](docs/csd/CSD-015-houses.md) | Houses |
+| [CSD-016](docs/csd/CSD-016-house-insights.md) | House insights chart |
+| [CSD-019](docs/csd/CSD-019-house-purchase-and-sale.md) | House purchase and sale |
 | [CSD-017](docs/csd/CSD-017-net-worth-insights.md) | Net worth insights (the Net worth page) |
 | [CSD-018](docs/csd/CSD-018-ratios.md) | Ratios (the Ratios page) |
+| [CSD-020](docs/csd/CSD-020-debt-linked-to-house.md) | Debt linked to a house |
 
 Only specs with `status: approved` are implemented; check a spec's status before relying on it. Tests reference acceptance criteria in their names, for example `test_csd002_ac_1_1_...`.
 

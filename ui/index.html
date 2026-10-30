@@ -79,13 +79,13 @@
           Investments
         </button>
 
-        <button class="nav-item" data-section="assets">
+        <button class="nav-item" data-section="houses">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M3 11l9-8 9 8"/>
             <path d="M5 10v10h14V10"/>
             <path d="M10 20v-6h4v6"/>
           </svg>
-          Assets
+          Houses
         </button>
 
         <div class="nav-section-label">Liabilities</div>
@@ -426,42 +426,42 @@
         </div>
       </section>
 
-      <!-- Assets -->
-      <section class="section" id="assets" aria-labelledby="assets-title">
+      <!-- Houses -->
+      <section class="section" id="houses" aria-labelledby="houses-title">
         <div class="section-header">
-          <h1 class="section-title" id="assets-title">Assets</h1>
+          <h1 class="section-title" id="houses-title">Houses</h1>
         </div>
 
-        <div class="placeholder" id="assets-empty" hidden>
-          <p>No assets yet. Add your first asset to start tracking what you own.</p>
-          <button type="button" class="btn primary" id="asset-add-first">Add your first asset</button>
+        <div class="placeholder" id="houses-empty" hidden>
+          <p>No houses yet. Add your first house to start tracking what you own.</p>
+          <button type="button" class="btn primary" id="house-add-first">Add your first house</button>
         </div>
 
-        <div id="assets-content" hidden>
-          <div class="tabs" role="tablist" aria-label="Asset views">
-            <button type="button" class="tab" role="tab" id="assets-tab-overview" aria-controls="assets-overview" aria-selected="true">Overview</button>
-            <button type="button" class="tab" role="tab" id="assets-tab-insights" aria-controls="assets-insights" aria-selected="false" tabindex="-1">Insights</button>
+        <div id="houses-content" hidden>
+          <div class="tabs" role="tablist" aria-label="House views">
+            <button type="button" class="tab" role="tab" id="houses-tab-overview" aria-controls="houses-overview" aria-selected="true">Overview</button>
+            <button type="button" class="tab" role="tab" id="houses-tab-insights" aria-controls="houses-insights" aria-selected="false" tabindex="-1">Insights</button>
           </div>
 
-          <div id="assets-overview" role="tabpanel" aria-labelledby="assets-tab-overview">
+          <div id="houses-overview" role="tabpanel" aria-labelledby="houses-tab-overview">
           <div class="panel">
             <div class="panel-header">
-              <span class="panel-title">Assets</span>
-              <button type="button" class="btn primary" id="asset-add">Add asset</button>
+              <span class="panel-title">Houses</span>
+              <button type="button" class="btn primary" id="house-add">Add house</button>
             </div>
-            <ul class="job-list" id="asset-list"></ul>
-            <div class="job-row account-total" id="asset-total" hidden>
+            <ul class="job-list" id="house-list"></ul>
+            <div class="job-row account-total" id="house-total" hidden>
               <span class="job-name">Total value</span>
               <span class="job-meta"></span>
-              <span class="account-amount" id="asset-total-value"></span>
+              <span class="account-amount" id="house-total-value"></span>
             </div>
           </div>
 
           <div class="panel">
             <div class="panel-header"><span class="panel-title">Yearly values</span></div>
-            <p class="empty-note" id="asset-totals-empty" hidden>No yearly values yet. They appear once there is a valuation.</p>
+            <p class="empty-note" id="house-totals-empty" hidden>No yearly values yet. They appear once there is a valuation.</p>
             <div class="table-wrap">
-              <table class="data-table" id="asset-totals-table" hidden>
+              <table class="data-table" id="house-totals-table" hidden>
                 <thead>
                   <tr>
                     <th scope="col">Year</th>
@@ -469,7 +469,7 @@
                     <th scope="col" class="num">Change</th>
                   </tr>
                 </thead>
-                <tbody id="asset-totals-rows"></tbody>
+                <tbody id="house-totals-rows"></tbody>
               </table>
             </div>
           </div>
@@ -477,36 +477,36 @@
           <div class="panel">
             <div class="panel-header">
               <span class="panel-title">Valuations</span>
-              <button type="button" class="btn primary" id="asset-valuation-add">Add valuation</button>
+              <button type="button" class="btn primary" id="house-valuation-add">Add valuation</button>
             </div>
-            <p class="empty-note" id="asset-valuations-empty" hidden>No valuations yet.</p>
+            <p class="empty-note" id="house-valuations-empty" hidden>No valuations yet.</p>
             <div class="table-wrap">
-              <table class="data-table" id="asset-valuations-table" hidden>
+              <table class="data-table" id="house-valuations-table" hidden>
                 <thead>
                   <tr>
                     <th scope="col">Period</th>
-                    <th scope="col">Asset</th>
+                    <th scope="col">House</th>
                     <th scope="col" class="num">Value</th>
                     <th scope="col" class="num">Change</th>
                     <th scope="col">Note</th>
                     <th scope="col"><span class="visually-hidden">Actions</span></th>
                   </tr>
                 </thead>
-                <tbody id="asset-valuations-rows"></tbody>
+                <tbody id="house-valuations-rows"></tbody>
               </table>
             </div>
           </div>
           </div>
 
-          <div id="assets-insights" role="tabpanel" aria-labelledby="assets-tab-insights" hidden>
+          <div id="houses-insights" role="tabpanel" aria-labelledby="houses-tab-insights" hidden>
             <div class="panel">
               <div class="panel-header">
-                <span class="panel-title">Assets per year</span>
-                <ul class="legend" id="assets-insights-legend" aria-label="Legend"></ul>
+                <span class="panel-title">Houses per year</span>
+                <ul class="legend" id="houses-insights-legend" aria-label="Legend"></ul>
               </div>
-              <p class="empty-note" id="assets-insights-empty" hidden>No valuations yet. The chart appears once there is a valuation.</p>
-              <div class="chart-scroll" id="assets-insights-scroll" hidden>
-                <div class="chart-inner" id="assets-insights-chart"></div>
+              <p class="empty-note" id="houses-insights-empty" hidden>No valuations yet. The chart appears once there is a valuation.</p>
+              <div class="chart-scroll" id="houses-insights-scroll" hidden>
+                <div class="chart-inner" id="houses-insights-chart"></div>
               </div>
             </div>
           </div>
@@ -723,7 +723,7 @@
               <span class="panel-title">Net worth per year</span>
               <ul class="legend" id="net-worth-insights-legend" aria-label="Legend"></ul>
             </div>
-            <p class="empty-note" id="net-worth-insights-empty" hidden>No data yet. The chart appears once there is an asset, investment, bank account entry or debt.</p>
+            <p class="empty-note" id="net-worth-insights-empty" hidden>No data yet. The chart appears once there is a house, investment, bank account entry or debt.</p>
             <div class="chart-scroll" id="net-worth-insights-scroll" hidden>
               <div class="chart-inner" id="net-worth-insights-chart"></div>
             </div>
@@ -739,7 +739,7 @@
 
         <div class="panel">
           <div class="panel-header"><span class="panel-title">Ratios per year</span></div>
-          <p class="empty-note" id="ratios-empty" hidden>No data yet. The table appears once there is income, an asset, an investment, a bank account entry, a debt or an expense.</p>
+          <p class="empty-note" id="ratios-empty" hidden>No data yet. The table appears once there is income, a house, an investment, a bank account entry, a debt or an expense.</p>
           <div class="table-wrap">
             <table class="data-table ratios-table" id="ratios-table" hidden>
               <thead id="ratios-head"></thead>
@@ -762,11 +762,11 @@
         <input type="text" name="title" maxlength="200" autocomplete="off">
       </label>
       <div class="field-row">
-        <label class="field">Start date (dd/mm/yyyy)
-          <input type="text" name="start_date" inputmode="numeric" placeholder="01/03/2024" maxlength="10" autocomplete="off" required>
+        <label class="field">Start date
+          <input data-mask="date" type="text" name="start_date" inputmode="numeric" placeholder="dd/mm/yyyy" maxlength="10" autocomplete="off" required>
         </label>
         <label class="field">End date (optional)
-          <input type="text" name="end_date" inputmode="numeric" placeholder="dd/mm/yyyy" maxlength="10" autocomplete="off">
+          <input data-mask="date" type="text" name="end_date" inputmode="numeric" placeholder="dd/mm/yyyy" maxlength="10" autocomplete="off">
         </label>
       </div>
       <label class="field">Pay period
@@ -793,8 +793,8 @@
       <div class="field-action">
         <button type="button" class="btn" id="paycheck-copy">Copy previous month</button>
       </div>
-      <label class="field"><span id="paycheck-period-label">Month (YYYY-MM)</span>
-        <input type="text" name="period" inputmode="numeric" placeholder="2026-09" maxlength="7" autocomplete="off" required>
+      <label class="field"><span id="paycheck-period-label">Month</span>
+        <input data-mask="month" type="text" name="period" inputmode="numeric" placeholder="yyyy-mm" maxlength="7" autocomplete="off" required>
       </label>
       <label class="field">Gross salary
         <input type="text" name="gross_salary" inputmode="decimal" placeholder="0.00" autocomplete="off" required>
@@ -844,8 +844,8 @@
       <div class="field-action">
         <button type="button" class="btn" id="statement-copy">Copy previous month</button>
       </div>
-      <label class="field"><span id="statement-period-label">Month (YYYY-MM)</span>
-        <input type="text" name="period" inputmode="numeric" placeholder="2026-09" maxlength="7" autocomplete="off" required>
+      <label class="field"><span id="statement-period-label">Month</span>
+        <input data-mask="month" type="text" name="period" inputmode="numeric" placeholder="yyyy-mm" maxlength="7" autocomplete="off" required>
       </label>
       <label class="field">Balance <span class="calc-tag" id="balance-calculated" hidden>calculated</span>
         <input type="text" name="balance" inputmode="decimal" placeholder="0.00" autocomplete="off" required>
@@ -901,8 +901,8 @@
       <div class="field-action">
         <button type="button" class="btn" id="bank-entry-copy">Copy previous month</button>
       </div>
-      <label class="field"><span id="bank-entry-period-label">Month (YYYY-MM)</span>
-        <input type="text" name="period" inputmode="numeric" placeholder="2026-09" maxlength="7" autocomplete="off" required>
+      <label class="field"><span id="bank-entry-period-label">Month</span>
+        <input data-mask="month" type="text" name="period" inputmode="numeric" placeholder="yyyy-mm" maxlength="7" autocomplete="off" required>
       </label>
       <label class="field">Balance
         <input type="text" name="balance" inputmode="decimal" placeholder="0.00" autocomplete="off" required>
@@ -919,10 +919,10 @@
     </form>
   </dialog>
 
-  <dialog id="asset-dialog" aria-labelledby="asset-dialog-title">
-    <form method="dialog" id="asset-form" novalidate>
-      <h2 id="asset-dialog-title">Add asset</h2>
-      <label class="field">Asset name
+  <dialog id="house-dialog" aria-labelledby="house-dialog-title">
+    <form method="dialog" id="house-form" novalidate>
+      <h2 id="house-dialog-title">Add house</h2>
+      <label class="field">House name
         <input type="text" name="name" maxlength="100" autocomplete="off" required>
       </label>
       <label class="field">Valuation period
@@ -930,27 +930,72 @@
           <option value="Monthly">Monthly</option>
           <option value="Yearly">Yearly</option>
         </select>
-        <span class="field-hint" id="asset-period-hint" hidden>The valuation period cannot change once the asset has valuations.</span>
+        <span class="field-hint" id="house-period-hint" hidden>The valuation period cannot change once the house has valuations.</span>
       </label>
-      <p class="form-error" id="asset-error" role="alert" hidden></p>
+      <div class="field-row">
+        <label class="field">Purchase date
+          <input data-mask="date" type="text" name="purchase_date" inputmode="numeric" placeholder="dd/mm/yyyy" maxlength="10" autocomplete="off" required>
+        </label>
+        <label class="field">Purchase amount
+          <input type="text" name="purchase_amount" inputmode="decimal" placeholder="250000.00" autocomplete="off" required>
+        </label>
+      </div>
+      <div class="field-row">
+        <label class="field">Sell date (optional)
+          <input data-mask="date" type="text" name="sell_date" inputmode="numeric" placeholder="dd/mm/yyyy" maxlength="10" autocomplete="off">
+        </label>
+        <label class="field">Sell amount (optional)
+          <input type="text" name="sell_amount" inputmode="decimal" autocomplete="off">
+        </label>
+      </div>
+      <div class="field" id="house-debts" hidden>
+        <span id="house-debts-label">Linked debts</span>
+        <div class="table-wrap in-dialog">
+          <table class="data-table compact" aria-labelledby="house-debts-label">
+            <thead>
+              <tr>
+                <th scope="col">Debt</th>
+                <th scope="col">Category</th>
+                <th scope="col" class="num">Balance</th>
+                <th scope="col">Outcome</th>
+              </tr>
+            </thead>
+            <tbody id="house-debt-rows"></tbody>
+          </table>
+        </div>
+        <span class="field-hint">Debts are linked to a house in the Debts page.</span>
+      </div>
+      <p class="form-error" id="house-error" role="alert" hidden></p>
       <div class="dialog-actions">
         <button type="button" class="btn" data-cancel>Cancel</button>
-        <button type="submit" class="btn primary">Save asset</button>
+        <button type="submit" class="btn primary">Save house</button>
       </div>
     </form>
   </dialog>
 
-  <dialog id="asset-valuation-dialog" aria-labelledby="asset-valuation-dialog-title">
-    <form method="dialog" id="asset-valuation-form" novalidate>
-      <h2 id="asset-valuation-dialog-title">Add valuation</h2>
-      <label class="field">Asset
-        <select name="asset_id"></select>
+  <dialog id="house-settle-dialog" aria-labelledby="house-settle-title">
+    <form method="dialog" id="house-settle-form" novalidate>
+      <h2 id="house-settle-title">Settle linked debts</h2>
+      <p class="field-hint">Repaid counts as wealth accumulation from cash, Cancelled does not.</p>
+      <div id="house-settle-rows"></div>
+      <div class="dialog-actions">
+        <button type="button" class="btn" id="house-settle-back">Back</button>
+        <button type="submit" class="btn primary" id="house-settle-save" disabled>Save sale</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="house-valuation-dialog" aria-labelledby="house-valuation-dialog-title">
+    <form method="dialog" id="house-valuation-form" novalidate>
+      <h2 id="house-valuation-dialog-title">Add valuation</h2>
+      <label class="field">House
+        <select name="house_id"></select>
       </label>
       <div class="field-action">
-        <button type="button" class="btn" id="asset-valuation-copy">Copy previous month</button>
+        <button type="button" class="btn" id="house-valuation-copy">Copy previous month</button>
       </div>
-      <label class="field"><span id="asset-valuation-period-label">Month (YYYY-MM)</span>
-        <input type="text" name="period" inputmode="numeric" placeholder="2026-09" maxlength="7" autocomplete="off" required>
+      <label class="field"><span id="house-valuation-period-label">Month</span>
+        <input data-mask="month" type="text" name="period" inputmode="numeric" placeholder="yyyy-mm" maxlength="7" autocomplete="off" required>
       </label>
       <label class="field">Value
         <input type="text" name="value" inputmode="decimal" placeholder="0.00" autocomplete="off" required>
@@ -958,8 +1003,8 @@
       <label class="field">Note (optional)
         <textarea name="note" rows="4" autocomplete="off"></textarea>
       </label>
-      <p class="field-hint">Use a dot for decimals, for example 150000.00. The value is what the asset is worth at the end of the period, so it cannot be negative. A note can be up to 2000 characters.</p>
-      <p class="form-error" id="asset-valuation-error" role="alert" hidden></p>
+      <p class="field-hint">Use a dot for decimals, for example 150000.00. The value is what the house is worth at the end of the period, so it cannot be negative. A note can be up to 2000 characters.</p>
+      <p class="form-error" id="house-valuation-error" role="alert" hidden></p>
       <div class="dialog-actions">
         <button type="button" class="btn" data-cancel>Cancel</button>
         <button type="submit" class="btn primary">Save valuation</button>
@@ -980,6 +1025,18 @@
         </select>
         <span class="field-hint" id="debt-period-hint" hidden>The statement period cannot change once the debt has statements.</span>
       </label>
+      <label class="field">Category
+        <select name="category">
+          <option value="Other">Other</option>
+          <option value="Mortgage">Mortgage</option>
+          <option value="Loan">Loan</option>
+          <option value="Scholarship">Scholarship</option>
+        </select>
+      </label>
+      <label class="field" id="debt-house-field" hidden>House (optional)
+        <select name="house_id"></select>
+        <span class="field-hint" id="debt-house-hint" hidden>This debt was settled on the sale of its house, so category and house can no longer change.</span>
+      </label>
       <p class="form-error" id="debt-error" role="alert" hidden></p>
       <div class="dialog-actions">
         <button type="button" class="btn" data-cancel>Cancel</button>
@@ -997,8 +1054,8 @@
       <div class="field-action">
         <button type="button" class="btn" id="debt-statement-copy">Copy previous month</button>
       </div>
-      <label class="field"><span id="debt-statement-period-label">Month (YYYY-MM)</span>
-        <input type="text" name="period" inputmode="numeric" placeholder="2026-09" maxlength="7" autocomplete="off" required>
+      <label class="field"><span id="debt-statement-period-label">Month</span>
+        <input data-mask="month" type="text" name="period" inputmode="numeric" placeholder="yyyy-mm" maxlength="7" autocomplete="off" required>
       </label>
       <label class="field">Balance
         <input type="text" name="balance" inputmode="decimal" placeholder="0.00" autocomplete="off" required>
@@ -1028,8 +1085,8 @@
         <label class="field">Amount
           <input type="text" name="amount" inputmode="decimal" placeholder="0.00" autocomplete="off" required>
         </label>
-        <label class="field">Date (dd/mm/yyyy)
-          <input type="text" name="date" inputmode="numeric" placeholder="15/09/2026" maxlength="10" autocomplete="off" required>
+        <label class="field">Date
+          <input data-mask="date" type="text" name="date" inputmode="numeric" placeholder="dd/mm/yyyy" maxlength="10" autocomplete="off" required>
         </label>
       </div>
       <label class="field">Category

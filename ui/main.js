@@ -1,6 +1,7 @@
-// Entry point: wires the project controls, the income, investments, bank accounts, assets, debts and expenses views (each with an insights chart), the net worth chart, the ratios table, the settings and the dashboard.
+// Entry point: wires the project controls, the income, investments, bank accounts, houses, debts and expenses views (each with an insights chart), the net worth chart, the ratios table, the settings and the dashboard.
 import { errorText, listen } from './shared/ipc.js';
 import { showToast } from './shared/dom.js';
+import { initDateMasks } from './shared/date-mask.js';
 import { initProject, refreshProjectStatus } from './pages/project.js';
 import { initIncomeOverview, reloadIncomeOverview } from './pages/income-overview.js';
 import { initIncomeInsights, reloadIncomeInsightsIfOpen } from './pages/income-insights.js';
@@ -8,8 +9,8 @@ import { initInvestmentsInsights, reloadInvestmentsInsightsIfOpen } from './page
 import { initInvestmentsOverview, reloadInvestmentsOverview } from './pages/investments-overview.js';
 import { initBankInsights, reloadBankInsightsIfOpen } from './pages/bank-insights.js';
 import { initBankOverview, reloadBankOverview } from './pages/bank-overview.js';
-import { initAssetsInsights, reloadAssetsInsightsIfOpen } from './pages/assets-insights.js';
-import { initAssetsOverview, reloadAssetsOverview } from './pages/assets-overview.js';
+import { initHousesInsights, reloadHousesInsightsIfOpen } from './pages/houses-insights.js';
+import { initHousesOverview, reloadHousesOverview } from './pages/houses-overview.js';
 import { initDebtsInsights, reloadDebtsInsightsIfOpen } from './pages/debts-insights.js';
 import { initDebtsOverview, reloadDebtsOverview } from './pages/debts-overview.js';
 import { initExpensesInsights, reloadExpensesInsightsIfOpen } from './pages/expenses-insights.js';
@@ -29,6 +30,8 @@ async function start() {
   } finally {
     document.documentElement.classList.add('theme-ready');
   }
+
+  initDateMasks();
 
   document.querySelectorAll('dialog [data-cancel]').forEach((button) => {
     button.addEventListener('click', () => button.closest('dialog').close());
@@ -68,9 +71,9 @@ async function start() {
       await reloadSettings();
     },
   });
-  initAssetsInsights();
-  // Asset valuations count for the currency confirmation of the settings page (CSD-015 REQ-25).
-  initAssetsOverview({
+  initHousesInsights();
+  // House valuations count for the currency confirmation of the settings page (CSD-015 REQ-25).
+  initHousesOverview({
     onChanged: async () => {
       await refreshProjectStatus();
       await reloadSettings();
@@ -102,8 +105,8 @@ async function start() {
       await reloadBankInsightsIfOpen();
       await reloadDebtsOverview();
       await reloadDebtsInsightsIfOpen();
-      await reloadAssetsOverview();
-      await reloadAssetsInsightsIfOpen();
+      await reloadHousesOverview();
+      await reloadHousesInsightsIfOpen();
       await reloadExpensesOverview();
       await reloadExpensesInsightsIfOpen();
       await reloadNetWorthIfOpen();
@@ -129,7 +132,7 @@ async function start() {
   await reloadInvestmentsOverview();
   await reloadBankOverview();
   await reloadDebtsOverview();
-  await reloadAssetsOverview();
+  await reloadHousesOverview();
   await reloadExpensesOverview();
   await reloadDashboard();
 }

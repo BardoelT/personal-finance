@@ -2,10 +2,12 @@
 import { invoke, errorText } from '../shared/ipc.js';
 import { h, iconButton, confirmAction, showToast, showError } from '../shared/dom.js';
 import { formatAmount, currentYear, currentMonth } from '../shared/format.js';
+import { askSettlements } from '../shared/settle.js';
 
 const $ = (id) => document.getElementById(id);
 
 let debts = [];
+let houses = [];
 let onChanged = async () => {};
 
 /** The first line of a note, with an ellipsis when there is more (CSD-011 REQ-20). */
@@ -26,6 +28,12 @@ function latestBalance(debt) {
   return h('span', { class: 'account-amount' }, formatAmount(debt.latest_balance), h('small', {}, debt.latest_period));
 }
 
+/** The settlement badge of a settled debt, else Repaid while the latest balance is 0.00 (CSD-011 REQ-26). */
+function debtBadge(debt) {
+  if (debt.settlement) return h('span', { class: 'badge' }, `${debt.settlement.outcome} ${formatAmount(debt.settlement.amount)}`);
+  return debt.repaid ? h('span', { class: 'badge' }, 'Repaid') : '';
+}
+
 function renderDebts(overview) {
   debts = overview.debts;
   const hasDebts = debts.length > 0;
@@ -37,7 +45,12 @@ function renderDebts(overview) {
         'li',
         { class: 'job-row' },
         h('span', { class: 'job-name' }, debt.name),
-        h('span', { class: 'job-meta' }, debt.statement_period),
+        h(
+          'span',
+          { class: 'job-meta' },
+          `${debt.category} · ${debt.statement_period}${debt.house_name ? ` · ${debt.house_name}` : ''} `,
+          debtBadge(debt),
+        ),
         latestBalance(debt),
         h(
           'span',
@@ -95,7 +108,8 @@ function renderStatements(statements) {
 
 /** Reloads everything from Rust. */
 export async function reloadDebtsOverview() {
-  const overview = await invoke('list_debts');
+  const [overview, houseOverview] = await Promise.all([invoke('list_debts'), invoke('list_houses')]);
+  houses = houseOverview.houses;
   renderDebts(overview);
   if (overview.debts.length === 0) return;
   const [totals, statements] = await Promise.all([invoke('yearly_debt_totals'), invoke('list_debt_statements')]);
@@ -112,6 +126,31 @@ async function changed() {
 
 let editingDebt = null;
 
+/** The House dropdown: no house and all houses, a sold one marked (CSD-020 REQ-14). */
+function fillHouseChoices(debt) {
+  const form = $('debt-form');
+  const select = form.elements.house_id;
+  select.replaceChildren(
+    h('option', { value: '' }, 'No house'),
+    ...houses.map((house) => h('option', { value: house.id }, house.held ? house.name : `${house.name} (sold)`)),
+  );
+  select.value = debt?.house_id ?? '';
+  // The link of a settled debt, or of a debt whose house is sold, cannot change (CSD-020 REQ-2, REQ-8).
+  const locked = Boolean(debt && (debt.settlement || (debt.house_id && !houses.find((house) => house.id === debt.house_id)?.held)));
+  select.disabled = locked;
+  form.elements.category.disabled = locked && Boolean(debt.house_id);
+  $('debt-house-hint').hidden = !locked;
+  applyCategory();
+}
+
+/** The House dropdown shows only for a Mortgage or a Loan (CSD-020 REQ-14). */
+function applyCategory() {
+  const form = $('debt-form');
+  const linkable = ['Mortgage', 'Loan'].includes(form.elements.category.value);
+  $('debt-house-field').hidden = !linkable;
+  if (!linkable) form.elements.house_id.value = '';
+}
+
 function openDebtDialog(debt) {
   editingDebt = debt;
   const form = $('debt-form');
@@ -125,7 +164,9 @@ function openDebtDialog(debt) {
   if (debt) {
     form.elements.name.value = debt.name;
     form.elements.statement_period.value = debt.statement_period;
+    form.elements.category.value = debt.category;
   }
+  fillHouseChoices(debt);
   $('debt-dialog').showModal();
   form.elements.name.focus();
 }
@@ -133,11 +174,26 @@ function openDebtDialog(debt) {
 async function submitDebt(event) {
   event.preventDefault();
   const form = $('debt-form');
-  const input = { name: form.elements.name.value };
+  const category = form.elements.category.value;
+  const input = {
+    name: form.elements.name.value,
+    category,
+    house_id: ['Mortgage', 'Loan'].includes(category) ? form.elements.house_id.value : '',
+  };
   if (!form.elements.statement_period.disabled) {
     input.statement_period = form.elements.statement_period.value;
   }
   try {
+    // Linking to a house that is already sold settles the debt: Repaid or Cancelled (CSD-020 REQ-17).
+    const chosen = houses.find((house) => house.id === input.house_id);
+    if (editingDebt && chosen && !chosen.held && editingDebt.house_id !== chosen.id) {
+      const open = await invoke('debt_open_balance', { debtId: editingDebt.id, houseId: chosen.id });
+      if (open) {
+        const choices = await askSettlements([open]);
+        if (choices === null) return;
+        input.settlement = choices[0].outcome;
+      }
+    }
     if (editingDebt) {
       await invoke('update_debt', { debtId: editingDebt.id, input });
     } else {
@@ -187,8 +243,8 @@ function chosenDebt() {
 function applyStatementPeriod({ resetPeriod }) {
   const form = $('debt-statement-form');
   const yearly = chosenDebt()?.statement_period === 'Yearly';
-  $('debt-statement-period-label').textContent = yearly ? 'Year (YYYY)' : 'Month (YYYY-MM)';
-  form.elements.period.placeholder = yearly ? String(new Date().getFullYear() - 1) : '2026-09';
+  $('debt-statement-period-label').textContent = yearly ? 'Year' : 'Month';
+  form.elements.period.placeholder = yearly ? String(new Date().getFullYear() - 1) : 'yyyy-mm';
   form.elements.period.maxLength = yearly ? 4 : 7;
   $('debt-statement-copy').textContent = yearly ? 'Copy previous year' : 'Copy previous month';
   if (resetPeriod && yearly !== formIsYearly) {
@@ -209,7 +265,7 @@ function openStatementDialog(statement = null) {
   if (statement) {
     // The period is editable too; the debt is not (CSD-011 REQ-12).
     $('debt-statement-dialog-title').textContent = `Edit statement ${statement.period}`;
-    $('debt-statement-period-label').textContent = statement.period.length === 4 ? 'Year (YYYY)' : 'Month (YYYY-MM)';
+    $('debt-statement-period-label').textContent = statement.period.length === 4 ? 'Year' : 'Month';
     form.elements.period.maxLength = statement.period.length;
     form.elements.period.value = statement.period;
     formIsYearly = statement.period.length === 4;
@@ -281,6 +337,7 @@ export function initDebtsOverview({ onChanged: callback }) {
   $('debt-add').addEventListener('click', () => openDebtDialog(null));
   $('debt-add-first').addEventListener('click', () => openDebtDialog(null));
   $('debt-form').addEventListener('submit', submitDebt);
+  $('debt-form').elements.category.addEventListener('change', applyCategory);
   $('debt-statement-add').addEventListener('click', () => openStatementDialog());
   $('debt-statement-copy').addEventListener('click', copyPrevious);
   $('debt-statement-form').addEventListener('submit', submitStatement);

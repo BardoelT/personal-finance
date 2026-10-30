@@ -191,8 +191,8 @@ function applyPayPeriod({ resetPeriod }) {
   const form = $('paycheck-form');
   const yearly = chosenJob()?.pay_period === 'Yearly';
   $('paycheck-dialog-title').textContent = yearly ? 'Add annual statement' : 'Add paycheck';
-  $('paycheck-period-label').textContent = yearly ? 'Year (YYYY)' : 'Month (YYYY-MM)';
-  form.elements.period.placeholder = yearly ? String(new Date().getFullYear() - 1) : '2026-09';
+  $('paycheck-period-label').textContent = yearly ? 'Year' : 'Month';
+  form.elements.period.placeholder = yearly ? String(new Date().getFullYear() - 1) : 'yyyy-mm';
   form.elements.period.maxLength = yearly ? 4 : 7;
   $('paycheck-copy').textContent = yearly ? 'Copy previous year' : 'Copy previous month';
   if (resetPeriod && yearly !== formIsYearly) {
@@ -215,7 +215,7 @@ function openEntryDialog(entry = null) {
     $('paycheck-dialog-title').textContent = statement
       ? `Edit annual statement ${entry.period}`
       : `Edit paycheck ${entry.period}`;
-    $('paycheck-period-label').textContent = statement ? 'Year (YYYY)' : 'Month (YYYY-MM)';
+    $('paycheck-period-label').textContent = statement ? 'Year' : 'Month';
     form.elements.period.maxLength = statement ? 4 : 7;
     form.elements.period.value = entry.period;
     form.elements.gross_salary.value = entry.gross_salary;

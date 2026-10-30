@@ -20,7 +20,7 @@ pub fn get_ratios(state: State<'_, AppState>) -> Result<Ratios, AppError> {
         &RatioSources {
             income: project.income(),
             expenses: project.expenses(),
-            assets: project.assets(),
+            houses: project.houses(),
             investments: project.investments(),
             bank_accounts: project.bank_accounts(),
             debts: project.debts(),

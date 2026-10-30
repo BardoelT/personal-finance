@@ -8,10 +8,12 @@ use serde::Serialize;
 use tauri::State;
 
 use super::AppState;
-use crate::domain::debts::{debt_note, parse_period, DebtBalance, DebtInput};
+use crate::domain::debts::OpenDebt;
+use crate::domain::debts::{debt_note, parse_period, DebtBalance};
+use crate::domain::houses::linking::{self, DebtFormInput, DebtsView};
+use crate::domain::HouseId;
 use crate::domain::{
     Debt, DebtId, DebtInsights, DebtStatement, DebtStatementPrefill, DebtYearlyTotal, Debts,
-    DebtsOverview,
 };
 use crate::error::AppError;
 use crate::storage::Project;
@@ -46,27 +48,32 @@ impl StatementView {
 
 /// The debts with their latest balances and the total debt (REQ-17).
 #[tauri::command]
-pub fn list_debts(state: State<'_, AppState>) -> Result<DebtsOverview, AppError> {
+pub fn list_debts(state: State<'_, AppState>) -> Result<DebtsView, AppError> {
     let project = state.project()?;
-    Ok(project.debts().overview())
+    Ok(linking::debts_view(project.debts(), project.houses()))
 }
 
 #[tauri::command]
-pub fn create_debt(state: State<'_, AppState>, input: DebtInput) -> Result<Debt, AppError> {
+pub fn create_debt(state: State<'_, AppState>, input: DebtFormInput) -> Result<Debt, AppError> {
     let mut project = state.project()?;
-    Ok(project.debts_mut().create_debt(&input)?)
+    let (houses, debts) = project.houses_and_debts_mut();
+    Ok(linking::create_debt(houses, debts, &input)?)
 }
 
 #[tauri::command]
 pub fn update_debt(
     state: State<'_, AppState>,
     debt_id: String,
-    input: DebtInput,
+    input: DebtFormInput,
 ) -> Result<Debt, AppError> {
     let mut project = state.project()?;
-    Ok(project
-        .debts_mut()
-        .update_debt(DebtId::parse(&debt_id)?, &input)?)
+    let (houses, debts) = project.houses_and_debts_mut();
+    Ok(linking::update_debt(
+        houses,
+        debts,
+        DebtId::parse(&debt_id)?,
+        &input,
+    )?)
 }
 
 #[tauri::command]
@@ -74,6 +81,23 @@ pub fn delete_debt(state: State<'_, AppState>, debt_id: String) -> Result<(), Ap
     let mut project = state.project()?;
     project.debts_mut().delete_debt(DebtId::parse(&debt_id)?)?;
     Ok(())
+}
+
+/// The open balance of a debt at the sale of the house it would be linked to,
+/// for the settlement prompt (CSD-020 REQ-15, REQ-17).
+#[tauri::command]
+pub fn debt_open_balance(
+    state: State<'_, AppState>,
+    debt_id: String,
+    house_id: String,
+) -> Result<Option<OpenDebt>, AppError> {
+    let project = state.project()?;
+    Ok(linking::debt_open_balance(
+        project.houses(),
+        project.debts(),
+        DebtId::parse(&debt_id)?,
+        HouseId::parse(&house_id)?,
+    )?)
 }
 
 /// The statements of all debts, newest period first (REQ-18).

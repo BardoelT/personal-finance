@@ -1236,3 +1236,29 @@ fn test_csd012_ac_15_3_a_moved_statement_follows_to_its_new_year() {
     assert_eq!(years[0].segments.len(), 1);
     assert_eq!(years[1].segments.len(), 0);
 }
+
+#[test]
+fn test_csd011_ac_26_1_a_latest_balance_of_zero_is_marked_repaid() {
+    let mut debts = Debts::default();
+    let id = debt(&mut debts, "Example Car Loan", "Monthly");
+    add(&mut debts, id, "2026-08", "4000.00");
+    assert!(!debts.overview().debts[0].repaid);
+    add(&mut debts, id, "2026-09", "0.00");
+    assert!(debts.overview().debts[0].repaid);
+}
+
+#[test]
+fn test_csd011_ac_26_2_a_later_balance_above_zero_removes_the_mark() {
+    let mut debts = Debts::default();
+    let id = debt(&mut debts, "Example Car Loan", "Monthly");
+    add(&mut debts, id, "2026-09", "0.00");
+    add(&mut debts, id, "2026-10", "500.00");
+    assert!(!debts.overview().debts[0].repaid);
+}
+
+#[test]
+fn test_csd011_ac_26_3_a_debt_without_statements_has_no_mark() {
+    let mut debts = Debts::default();
+    debt(&mut debts, "Example Card", "Monthly");
+    assert!(!debts.overview().debts[0].repaid);
+}

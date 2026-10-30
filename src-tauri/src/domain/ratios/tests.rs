@@ -1,10 +1,10 @@
 use time::macros::date;
 
 use super::*;
-use crate::domain::assets::{AssetInput, AssetValue};
 use crate::domain::bank_accounts::{AccountInput as BankInput, BankBalance};
 use crate::domain::debts::{DebtBalance, DebtInput};
 use crate::domain::expenses::ExpenseInput;
+use crate::domain::houses::{HouseInput, HouseValue};
 use crate::domain::income::JobInput;
 use crate::domain::investments::{
     AccountInput as InvestmentInput, Balance, NetDeposits, Note, Period,
@@ -131,20 +131,26 @@ fn add_debt(data: &mut ProjectData, statements: &[(&str, &str)]) {
     }
 }
 
-fn add_asset(data: &mut ProjectData, at: &str, value: &str) {
+fn add_house(data: &mut ProjectData, at: &str, value: &str) {
     let id = data
-        .assets
-        .create_asset(&AssetInput {
-            name: "Example House".to_owned(),
-            valuation_period: Some("Yearly".to_owned()),
-        })
+        .houses
+        .create_house(
+            &HouseInput {
+                name: "Example House".to_owned(),
+                valuation_period: Some("Yearly".to_owned()),
+                purchase_date: Some("01/01/1900".to_owned()),
+                purchase_amount: Some("0.00".to_owned()),
+                ..HouseInput::default()
+            },
+            time::macros::date!(2026 - 10 - 29),
+        )
         .unwrap()
         .id;
-    data.assets
+    data.houses
         .add_valuation(
             id,
-            crate::domain::assets::parse_period(at).unwrap(),
-            AssetValue::parse(value).unwrap(),
+            crate::domain::houses::parse_period(at).unwrap(),
+            HouseValue::parse(value).unwrap(),
             Note::default(),
             today(),
         )
@@ -156,7 +162,7 @@ fn series(data: &ProjectData) -> Vec<RatiosYear> {
         &RatioSources {
             income: &data.income,
             expenses: &data.expenses,
-            assets: &data.assets,
+            houses: &data.houses,
             investments: &data.investments,
             bank_accounts: &data.bank_accounts,
             debts: &data.debts,
@@ -372,13 +378,13 @@ fn test_csd018_ac_7_2_the_first_year_has_none() {
 
 fn net_worth_of(first: &str, second: &str) -> ProjectData {
     let mut data = ProjectData::default();
-    add_asset(&mut data, "2025", first);
-    let id = data.assets.assets()[0].id;
-    data.assets
+    add_house(&mut data, "2025", first);
+    let id = data.houses.houses()[0].id;
+    data.houses
         .add_valuation(
             id,
-            crate::domain::assets::parse_period("2026").unwrap(),
-            AssetValue::parse(second).unwrap(),
+            crate::domain::houses::parse_period("2026").unwrap(),
+            HouseValue::parse(second).unwrap(),
             Note::default(),
             today(),
         )
@@ -415,7 +421,7 @@ fn test_csd018_ac_8_3_a_year_before_that_is_not_positive_gives_none() {
 #[test]
 fn test_csd018_ac_8_4_a_year_before_without_records_gives_none() {
     let mut data = ProjectData::default();
-    add_asset(&mut data, "2024", "100.00");
+    add_house(&mut data, "2024", "100.00");
     add_bank(&mut data, "Example Bank", &[("2026", "1000.00")]);
     assert_eq!(year(&data, 2026).wealth_growth_percent, None);
 }
@@ -423,7 +429,7 @@ fn test_csd018_ac_8_4_a_year_before_without_records_gives_none() {
 #[test]
 fn test_csd018_ac_8_4_a_year_without_records_gives_none() {
     let mut data = ProjectData::default();
-    add_asset(&mut data, "2024", "100.00");
+    add_house(&mut data, "2024", "100.00");
     assert_eq!(year(&data, 2025).wealth_growth_percent, None);
 }
 
