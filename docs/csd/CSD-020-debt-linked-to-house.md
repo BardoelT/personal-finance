@@ -3,7 +3,7 @@ id: CSD-020
 title: Debt linked to a house
 status: draft
 owner: Thijs Bardoel
-version: 0.2
+version: 0.3
 last_updated: 30/10/2026
 related: [CSD-000, CSD-002, CSD-011, CSD-012, CSD-015, CSD-017, CSD-018, CSD-019]
 ---
@@ -104,7 +104,7 @@ Scenario: The category defaults to Other
 ```
 
 **REQ-2: Category and link rules** *(unwanted behaviour)*
-If a debt is saved with a category other than Mortgage, Loan or Other, a house with the category Other, a house that does not exist or is sold, or while its current house is sold, then the app shall reject the save with the error code of the violated rule and change nothing.
+If a debt is saved with a category other than Mortgage, Loan or Other, a house with the category Other, a house that does not exist, or while its current house is sold, then the app shall reject the save with the error code of the violated rule and change nothing.
 
 ```gherkin
 @AC-2.1
@@ -120,7 +120,6 @@ Scenario Outline: A forbidden category or link is rejected
     | debt              | category | house                  | code                     |
     | Example Loan      | Savings  | (none)                 | DEBT_CATEGORY_INVALID    |
     | Example Loan      | Other    | Example House          | DEBT_LINK_CATEGORY_INVALID |
-    | Example Loan      | Loan     | Example Guesthouse     | HOUSE_LINKS_LOCKED_SOLD  |
     | Example Loan      | Loan     | (a deleted house)      | HOUSE_NOT_FOUND          |
     | Example Cabin Loan | Loan    | (none)                 | HOUSE_LINKS_LOCKED_SOLD  |
 ```
@@ -367,7 +366,7 @@ Scenario: The house form has no debts
 ```
 
 **REQ-14: The debt form and the Debts view** *(ubiquitous)*
-The app shall show on each debt row of the Debts overview (CSD-011 REQ-20) the category, the name of the linked house and, for a settled debt, the badge Repaid or Cancelled, and shall show in the debt form a Category dropdown (Mortgage, Loan, Other) and, only while Mortgage or Loan is selected, an optional House dropdown with the unsold houses and a choice for no house.
+The app shall show on each debt row of the Debts overview (CSD-011 REQ-20) the category, the name of the linked house and, for a settled debt, the badge Repaid or Cancelled, and shall show in the debt form a Category dropdown (Mortgage, Loan, Other) and, only while Mortgage or Loan is selected, an optional House dropdown with a choice for no house and all houses, a sold one marked "(sold)".
 
 ```gherkin
 @AC-14.1
@@ -382,13 +381,13 @@ Scenario: The house dropdown follows the category
   When the user opens the Add debt form
   Then the Category is Other and there is no House dropdown
   When the user selects the category Mortgage
-  Then a House dropdown appears with "No house" and "Example House" and not "Example Guesthouse"
+  Then a House dropdown appears with "No house", "Example House" and "Example Guesthouse (sold)"
   When the user selects the category Other
   Then the House dropdown disappears
 ```
 
 **REQ-15: The settlement prompt** *(event-driven)*
-When a sale with open linked debts is saved without outcomes, the app shall show the dialog "Settle linked debts" with one row per open debt (name, settled amount, and the choices Repaid and Cancelled, none selected), the line "Repaid counts as wealth accumulation from cash, Cancelled does not.", the button "Save sale" disabled until every row has a choice, and the button "Back", which saves nothing.
+When a sale with open linked debts, or a link of a debt with an open balance to a sold house (REQ-17), is saved without outcomes, the app shall show the dialog "Settle linked debts" with one row per open debt (name, settled amount, and the choices Repaid and Cancelled, none selected), the line "Repaid counts as wealth accumulation from cash, Cancelled does not.", the button "Save sale" disabled until every row has a choice, and the button "Back", which saves nothing.
 
 ```gherkin
 @AC-15.1
@@ -398,6 +397,45 @@ Scenario: Prompt behaviour
   Then the dialog "Settle linked debts" lists both rows with no choice selected
   And "Save sale" is disabled until both have a choice
   And "Back" returns to the form with nothing saved
+```
+
+**REQ-17: Link a debt to a house that is already sold** *(event-driven)*
+When the user saves a debt with a sold house, the app shall link the debt and, if the debt has an open balance at the sell date of that house, require the outcome Repaid or Cancelled and settle the debt as the sale would have (REQ-5), all in one change.
+
+```gherkin
+@AC-17.1
+Scenario: Link a mortgage to a sold house
+  Given "Example House" sold on 10/06/2026 and "Example Mortgage" (monthly) with a statement for 2026-03 with balance 190000.00
+  When the user links "Example Mortgage" to "Example House" with the outcome Repaid
+  Then "Example Mortgage" is linked and settled as Repaid with settled amount 190000.00
+  And it has a statement for 2026-06 with balance 0.00 and note "Repaid on sale of Example House"
+
+@AC-17.2
+Scenario: The outcome is required
+  Given the same house and debt
+  When the user links "Example Mortgage" to "Example House" without an outcome
+  Then it is rejected with error code "HOUSE_SETTLEMENT_REQUIRED"
+  And nothing changes
+
+@AC-17.3
+Scenario: A debt without an open balance links directly
+  Given "Example House" sold on 10/06/2026 and "Example Loan" with no statements
+  When the user links "Example Loan" to "Example House"
+  Then "Example Loan" is linked and not settled
+  And an outcome for it is rejected with error code "HOUSE_SETTLEMENT_INVALID"
+
+@AC-17.4
+Scenario: A statement after the sale blocks the link
+  Given "Example House" sold on 10/06/2026 and "Example Mortgage" with statements for 2026-03 (190000.00) and 2026-08 (180000.00)
+  When the user links "Example Mortgage" to "Example House" with the outcome Repaid
+  Then it is rejected with error code "DEBT_STATEMENT_AFTER_SALE"
+  And nothing changes
+
+@AC-17.5
+Scenario: Undoing the sale later undoes the settlement
+  Given "Example Mortgage" linked and settled on the sale of "Example House" as in AC-17.1
+  When the user empties the sell date and sell amount of the house, confirms and saves
+  Then "Example Mortgage" has no settlement, is still linked, and has no statement for 2026-06
 ```
 
 **REQ-16: The project file** *(event-driven)*
@@ -444,7 +482,7 @@ erDiagram
 
 The link is stored on the debt (`house_id`) and the settlement on the debt (`settlement`), both optional; the project file keeps `format_version` 1 and a file without them opens with no links. The settlement statement is an ordinary statement of the debt (CSD-011) and counts in its figures.
 
-Commands: `create_debt` and `update_debt` take, besides the fields of CSD-011, `category` (`Mortgage`, `Loan` or `Other`; unchanged when omitted on an edit, `Other` on create) and `house_id` (optional; sent empty to unlink). `create_house` and `update_house` take, besides the fields of CSD-015 and CSD-019, `links` with `settlements` (a list of `{ debt_id, outcome }`) and `confirm_undo` (boolean) only. `list_open_debts(house_id, sell_date)` returns the linked debts of that house with an open balance at a sale, for the prompt of REQ-15, and the commands still validate the choices (REQ-3). `list_houses()` returns the linked debts of each house with latest balance and settlement, and `list_debts()` returns the category, house name and settlement of each debt. All validation is in Rust.
+Commands: `create_debt` and `update_debt` take, besides the fields of CSD-011, `category` (`Mortgage`, `Loan` or `Other`; unchanged when omitted on an edit, `Other` on create) and `house_id` (optional; sent empty to unlink) and `settlement` (`Repaid` or `Cancelled`; only for a link to a sold house, REQ-17). `debt_open_balance(debt_id, house_id)` returns the open balance of a debt at the sell date of a sold house, or none, for the prompt of REQ-15. `create_house` and `update_house` take, besides the fields of CSD-015 and CSD-019, `links` with `settlements` (a list of `{ debt_id, outcome }`) and `confirm_undo` (boolean) only. `list_open_debts(house_id, sell_date)` returns the linked debts of that house with an open balance at a sale, for the prompt of REQ-15, and the commands still validate the choices (REQ-3). `list_houses()` returns the linked debts of each house with latest balance and settlement, and `list_debts()` returns the category, house name and settlement of each debt. All validation is in Rust.
 
 Error codes (code plus safe message): `DEBT_CATEGORY_INVALID`, `DEBT_LINK_CATEGORY_INVALID`, `HOUSE_NOT_FOUND`, `HOUSE_LINKS_LOCKED_SOLD`, `HOUSE_SETTLEMENT_REQUIRED`, `HOUSE_SETTLEMENT_INVALID`, `HOUSE_SALE_UNDO_UNCONFIRMED`, `HOUSE_SELL_DATE_LOCKED`, `HOUSE_HAS_LINKED_DEBTS`, `DEBT_STATEMENT_AFTER_SALE`, `DEBT_SETTLED_LOCKED`, `PROJECT_INVALID_FILE`.
 
@@ -469,5 +507,6 @@ Done means fmt, clippy (`-D warnings`), `cargo test --all-features` and `cargo d
 - OQ-1: Should the yearly totals of the Debts overview (CSD-011 REQ-19) show the Cancelled-adjusted repaid amount, or the raw drop as today? This CSD adjusts only the wealth accumulation (REQ-12). Owner: Thijs. Blocks: none (default: raw in the Debts overview).
 
 ## 9. Changelog
+- 0.3 (30/10/2026): A debt can be linked to a house that is already sold, with the Repaid or Cancelled choice in the debt form (new REQ-17; REQ-2, REQ-14, REQ-15 changed), because debts that predate a sale could not be linked. Back to `draft` until re-approved.
 - 0.2 (30/10/2026): The link is made in the debt form, not in the house forms: every debt gets a category (Mortgage, Loan, Other) and only a Mortgage or Loan can be linked to a house (REQ-1, REQ-2, REQ-13, REQ-14, REQ-16, NG-1, NG-3). The house forms keep only the settlement prompt on a sale and the undo confirmation. Back to `draft` until re-approved.
 - 0.1 (30/10/2026): initial draft, from GitHub issue 31 and the grill-me interview. It replaces the earlier CSD-020 draft that was removed.
