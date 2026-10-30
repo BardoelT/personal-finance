@@ -1,7 +1,7 @@
 ---
 id: CSD-004
 title: Income dashboard
-status: draft
+status: approved
 owner: Thijs Bardoel
 version: 0.8
 last_updated: 30/10/2026

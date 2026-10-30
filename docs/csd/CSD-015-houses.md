@@ -1,7 +1,7 @@
 ---
 id: CSD-015
 title: Houses
-status: draft
+status: approved
 owner: Thijs Bardoel
 version: 0.5
 last_updated: 30/10/2026

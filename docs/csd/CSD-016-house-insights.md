@@ -1,7 +1,7 @@
 ---
 id: CSD-016
 title: House insights
-status: draft
+status: approved
 owner: Thijs Bardoel
 version: 0.7
 last_updated: 30/10/2026
