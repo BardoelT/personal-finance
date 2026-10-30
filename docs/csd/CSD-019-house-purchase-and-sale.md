@@ -1,9 +1,9 @@
 ---
 id: CSD-019
 title: House purchase and sale
-status: approved
+status: draft
 owner: Thijs Bardoel
-version: 0.2
+version: 0.3
 last_updated: 30/10/2026
 related: [CSD-000, CSD-002, CSD-003, CSD-015, CSD-016, CSD-017, CSD-018, CSD-020]
 ---
@@ -273,25 +273,19 @@ Scenario: Widening the window is accepted
 
 ### 4.3 Views and figures
 
-**REQ-9: Held or sold, and the result** *(ubiquitous)*
-The app shall show for each house its purchase date and amount, and either "Held" or "Sold on dd/mm/yyyy" with the sell amount and, computed in Rust, the result. Sold houses shall stay in the list in the order of CSD-015 REQ-18.
+**REQ-9: Held or sold** *(ubiquitous)*
+The app shall show on each house row of the Houses overview its valuation period and either "Held" or "Sold", and nothing else of the purchase and the sale: the purchase date and amount, the sell date and amount are shown in the Edit house form (REQ-12). Sold houses shall stay in the list in the order of CSD-015 REQ-18.
 
 ```gherkin
 @AC-9.1
 Scenario: Held house
-  Given a house "Example House" bought on 15/03/2024 for 250000.00 and not sold
-  Then its row shows purchase "15/03/2024" and "250000.00" and "Held"
+  Given a monthly house "Example House" bought on 15/03/2024 for 250000.00 and not sold
+  Then its row shows "Monthly" and "Held" and no purchase date or amount
 
 @AC-9.2
-Scenario Outline: Sold house with its result
-  Given a house "Example House" bought on 15/03/2024 for 250000.00 and sold on 10/06/2026 for <sell>
-  Then its row shows "Sold on 10/06/2026" with sell amount <sell> and result <result>
-
-  Examples:
-    | sell      | result     |
-    | 300000.00 | 50000.00   |
-    | 240000.00 | -10000.00  |
-    | 250000.00 | 0.00       |
+Scenario: Sold house
+  Given a yearly house "Example House" bought on 15/03/2024 for 250000.00 and sold on 10/06/2026 for 300000.00
+  Then its row shows "Yearly" and "Sold" and no sell date, sell amount or result
 
 @AC-9.3
 Scenario: A sold house stays in the list
@@ -470,5 +464,6 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass. CSD
 None.
 
 ## 9. Changelog
+- 0.3 (30/10/2026): The house row shows only the valuation period and Held or Sold (REQ-9, AC-9.1, AC-9.2); the purchase and sale stay in the Edit house form, and the result is no longer shown. Back to `draft` until re-approved.
 - 0.2 (30/10/2026): Assets are renamed to houses. NG-4 now excludes only the cash and net-worth effect of the amounts: selling a house that has linked debts also settles them (CSD-020), which extends REQ-2. Back to `draft` until re-approved (GitHub issue 31).
 - 0.1 (29/10/2026): initial draft, from GitHub issue 27 and the grill-me interview. It supersedes CSD-015 NG-1 (purchase price), NG-6 (sold state) and NG-8 (purchase and sale transactions), and extends CSD-015 REQ-1, REQ-4, REQ-7, REQ-13, REQ-17, REQ-20 and REQ-24.
