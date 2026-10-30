@@ -11,7 +11,7 @@ The left pane groups the pages as **Overview**, **Finance**, **Wealth**, **Liabi
 - **Expenses:** dated expenses with a name, amount, category (a fixed list) and a note, with yearly totals and the largest expense of each year. Insights charts the spending per year, stacked by category.
 - **Bank accounts:** any number of accounts, each recorded monthly or yearly as a closing balance (negative when overdrawn) and a note. Yearly totals and the total of the latest balances. Insights charts the balance per bank per year with a closing-balance marker.
 - **Investments:** any number of investment accounts, each recorded monthly or yearly. A statement holds the closing balance, the net deposits (money put in minus money taken out) and a note; the capital growth is derived from them, and the form calculates the balance or the growth from the other. Yearly totals show closing balance, net deposits and capital growth. Insights charts opening balance, net deposits and capital growth with a closing-balance marker and the growth percentage. Individual stocks, prices and trades are not tracked.
-- **Assets:** things you own (a house, a car), each valued monthly or yearly, with the change since the previous valuation and yearly values. Insights charts the value per asset per year.
+- **Assets:** things you own (a house, a car), each bought once and possibly sold, valued monthly or yearly, with the change since the previous valuation and yearly values. A sold asset stops counting from its sale year. Insights charts the value per asset per year.
 - **Debts:** what you owe, each recorded monthly or yearly as a remaining balance, with the amount repaid per year. Insights charts the debt per debt per year.
 - **Net worth:** one chart of your overall financial state: a stacked bar per year with assets, investments and cash above the zero line and debts below it, and a marker at the net worth. Every figure is the one the chart of its own area shows.
 - **Ratios:** one table with the years as columns: total income, how much of it became wealth (bank increase, investment net deposits and debt repaid), the growth of the investments and of the total wealth, and the disposable income with its share of the income.
@@ -121,6 +121,7 @@ Behaviour is defined in Capability Specification Documents in [`docs/csd/`](docs
 | [CSD-014](docs/csd/CSD-014-expense-insights.md) | Expense insights chart |
 | [CSD-015](docs/csd/CSD-015-assets.md) | Assets |
 | [CSD-016](docs/csd/CSD-016-asset-insights.md) | Asset insights chart |
+| [CSD-019](docs/csd/CSD-019-asset-purchase-and-sale.md) | Asset purchase and sale |
 | [CSD-017](docs/csd/CSD-017-net-worth-insights.md) | Net worth insights (the Net worth page) |
 | [CSD-018](docs/csd/CSD-018-ratios.md) | Ratios (the Ratios page) |
 

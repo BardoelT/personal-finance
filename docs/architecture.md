@@ -26,7 +26,7 @@ Two rules shape everything:
 |---|---|
 | `domain/income/` | Jobs, paychecks, annual statements, yearly totals, dashboard overview, insights |
 | `domain/investments/` | Accounts, statements, net deposits, capital growth, yearly totals, insights |
-| `domain/assets/` | Assets, valuations with non-negative values, the change per valuation, colour slots, yearly values with the change, insights per asset. Reuses the investments' `Period` and `Note` |
+| `domain/assets/` | Assets with one purchase and at most one sale, valuations with non-negative values inside the holding window, the change per valuation, colour slots, yearly values with the change (assets held at year end), insights per asset. Reuses the investments' `Period` and `Note` |
 | `domain/debts/` | Debts, statements with non-negative balances, the change per statement, colour slots, yearly totals with the amount repaid, insights per debt. Reuses the investments' `Period` and `Note` |
 | `domain/expenses/` | Expenses (dated, with a fixed category and a note), the year and month filter, yearly totals with the largest expense, insights per category. Reuses the investments' `Note` |
 | `domain/bank_accounts/` | Bank accounts, entries with signed balances, colour slots, yearly totals, insights per bank. Reuses the investments' `Period` and `Note` |
