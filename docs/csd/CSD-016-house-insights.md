@@ -151,25 +151,25 @@ The app shall give each year one segment per house that has a valuation in that 
 Scenario: Segments of a year
   Given today is 29/10/2026
   And house "Example House" with valuations 2026-03 (value 299000.00) and 2026-09 (value 300000.00)
-  And house "Example Flat" with a valuation 2026-06 (value 50000.00)
+  And house "Example Lodge" with a valuation 2026-06 (value 50000.00)
   When the insights are requested
-  Then 2026 has the segments "Example House" 300000.00 and "Example Flat" 50000.00
+  Then 2026 has the segments "Example House" 300000.00 and "Example Lodge" 50000.00
   And 2026 has total value 350000.00
 
 @AC-5.2
 Scenario: A house without a valuation in the year has no segment
   Given today is 29/10/2026
   And a monthly house "Example House" with valuations 2025-12 (value 300000.00) and 2026-03 (value 310000.00)
-  And a yearly house "Example Flat" with a valuation 2025 (value 55000.00)
+  And a yearly house "Example Lodge" with a valuation 2025 (value 55000.00)
   When the insights are requested
-  Then 2025 has the segments "Example House" 300000.00 and "Example Flat" 55000.00
+  Then 2025 has the segments "Example House" 300000.00 and "Example Lodge" 55000.00
   And 2026 has only the segment "Example House" 310000.00
 
 @AC-5.3
 Scenario: A house at 0.00 has no visible segment
   Given today is 29/10/2026
   And house "Example House" with a valuation 2026-09 (value 300000.00)
-  And house "Example Studio" with a valuation 2026-09 (value 0.00)
+  And house "Example Cabin" with a valuation 2026-09 (value 0.00)
   When the insights are requested
   Then 2026 has the segments 300000.00 and 0.00
   And 2026 has total value 300000.00
@@ -177,9 +177,9 @@ Scenario: A house at 0.00 has no visible segment
 @AC-5.4
 Scenario: Segments are ordered by creation, not by name
   Given today is 29/10/2026
-  And houses "Example Flat" and then "Example House", both with a valuation 2026-09
+  And houses "Example Lodge" and then "Example House", both with a valuation 2026-09
   When the insights are requested
-  Then the segments of 2026 are listed "Example Flat" first and "Example House" second
+  Then the segments of 2026 are listed "Example Lodge" first and "Example House" second
 
 @AC-5.5
 Scenario: The insights equal the yearly values
@@ -261,7 +261,7 @@ The Insights tab shall draw every segment of a house in the colour of the house'
 ```gherkin
 @AC-8.1
 Scenario: A house has one colour everywhere
-  Given house "Example Flat" has colour slot 1 and valuations in 2025 and 2026
+  Given house "Example Lodge" has colour slot 1 and valuations in 2025 and 2026
   When the user opens the Insights tab
   Then its segments in 2025 and 2026, its legend swatch and its tooltip swatch have the colour of slot 1
 
@@ -292,9 +292,9 @@ The Insights tab shall show a legend with a colour swatch and the name of every 
 ```gherkin
 @AC-9.1
 Scenario: Legend lists the houses in creation order
-  Given houses "Example Flat" and then "Example House", both with valuations
+  Given houses "Example Lodge" and then "Example House", both with valuations
   When the user opens the Insights tab
-  Then the legend lists "Example Flat" and "Example House" in that order, each with its colour swatch
+  Then the legend lists "Example Lodge" and "Example House" in that order, each with its colour swatch
   And the legend shows the total-value marker
 
 @AC-9.2
@@ -319,8 +319,8 @@ Scenario: A long name is cut with an ellipsis
 
 @AC-9.5
 Scenario: A deleted house leaves the legend
-  Given the legend lists "Example Flat" and "Example House"
-  When the user deletes "Example Flat" on the Overview tab and opens the Insights tab
+  Given the legend lists "Example Lodge" and "Example House"
+  When the user deletes "Example Lodge" on the Overview tab and opens the Insights tab
   Then the legend lists only "Example House"
 ```
 
@@ -330,7 +330,7 @@ When the user hovers over or moves keyboard focus to a year, the Insights tab sh
 ```gherkin
 @AC-10.1
 Scenario: Tooltip on hover
-  Given 2026 has the segments "Example House" 300000.00 and "Example Flat" 50000.00, total value 350000.00, and change 10000.00
+  Given 2026 has the segments "Example House" 300000.00 and "Example Lodge" 50000.00, total value 350000.00, and change 10000.00
   When the user hovers over the 2026 bar
   Then a tooltip shows both houses with their swatch and value, the total value 350000.00 and change 10000.00
   And it shows no number of valuations
@@ -344,7 +344,7 @@ Scenario: Tooltip on keyboard focus
 
 @AC-10.3
 Scenario: Accessible label
-  Given 2026 has the segments "Example House" 300000.00 and "Example Flat" 50000.00 and change -200.00
+  Given 2026 has the segments "Example House" 300000.00 and "Example Lodge" 50000.00 and change -200.00
   When a screen reader reads the 2026 bar
   Then it announces the year, each house with its value, the total value and the change and that it is negative
   And it announces no number of valuations
@@ -379,9 +379,9 @@ Scenario: Year without a bar
 
 @AC-10.8
 Scenario: Rows follow the bar from top to bottom
-  Given 2026 has the segments "Example House" 300000.00 (first in stacking order) and "Example Flat" 50000.00 (second, so at the top of the bar), total value 350000.00 and change 10000.00
+  Given 2026 has the segments "Example House" 300000.00 (first in stacking order) and "Example Lodge" 50000.00 (second, so at the top of the bar), total value 350000.00 and change 10000.00
   When the user hovers over the 2026 bar
-  Then the tooltip rows are listed "Example Flat", "Example House", "Total value", "Change" in that order
+  Then the tooltip rows are listed "Example Lodge", "Example House", "Total value", "Change" in that order
 
 @AC-10.9
 Scenario: Same order in the accessible label
@@ -396,24 +396,24 @@ When the mouse is over a segment or a legend item of a house, or keyboard focus 
 ```gherkin
 @AC-11.1
 Scenario: Hovering a segment
-  Given 2025 and 2026 each have a segment of "Example Flat" and of "Example House"
-  When the user hovers over the "Example Flat" segment of 2025
-  Then all "Example Flat" segments, in 2025 and 2026, keep their full colour
+  Given 2025 and 2026 each have a segment of "Example Lodge" and of "Example House"
+  When the user hovers over the "Example Lodge" segment of 2025
+  Then all "Example Lodge" segments, in 2025 and 2026, keep their full colour
   And all "Example House" segments are eased down to 70% opacity
-  And the "Example Flat" legend item is in the full text colour and a heavier font weight
+  And the "Example Lodge" legend item is in the full text colour and a heavier font weight
   And the other legend items are eased down to 70% opacity
 
 @AC-11.2
 Scenario: Hovering a legend item
-  Given the legend lists "Example Flat" and "Example House"
-  When the user hovers over the legend item "Example Flat"
-  Then the segments of "Example Flat" keep their full colour in every year
+  Given the legend lists "Example Lodge" and "Example House"
+  When the user hovers over the legend item "Example Lodge"
+  Then the segments of "Example Lodge" keep their full colour in every year
   And the other segments are eased down to 70% opacity
 
 @AC-11.3
 Scenario: Focusing a legend item
-  Given the legend lists "Example Flat" and "Example House"
-  When the user moves keyboard focus to the legend item "Example Flat"
+  Given the legend lists "Example Lodge" and "Example House"
+  When the user moves keyboard focus to the legend item "Example Lodge"
   Then the highlight is the same as when hovering over it
   And it ends when focus leaves the legend item
 
@@ -450,7 +450,7 @@ Scenario: Tooltip fades in and glides
 
 @AC-12.2
 Scenario: Dimming eases
-  Given the user hovers over a segment of "Example Flat"
+  Given the user hovers over a segment of "Example Lodge"
   When the user moves the mouse away from the segment
   Then the other segments and the legend items ease back to full opacity over 120 to 150 ms
 
@@ -489,9 +489,9 @@ Scenario: Tooltip
 
 @AC-13.4
 Scenario: Segment labels
-  Given 2026 has a segment of "Example Flat" with value 50000.00
+  Given 2026 has a segment of "Example Lodge" with value 50000.00
   When a screen reader reads that segment
-  Then it announces "Example Flat", 2026 and 50000.00
+  Then it announces "Example Lodge", 2026 and 50000.00
 
 @AC-13.5
 Scenario: Same size as the bank accounts chart
@@ -545,7 +545,7 @@ Command: `get_house_insights()` returns the houses that have at least one valuat
 {
   "houses": [
     { "id": "…", "name": "Example House", "colour_slot": 0 },
-    { "id": "…", "name": "Example Flat", "colour_slot": 1 }
+    { "id": "…", "name": "Example Lodge", "colour_slot": 1 }
   ],
   "years": [
     { "year": 2025, "closing_value": "355000.00", "change": null, "valuation_count": 2, "is_partial": false,

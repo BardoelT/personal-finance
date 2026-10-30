@@ -16,7 +16,7 @@ use crate::storage::Project;
 pub struct SettingsView {
     currency: Currency,
     /// How many entries (paychecks, annual statements, investment statements,
-    /// bank entries, debt statements, expenses and asset valuations) exist, so the
+    /// bank entries, debt statements, expenses and house valuations) exist, so the
     /// frontend knows whether changing the currency needs a confirmation (REQ-5).
     entry_count: usize,
 }
@@ -30,7 +30,7 @@ impl SettingsView {
                 + project.bank_accounts().total_entry_count()
                 + project.debts().total_statement_count()
                 + project.expenses().total_count()
-                + project.assets().total_valuation_count(),
+                + project.houses().total_valuation_count(),
         }
     }
 }

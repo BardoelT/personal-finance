@@ -171,64 +171,64 @@ pub enum DomainError {
     DebtStatementNoteTooLong,
     #[error("The debt data is not consistent.")]
     DebtDataInvalid,
-    #[error("Enter an asset name.")]
-    AssetNameRequired,
-    #[error("The asset name can be at most 100 characters.")]
-    AssetNameTooLong,
-    #[error("An asset with this name already exists.")]
-    AssetNameDuplicate,
-    #[error("This asset does not exist.")]
-    AssetNotFound,
+    #[error("Enter a house name.")]
+    HouseNameRequired,
+    #[error("The house name can be at most 100 characters.")]
+    HouseNameTooLong,
+    #[error("A house with this name already exists.")]
+    HouseNameDuplicate,
+    #[error("This house does not exist.")]
+    HouseNotFound,
     #[error("Choose Monthly or Yearly.")]
-    AssetPeriodUnsupported,
-    #[error("The valuation period cannot change once the asset has valuations.")]
-    AssetPeriodLocked,
-    #[error("A monthly asset has monthly valuations and a yearly asset has yearly valuations.")]
-    AssetPeriodMismatch,
+    HousePeriodUnsupported,
+    #[error("The valuation period cannot change once the house has valuations.")]
+    HousePeriodLocked,
+    #[error("A monthly house has monthly valuations and a yearly house has yearly valuations.")]
+    HousePeriodMismatch,
     #[error("A valuation cannot be for a period that has not started yet.")]
-    AssetValuationInFuture,
+    HouseValuationInFuture,
     #[error("Enter the month as YYYY-MM or the year as YYYY.")]
-    AssetValuationPeriodInvalid,
-    #[error("This asset already has a valuation for that period.")]
-    AssetValuationDuplicate,
+    HouseValuationPeriodInvalid,
+    #[error("This house already has a valuation for that period.")]
+    HouseValuationDuplicate,
     #[error("There is no valuation for that period.")]
-    AssetValuationNotFound,
+    HouseValuationNotFound,
     #[error("Enter the value as a number such as 300000.00.")]
-    AssetValuationValueInvalid,
+    HouseValuationValueInvalid,
     #[error("The value cannot be negative.")]
-    AssetValuationValueNegative,
+    HouseValuationValueNegative,
     #[error("The value can have at most 2 decimal places.")]
-    AssetValuationValuePrecision,
+    HouseValuationValuePrecision,
     #[error("The value can be at most 1000000000.00.")]
-    AssetValuationValueTooLarge,
+    HouseValuationValueTooLarge,
     #[error("A note can be at most 2000 characters.")]
-    AssetValuationNoteTooLong,
-    #[error("The asset data is not consistent.")]
-    AssetDataInvalid,
+    HouseValuationNoteTooLong,
+    #[error("The house data is not consistent.")]
+    HouseDataInvalid,
     #[error("Enter the purchase date.")]
-    AssetPurchaseDateRequired,
+    HousePurchaseDateRequired,
     #[error("Enter the purchase amount.")]
-    AssetPurchaseAmountRequired,
+    HousePurchaseAmountRequired,
     #[error("Enter the date as dd/mm/yyyy, from 01/01/1900.")]
-    AssetDateInvalid,
+    HouseDateInvalid,
     #[error("The date cannot be in the future.")]
-    AssetDateInFuture,
+    HouseDateInFuture,
     #[error("The sell date cannot be before the purchase date.")]
-    AssetSellBeforePurchase,
+    HouseSellBeforePurchase,
     #[error("Enter both the sell date and the sell amount, or neither.")]
-    AssetSaleIncomplete,
+    HouseSaleIncomplete,
     #[error("Enter the amount as a number such as 250000.00.")]
-    AssetAmountInvalid,
+    HouseAmountInvalid,
     #[error("The amount cannot be negative.")]
-    AssetAmountNegative,
+    HouseAmountNegative,
     #[error("The amount can have at most 2 decimal places.")]
-    AssetAmountPrecision,
+    HouseAmountPrecision,
     #[error("The amount can be at most 1000000000.00.")]
-    AssetAmountTooLarge,
-    #[error("A valuation must be between the purchase and the sale of the asset.")]
-    AssetValuationOutsideHolding,
-    #[error("These dates leave existing valuations outside the purchase and sale of the asset.")]
-    AssetDatesExcludeValuations,
+    HouseAmountTooLarge,
+    #[error("A valuation must be between the purchase and the sale of the house.")]
+    HouseValuationOutsideHolding,
+    #[error("These dates leave existing valuations outside the purchase and sale of the house.")]
+    HouseDatesExcludeValuations,
     #[error("Enter a name for the expense.")]
     ExpenseNameRequired,
     #[error("The expense name can be at most 100 characters.")]
@@ -345,35 +345,35 @@ impl DomainError {
             Self::DebtStatementBalanceTooLarge => "DEBT_STATEMENT_BALANCE_TOO_LARGE",
             Self::DebtStatementNoteTooLong => "DEBT_STATEMENT_NOTE_TOO_LONG",
             Self::DebtDataInvalid => "DEBT_DATA_INVALID",
-            Self::AssetNameRequired => "ASSET_NAME_REQUIRED",
-            Self::AssetNameTooLong => "ASSET_NAME_TOO_LONG",
-            Self::AssetNameDuplicate => "ASSET_NAME_DUPLICATE",
-            Self::AssetNotFound => "ASSET_NOT_FOUND",
-            Self::AssetPeriodUnsupported => "ASSET_PERIOD_UNSUPPORTED",
-            Self::AssetPeriodLocked => "ASSET_PERIOD_LOCKED",
-            Self::AssetPeriodMismatch => "ASSET_PERIOD_MISMATCH",
-            Self::AssetValuationInFuture => "ASSET_VALUATION_IN_FUTURE",
-            Self::AssetValuationPeriodInvalid => "ASSET_VALUATION_PERIOD_INVALID",
-            Self::AssetValuationDuplicate => "ASSET_VALUATION_DUPLICATE",
-            Self::AssetValuationNotFound => "ASSET_VALUATION_NOT_FOUND",
-            Self::AssetValuationValueInvalid => "ASSET_VALUATION_VALUE_INVALID",
-            Self::AssetValuationValueNegative => "ASSET_VALUATION_VALUE_NEGATIVE",
-            Self::AssetValuationValuePrecision => "ASSET_VALUATION_VALUE_PRECISION",
-            Self::AssetValuationValueTooLarge => "ASSET_VALUATION_VALUE_TOO_LARGE",
-            Self::AssetValuationNoteTooLong => "ASSET_VALUATION_NOTE_TOO_LONG",
-            Self::AssetDataInvalid => "ASSET_DATA_INVALID",
-            Self::AssetPurchaseDateRequired => "ASSET_PURCHASE_DATE_REQUIRED",
-            Self::AssetPurchaseAmountRequired => "ASSET_PURCHASE_AMOUNT_REQUIRED",
-            Self::AssetDateInvalid => "ASSET_DATE_INVALID",
-            Self::AssetDateInFuture => "ASSET_DATE_IN_FUTURE",
-            Self::AssetSellBeforePurchase => "ASSET_SELL_BEFORE_PURCHASE",
-            Self::AssetSaleIncomplete => "ASSET_SALE_INCOMPLETE",
-            Self::AssetAmountInvalid => "ASSET_AMOUNT_INVALID",
-            Self::AssetAmountNegative => "ASSET_AMOUNT_NEGATIVE",
-            Self::AssetAmountPrecision => "ASSET_AMOUNT_PRECISION",
-            Self::AssetAmountTooLarge => "ASSET_AMOUNT_TOO_LARGE",
-            Self::AssetValuationOutsideHolding => "ASSET_VALUATION_OUTSIDE_HOLDING",
-            Self::AssetDatesExcludeValuations => "ASSET_DATES_EXCLUDE_VALUATIONS",
+            Self::HouseNameRequired => "HOUSE_NAME_REQUIRED",
+            Self::HouseNameTooLong => "HOUSE_NAME_TOO_LONG",
+            Self::HouseNameDuplicate => "HOUSE_NAME_DUPLICATE",
+            Self::HouseNotFound => "HOUSE_NOT_FOUND",
+            Self::HousePeriodUnsupported => "HOUSE_PERIOD_UNSUPPORTED",
+            Self::HousePeriodLocked => "HOUSE_PERIOD_LOCKED",
+            Self::HousePeriodMismatch => "HOUSE_PERIOD_MISMATCH",
+            Self::HouseValuationInFuture => "HOUSE_VALUATION_IN_FUTURE",
+            Self::HouseValuationPeriodInvalid => "HOUSE_VALUATION_PERIOD_INVALID",
+            Self::HouseValuationDuplicate => "HOUSE_VALUATION_DUPLICATE",
+            Self::HouseValuationNotFound => "HOUSE_VALUATION_NOT_FOUND",
+            Self::HouseValuationValueInvalid => "HOUSE_VALUATION_VALUE_INVALID",
+            Self::HouseValuationValueNegative => "HOUSE_VALUATION_VALUE_NEGATIVE",
+            Self::HouseValuationValuePrecision => "HOUSE_VALUATION_VALUE_PRECISION",
+            Self::HouseValuationValueTooLarge => "HOUSE_VALUATION_VALUE_TOO_LARGE",
+            Self::HouseValuationNoteTooLong => "HOUSE_VALUATION_NOTE_TOO_LONG",
+            Self::HouseDataInvalid => "HOUSE_DATA_INVALID",
+            Self::HousePurchaseDateRequired => "HOUSE_PURCHASE_DATE_REQUIRED",
+            Self::HousePurchaseAmountRequired => "HOUSE_PURCHASE_AMOUNT_REQUIRED",
+            Self::HouseDateInvalid => "HOUSE_DATE_INVALID",
+            Self::HouseDateInFuture => "HOUSE_DATE_IN_FUTURE",
+            Self::HouseSellBeforePurchase => "HOUSE_SELL_BEFORE_PURCHASE",
+            Self::HouseSaleIncomplete => "HOUSE_SALE_INCOMPLETE",
+            Self::HouseAmountInvalid => "HOUSE_AMOUNT_INVALID",
+            Self::HouseAmountNegative => "HOUSE_AMOUNT_NEGATIVE",
+            Self::HouseAmountPrecision => "HOUSE_AMOUNT_PRECISION",
+            Self::HouseAmountTooLarge => "HOUSE_AMOUNT_TOO_LARGE",
+            Self::HouseValuationOutsideHolding => "HOUSE_VALUATION_OUTSIDE_HOLDING",
+            Self::HouseDatesExcludeValuations => "HOUSE_DATES_EXCLUDE_VALUATIONS",
             Self::ExpenseNameRequired => "EXPENSE_NAME_REQUIRED",
             Self::ExpenseNameTooLong => "EXPENSE_NAME_TOO_LONG",
             Self::ExpenseCategoryUnsupported => "EXPENSE_CATEGORY_UNSUPPORTED",

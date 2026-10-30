@@ -1,10 +1,10 @@
 //! Pure business logic: no Tauri, no IO.
 
-pub mod assets;
 pub mod bank_accounts;
 pub mod debts;
 pub mod error;
 pub mod expenses;
+pub mod houses;
 pub mod income;
 pub mod investments;
 pub mod money;
@@ -14,10 +14,6 @@ pub mod project_data;
 pub mod ratios;
 pub mod settings;
 
-pub use assets::{
-    Asset, AssetId, AssetInsights, AssetValuation, AssetYearlyValue, Assets, AssetsOverview,
-    ValuationPrefill as AssetValuationPrefill,
-};
 pub use bank_accounts::{
     BankAccount, BankAccountId, BankAccounts, BankBalance, BankEntry, BankInsights, BankOverview,
     BankYearlyTotal, EntryPrefill,
@@ -29,6 +25,10 @@ pub use debts::{
 pub use error::DomainError;
 pub use expenses::{
     Expense, ExpenseId, ExpenseInsights, ExpenseList, ExpensePrefill, ExpenseYearlyTotal, Expenses,
+};
+pub use houses::{
+    House, HouseId, HouseInsights, HouseValuation, HouseYearlyValue, Houses, HousesOverview,
+    ValuationPrefill as HouseValuationPrefill,
 };
 pub use income::{
     Entry, Income, IncomeInsightsYear, IncomeOverview, IncomeYearlyTotal, Job, JobId, JobInput,

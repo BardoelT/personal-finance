@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use super::StorageError;
 use crate::domain::{
-    Assets, BankAccounts, Debts, Expenses, Income, Investments, ProjectData, Settings,
+    BankAccounts, Debts, Expenses, Houses, Income, Investments, ProjectData, Settings,
 };
 
 /// Version of the project file format this app writes and understands.
@@ -24,7 +24,7 @@ struct FileRef<'a> {
     bank_accounts: &'a BankAccounts,
     debts: &'a Debts,
     expenses: &'a Expenses,
-    assets: &'a Assets,
+    houses: &'a Houses,
     settings: &'a Settings,
 }
 
@@ -33,7 +33,8 @@ struct FileRef<'a> {
 /// (CSD-005 REQ-19), or without a `bank_accounts` section no bank accounts
 /// (CSD-009 REQ-23), and one without a `debts` section no debts (CSD-011
 /// REQ-23), and one without an `expenses` section no expenses (CSD-013
-/// REQ-16), and one without an `assets` section no assets (CSD-015 REQ-24).
+/// REQ-16), and one without a `houses` section no houses (CSD-015 REQ-24); the former
+/// `assets` section is read as the houses.
 #[derive(Deserialize)]
 struct FileOwned {
     income: Income,
@@ -45,8 +46,8 @@ struct FileOwned {
     debts: Debts,
     #[serde(default)]
     expenses: Expenses,
-    #[serde(default)]
-    assets: Assets,
+    #[serde(default, alias = "assets")]
+    houses: Houses,
     #[serde(default)]
     settings: Settings,
 }
@@ -60,7 +61,7 @@ pub(super) fn to_json(data: &ProjectData) -> Result<String, StorageError> {
         bank_accounts: &data.bank_accounts,
         debts: &data.debts,
         expenses: &data.expenses,
-        assets: &data.assets,
+        houses: &data.houses,
         settings: &data.settings,
     })
     .map_err(|error| StorageError::SaveFailed(io::Error::other(error)))
@@ -95,7 +96,7 @@ pub(super) fn from_json(text: &str) -> Result<ProjectData, StorageError> {
     file.expenses
         .validate()
         .map_err(|_| StorageError::InvalidFile)?;
-    file.assets
+    file.houses
         .validate()
         .map_err(|_| StorageError::InvalidFile)?;
     Ok(ProjectData {
@@ -104,7 +105,7 @@ pub(super) fn from_json(text: &str) -> Result<ProjectData, StorageError> {
         bank_accounts: file.bank_accounts,
         debts: file.debts,
         expenses: file.expenses,
-        assets: file.assets,
+        houses: file.houses,
         settings: file.settings,
     })
 }

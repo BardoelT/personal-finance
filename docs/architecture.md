@@ -26,11 +26,11 @@ Two rules shape everything:
 |---|---|
 | `domain/income/` | Jobs, paychecks, annual statements, yearly totals, dashboard overview, insights |
 | `domain/investments/` | Accounts, statements, net deposits, capital growth, yearly totals, insights |
-| `domain/assets/` | Assets with one purchase and at most one sale, valuations with non-negative values inside the holding window, the change per valuation, colour slots, yearly values with the change (assets held at year end), insights per asset. Reuses the investments' `Period` and `Note` |
+| `domain/houses/` | Houses with one purchase and at most one sale, valuations with non-negative values inside the holding window, the change per valuation, colour slots, yearly values with the change (houses held at year end), insights per house. Reuses the investments' `Period` and `Note` |
 | `domain/debts/` | Debts, statements with non-negative balances, the change per statement, colour slots, yearly totals with the amount repaid, insights per debt. Reuses the investments' `Period` and `Note` |
 | `domain/expenses/` | Expenses (dated, with a fixed category and a note), the year and month filter, yearly totals with the largest expense, insights per category. Reuses the investments' `Note` |
 | `domain/bank_accounts/` | Bank accounts, entries with signed balances, colour slots, yearly totals, insights per bank. Reuses the investments' `Period` and `Note` |
-| `domain/net_worth/` | The yearly net worth: combines the yearly closing figures of assets, investments, bank accounts and debts (it keeps no data of its own) |
+| `domain/net_worth/` | The yearly net worth: combines the yearly closing figures of houses, investments, bank accounts and debts (it keeps no data of its own) |
 | `domain/ratios/` | The yearly ratios between income, wealth, growth and expenses, built from the figures the other areas already give. The bank accounts add one figure of their own, the increase of a year |
 | `domain/money.rs`, `settings.rs`, `error.rs`, `project_data.rs` | Amounts and currency, project settings, the domain error enum, the project's data sections |
 | `commands/` | `#[tauri::command]` handlers, one file per area. Thin: parse and bound the input, call `domain`, map errors |
@@ -57,7 +57,7 @@ shared/             helpers pages share
 styles/             CSS by area
 ```
 
-**`pages/`** files are named `<page>-<view>.js`: `income-overview.js`, `income-insights.js`, `investments-overview.js`, `investments-insights.js`, `bank-overview.js`, `bank-insights.js`, `assets-overview.js`, `assets-insights.js`, `debts-overview.js`, `debts-insights.js`, `expenses-overview.js`, `expenses-insights.js`. Each exports `init<Page><View>()` (wire the events once) and `reload<Page><View>()` (fetch from Rust and render). `dashboard.js`, `net-worth.js`, `ratios.js`, `settings.js` and `project.js` are pages without views; `ratios.js` lays out the table of the Ratios page; `net-worth.js` draws the one chart of the Net worth page with `createYearlyChart`.
+**`pages/`** files are named `<page>-<view>.js`: `income-overview.js`, `income-insights.js`, `investments-overview.js`, `investments-insights.js`, `bank-overview.js`, `bank-insights.js`, `houses-overview.js`, `houses-insights.js`, `debts-overview.js`, `debts-insights.js`, `expenses-overview.js`, `expenses-insights.js`. Each exports `init<Page><View>()` (wire the events once) and `reload<Page><View>()` (fetch from Rust and render). `dashboard.js`, `net-worth.js`, `ratios.js`, `settings.js` and `project.js` are pages without views; `ratios.js` lays out the table of the Ratios page; `net-worth.js` draws the one chart of the Net worth page with `createYearlyChart`.
 
 **Element ids** follow `<page>-<view>-<part>`: `income-insights-chart`, `investments-insights-legend`, `investments-tab-insights`. The shared chart code finds its parts from the one id it is given.
 

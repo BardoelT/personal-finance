@@ -5,10 +5,10 @@ use std::collections::BTreeMap;
 use rust_decimal::Decimal;
 use serde::Serialize;
 
-use crate::domain::assets::Assets;
 use crate::domain::bank_accounts::BankAccounts;
 use crate::domain::debts::Debts;
 use crate::domain::expenses::Expenses;
+use crate::domain::houses::Houses;
 use crate::domain::income::{Income, YearMonth};
 use crate::domain::investments::Investments;
 use crate::domain::money::{percent_of, zero};
@@ -49,7 +49,7 @@ pub struct Ratios {
 pub struct RatioSources<'a> {
     pub income: &'a Income,
     pub expenses: &'a Expenses,
-    pub assets: &'a Assets,
+    pub houses: &'a Houses,
     pub investments: &'a Investments,
     pub bank_accounts: &'a BankAccounts,
     pub debts: &'a Debts,
@@ -91,7 +91,7 @@ pub fn ratios(sources: &RatioSources<'_>, today: YearMonth) -> Ratios {
         .map(|row| (row.year, row.growth_percent))
         .collect();
     let net_worth: BTreeMap<i32, (bool, Decimal)> = net_worth_insights(
-        sources.assets,
+        sources.houses,
         sources.investments,
         sources.bank_accounts,
         sources.debts,

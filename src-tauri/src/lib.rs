@@ -10,7 +10,7 @@ use tauri::{Emitter, Manager, RunEvent, Runtime, WindowEvent};
 use time::UtcOffset;
 
 use commands::{
-    assets, bank_accounts, dashboard, debts, expenses, income, investments, net_worth, preferences,
+    bank_accounts, dashboard, debts, expenses, houses, income, investments, net_worth, preferences,
     project, ratios, settings, AppState,
 };
 
@@ -85,17 +85,17 @@ fn configure<R: Runtime>(builder: tauri::Builder<R>, utc_offset: UtcOffset) -> t
             debts::copy_previous_debt_statement,
             debts::yearly_debt_totals,
             debts::get_debt_insights,
-            assets::list_assets,
-            assets::create_asset,
-            assets::update_asset,
-            assets::delete_asset,
-            assets::list_asset_valuations,
-            assets::add_asset_valuation,
-            assets::update_asset_valuation,
-            assets::delete_asset_valuation,
-            assets::copy_previous_asset_valuation,
-            assets::yearly_asset_values,
-            assets::get_asset_insights,
+            houses::list_houses,
+            houses::create_house,
+            houses::update_house,
+            houses::delete_house,
+            houses::list_house_valuations,
+            houses::add_house_valuation,
+            houses::update_house_valuation,
+            houses::delete_house_valuation,
+            houses::copy_previous_house_valuation,
+            houses::yearly_house_values,
+            houses::get_house_insights,
             expenses::list_expenses,
             expenses::add_expense,
             expenses::update_expense,

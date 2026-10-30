@@ -1,7 +1,7 @@
 // Net worth: the yearly stacked chart on the Net worth page (CSD-017). Its frame
 // (axis, bars, tooltip, loading) is shared with the other charts in
 // shared/yearly-chart.js; this file supplies what is specific to it: the four
-// series (assets, investments and cash above the zero line, debts below it) and
+// series (houses, investments and cash above the zero line, debts below it) and
 // the net worth marker.
 import { h, showToast } from '../shared/dom.js';
 import { errorText } from '../shared/ipc.js';
@@ -11,7 +11,7 @@ import { createYearlyChart, levelMarker, isNegative, yearLabel } from '../shared
 
 /** The series from the bottom of the bar up: the Rust field, the legend key, the colour class and the label. */
 const SERIES = [
-  ['assets', 'assets', 'nw-assets', 'Assets'],
+  ['houses', 'houses', 'nw-houses', 'Houses'],
   ['investments', 'investments', 'nw-investments', 'Investments'],
   ['cash', 'cash', 'nw-cash', 'Cash'],
   ['debts', 'debts', 'nw-debts', 'Debts'],
@@ -37,7 +37,7 @@ function describe(row) {
 }
 
 /**
- * The rows read like the bar, top to bottom: cash, investments, assets, then what hangs below
+ * The rows read like the bar, top to bottom: cash, investments, houses, then what hangs below
  * the zero line (debts, and cash of an overdrawn bank), and the net worth (CSD-017 REQ-10).
  */
 function tooltipContent(row) {

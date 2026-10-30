@@ -1,4 +1,4 @@
-//! The purchase date and sell date of an asset (CSD-019 REQ-3).
+//! The purchase date and sell date of a house (CSD-019 REQ-3).
 
 use serde::de::Error as _;
 use serde::ser::Error as _;
@@ -13,12 +13,12 @@ const FIRST_YEAR: i32 = 1900;
 /// A calendar day from 01/01/1900. The user types and sees `dd/mm/yyyy`; the
 /// project file and IPC hold `YYYY-MM-DD`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct AssetDate(Date);
+pub struct HouseDate(Date);
 
-impl AssetDate {
+impl HouseDate {
     fn new(date: Date) -> Result<Self, DomainError> {
         if date.year() < FIRST_YEAR {
-            return Err(DomainError::AssetDateInvalid);
+            return Err(DomainError::HouseDateInvalid);
         }
         Ok(Self(date))
     }
@@ -27,14 +27,14 @@ impl AssetDate {
     /// date is not.
     ///
     /// # Errors
-    /// Returns `AssetDateInvalid` for text that is not a real date from
-    /// 01/01/1900, and `AssetDateInFuture` for a date after `today`.
+    /// Returns `HouseDateInvalid` for text that is not a real date from
+    /// 01/01/1900, and `HouseDateInFuture` for a date after `today`.
     pub fn parse(text: &str, today: Date) -> Result<Self, DomainError> {
         let date = Date::parse(text.trim(), format_description!("[day]/[month]/[year]"))
-            .map_err(|_| DomainError::AssetDateInvalid)
+            .map_err(|_| DomainError::HouseDateInvalid)
             .and_then(Self::new)?;
         if date.0 > today {
-            return Err(DomainError::AssetDateInFuture);
+            return Err(DomainError::HouseDateInFuture);
         }
         Ok(date)
     }
@@ -52,7 +52,7 @@ impl AssetDate {
     }
 }
 
-impl Serialize for AssetDate {
+impl Serialize for HouseDate {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.0
             .format(format_description!("[year]-[month]-[day]"))
@@ -61,7 +61,7 @@ impl Serialize for AssetDate {
     }
 }
 
-impl<'de> Deserialize<'de> for AssetDate {
+impl<'de> Deserialize<'de> for HouseDate {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let text = String::deserialize(deserializer)?;
         Date::parse(&text, format_description!("[year]-[month]-[day]"))

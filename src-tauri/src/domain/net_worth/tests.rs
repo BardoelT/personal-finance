@@ -1,7 +1,7 @@
 use super::*;
-use crate::domain::assets::{AssetInput, AssetValue};
 use crate::domain::bank_accounts::{AccountInput as BankInput, BankBalance};
 use crate::domain::debts::{DebtBalance, DebtInput};
+use crate::domain::houses::{HouseInput, HouseValue};
 use crate::domain::investments::{
     AccountInput as InvestmentInput, Balance, NetDeposits, Note, Period,
 };
@@ -15,26 +15,26 @@ fn period(text: &str) -> Period {
     Period::parse(text).unwrap()
 }
 
-fn add_asset(data: &mut ProjectData, at: &str, amount: &str) {
+fn add_house(data: &mut ProjectData, at: &str, amount: &str) {
     let id = data
-        .assets
-        .create_asset(
-            &AssetInput {
+        .houses
+        .create_house(
+            &HouseInput {
                 name: "Example House".to_owned(),
                 valuation_period: Some("Yearly".to_owned()),
                 purchase_date: Some("01/01/1900".to_owned()),
                 purchase_amount: Some("0.00".to_owned()),
-                ..AssetInput::default()
+                ..HouseInput::default()
             },
             time::macros::date!(2026 - 10 - 29),
         )
         .unwrap()
         .id;
-    data.assets
+    data.houses
         .add_valuation(
             id,
-            crate::domain::assets::parse_period(at).unwrap(),
-            AssetValue::parse(amount).unwrap(),
+            crate::domain::houses::parse_period(at).unwrap(),
+            HouseValue::parse(amount).unwrap(),
             Note::default(),
             today(),
         )
@@ -108,7 +108,7 @@ fn add_debt(data: &mut ProjectData, at: &str, amount: &str) {
 
 fn series(data: &ProjectData) -> Vec<NetWorthYear> {
     net_worth_insights(
-        &data.assets,
+        &data.houses,
         &data.investments,
         &data.bank_accounts,
         &data.debts,
@@ -134,7 +134,7 @@ fn year(data: &ProjectData, wanted: i32) -> NetWorthYear {
 fn test_csd017_ac_2_1_the_range_covers_all_four_areas() {
     let mut data = ProjectData::default();
     add_cash(&mut data, "2024", "100.00");
-    add_asset(&mut data, "2025", "200.00");
+    add_house(&mut data, "2025", "200.00");
     assert_eq!(years(&data), [2024, 2025, 2026]);
 }
 
@@ -142,7 +142,7 @@ fn test_csd017_ac_2_1_the_range_covers_all_four_areas() {
 fn test_csd017_ac_2_1_a_debt_can_start_the_range() {
     let mut data = ProjectData::default();
     add_debt(&mut data, "2023", "100.00");
-    add_asset(&mut data, "2025", "200.00");
+    add_house(&mut data, "2025", "200.00");
     assert_eq!(years(&data), [2023, 2024, 2025, 2026]);
 }
 
@@ -168,12 +168,12 @@ fn test_csd017_ac_2_2_accounts_without_records_give_no_years() {
 #[test]
 fn test_csd017_ac_3_1_net_worth_adds_the_three_and_subtracts_debts() {
     let mut data = ProjectData::default();
-    add_asset(&mut data, "2025", "300000.00");
+    add_house(&mut data, "2025", "300000.00");
     add_investment(&mut data, "2025", "20000.00");
     add_cash(&mut data, "2025", "5000.00");
     add_debt(&mut data, "2025", "9000.00");
     let row = year(&data, 2025);
-    assert_eq!(row.assets.to_string(), "300000.00");
+    assert_eq!(row.houses.to_string(), "300000.00");
     assert_eq!(row.investments.to_string(), "20000.00");
     assert_eq!(row.cash.to_string(), "5000.00");
     assert_eq!(row.debts.to_string(), "9000.00");
@@ -183,11 +183,11 @@ fn test_csd017_ac_3_1_net_worth_adds_the_three_and_subtracts_debts() {
 #[test]
 fn test_csd017_ac_3_2_figures_equal_those_of_the_area_charts() {
     let mut data = ProjectData::default();
-    add_asset(&mut data, "2025", "300000.00");
+    add_house(&mut data, "2025", "300000.00");
     add_debt(&mut data, "2025", "9000.00");
     let row = year(&data, 2025);
-    let asset_row = data
-        .assets
+    let house_row = data
+        .houses
         .insights(today())
         .years
         .into_iter()
@@ -200,7 +200,7 @@ fn test_csd017_ac_3_2_figures_equal_those_of_the_area_charts() {
         .into_iter()
         .find(|r| r.year == 2025)
         .unwrap();
-    assert_eq!(row.assets, asset_row.closing_value);
+    assert_eq!(row.houses, house_row.closing_value);
     assert_eq!(row.debts, debt_row.closing_balance);
 }
 
@@ -262,7 +262,7 @@ fn test_csd017_ac_12_2_areas_without_records_contribute_zero() {
     let row = year(&data, 2026);
     assert_eq!(
         [
-            row.assets.to_string(),
+            row.houses.to_string(),
             row.investments.to_string(),
             row.debts.to_string()
         ],
@@ -276,23 +276,23 @@ fn test_csd017_ac_12_2_areas_without_records_contribute_zero() {
 #[test]
 fn test_csd017_section_5_amounts_cross_ipc_as_decimal_strings() {
     let mut data = ProjectData::default();
-    add_asset(&mut data, "2026", "300000.00");
+    add_house(&mut data, "2026", "300000.00");
     let json = serde_json::to_value(NetWorthInsights {
         years: series(&data),
     })
     .unwrap();
-    assert_eq!(json["years"][0]["assets"], "300000.00");
+    assert_eq!(json["years"][0]["houses"], "300000.00");
     assert_eq!(json["years"][0]["debts"], "0.00");
     assert_eq!(json["years"][0]["has_records"], true);
 }
 
 #[test]
-fn test_csd019_ac_11_6_net_worth_drops_a_sold_asset() {
+fn test_csd019_ac_11_6_net_worth_drops_a_sold_house() {
     let mut data = ProjectData::default();
     let id = data
-        .assets
-        .create_asset(
-            &AssetInput {
+        .houses
+        .create_house(
+            &HouseInput {
                 name: "Example House".to_owned(),
                 valuation_period: Some("Yearly".to_owned()),
                 purchase_date: Some("15/03/2024".to_owned()),
@@ -304,15 +304,15 @@ fn test_csd019_ac_11_6_net_worth_drops_a_sold_asset() {
         )
         .unwrap()
         .id;
-    data.assets
+    data.houses
         .add_valuation(
             id,
-            crate::domain::assets::parse_period("2025").unwrap(),
-            AssetValue::parse("210000.00").unwrap(),
+            crate::domain::houses::parse_period("2025").unwrap(),
+            HouseValue::parse("210000.00").unwrap(),
             Note::default(),
             today(),
         )
         .unwrap();
-    assert_eq!(year(&data, 2025).assets.to_string(), "210000.00");
-    assert_eq!(year(&data, 2026).assets.to_string(), "0.00");
+    assert_eq!(year(&data, 2025).houses.to_string(), "210000.00");
+    assert_eq!(year(&data, 2026).houses.to_string(), "0.00");
 }

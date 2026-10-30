@@ -97,8 +97,8 @@ Scenario: House created with the default period
 @AC-1.2
 Scenario: Yearly house
   Given no houses exist
-  When the user adds a house named "Example Flat" with valuation period "Yearly"
-  Then the house "Example Flat" exists with valuation period "Yearly"
+  When the user adds a house named "Example Lodge" with valuation period "Yearly"
+  Then the house "Example Lodge" exists with valuation period "Yearly"
 
 @AC-1.3
 Scenario: Unknown period rejected
@@ -139,13 +139,13 @@ Scenario: The name is stored trimmed
 
 @AC-2.4
 Scenario: Renaming to an existing name is rejected
-  Given houses "Example House" and "Example Flat"
-  When the user renames "Example Flat" to "example house"
+  Given houses "Example House" and "Example Lodge"
+  When the user renames "Example Lodge" to "example house"
   Then the edit is rejected with error code "HOUSE_NAME_DUPLICATE"
 
 @AC-2.5
 Scenario: Changing only the case of its own name is allowed
-  Given a house "Example Flat"
+  Given a house "Example Lodge"
   When the user renames it to "EXAMPLE LAND"
   Then the house is named "EXAMPLE LAND"
 ```
@@ -205,10 +205,10 @@ Scenario: Period of a house without valuations can change
 
 @AC-4.3
 Scenario: An invalid edit changes nothing
-  Given houses "Example House" and "Example Flat"
-  When the user renames "Example Flat" to "  "
+  Given houses "Example House" and "Example Lodge"
+  When the user renames "Example Lodge" to "  "
   Then the edit is rejected with error code "HOUSE_NAME_REQUIRED"
-  And "Example Flat" keeps its name
+  And "Example Lodge" keeps its name
 ```
 
 **REQ-5: Valuation period is locked once valuations exist** *(unwanted behaviour)*
@@ -249,7 +249,7 @@ Scenario: Cancelled deletion changes nothing
 
 @AC-6.3
 Scenario: A house at 0.00 is deleted like any other
-  Given a house "Example Studio" whose latest value is 0.00
+  Given a house "Example Cabin" whose latest value is 0.00
   When the user deletes the house and confirms
   Then the house and its valuations no longer exist
 
@@ -282,7 +282,7 @@ Scenario: Monthly valuation with a note
 @AC-7.2
 Scenario: Yearly valuation without a note
   Given the current date is 29/10/2026
-  And a yearly house "Example Flat"
+  And a yearly house "Example Lodge"
   When the user adds a valuation for 2025 with value 80000.00 and no note
   Then the valuation for 2025 has value 80000.00 and an empty note
 
@@ -640,9 +640,9 @@ Scenario: Houses without valuations do not count
 @AC-17.4
 Scenario: A house at 0.00 counts as 0.00
   Given a monthly house with latest valuation 2026-09 (value 300000.00)
-  And a monthly house "Example Studio" with latest valuation 2026-09 (value 0.00)
+  And a monthly house "Example Cabin" with latest valuation 2026-09 (value 0.00)
   Then the total value is 300000.00
-  And "Example Studio" shows latest value 0.00
+  And "Example Cabin" shows latest value 0.00
 
 @AC-17.5
 Scenario: A new latest valuation updates the total
@@ -664,8 +664,8 @@ The app shall list houses alphabetically by name ignoring case, and the valuatio
 ```gherkin
 @AC-18.1
 Scenario: Houses alphabetical
-  Given houses "example land", "Example House" and "Example Studio"
-  Then the houses are listed "Example Studio", "Example House", "example land"
+  Given houses "example land", "Example House" and "Example Cabin"
+  Then the houses are listed "Example Cabin", "Example House", "example land"
 
 @AC-18.2
 Scenario: Newest valuation first
@@ -679,8 +679,8 @@ Scenario: Yearly valuation counts as December
 
 @AC-18.4
 Scenario: Same period is ordered by house
-  Given monthly houses "Example House" and "Example Studio", both with a valuation for 2026-09
-  Then the valuation of "Example Studio" is listed before that of "Example House"
+  Given monthly houses "Example House" and "Example Cabin", both with a valuation for 2026-09
+  Then the valuation of "Example Cabin" is listed before that of "Example House"
 ```
 
 **REQ-19: Change per valuation** *(ubiquitous)*
@@ -708,9 +708,9 @@ Scenario: Yearly valuations
 @AC-19.4
 Scenario: Another house does not count
   Given a monthly house "Example House" with a valuation 2026-09 (value 300000.00)
-  And a monthly house "Example Studio" with valuations 2026-08 (value 15000.00) and 2026-09 (value 14500.00)
+  And a monthly house "Example Cabin" with valuations 2026-08 (value 15000.00) and 2026-09 (value 14500.00)
   Then the change of "Example House" 2026-09 is none
-  And the change of "Example Studio" 2026-09 is -500.00
+  And the change of "Example Cabin" 2026-09 is -500.00
 
 @AC-19.5
 Scenario: Changes follow edits
@@ -746,7 +746,7 @@ Scenario: No valuations
 @AC-20.3
 Scenario: Values add up all houses
   Given house "Example House" with valuations 2026-08 (value 300000.00) and 2026-09 (value 301000.00)
-  And house "Example Flat" with a valuation 2026-09 (value 50000.00)
+  And house "Example Lodge" with a valuation 2026-09 (value 50000.00)
   When the user views the yearly values
   Then there is one row for 2026 with closing value 351000.00, change none
 
@@ -759,7 +759,7 @@ Scenario: Closing value is the latest value of the year, not a sum over months
 @AC-20.5
 Scenario: Monthly and yearly houses add up together
   Given a monthly house "Example House" with a valuation 2025-12 (value 300000.00)
-  And a yearly house "Example Flat" with valuations 2024 (value 50000.00) and 2025 (value 55000.00)
+  And a yearly house "Example Lodge" with valuations 2024 (value 50000.00) and 2025 (value 55000.00)
   When the user views the yearly values
   Then 2025 shows closing value 355000.00, change 5000.00
   And 2024 shows closing value 50000.00, change none
@@ -767,7 +767,7 @@ Scenario: Monthly and yearly houses add up together
 @AC-20.6
 Scenario: A house without a valuation in a year does not count in it
   Given a monthly house "Example House" with valuations 2025-12 (value 300000.00) and 2026-03 (value 310000.00)
-  And a yearly house "Example Flat" with a valuation 2025 (value 55000.00)
+  And a yearly house "Example Lodge" with a valuation 2025 (value 55000.00)
   When the user views the yearly values
   Then 2026 shows closing value 310000.00, change 10000.00
   And 2025 shows closing value 355000.00, change none
@@ -781,7 +781,7 @@ Scenario: A house that lost value shows a negative change
 @AC-20.8
 Scenario: A house without an opening value adds no change
   Given a monthly house "Example House" with valuations 2025-12 (value 300000.00) and 2026-03 (value 310000.00)
-  And a monthly house "Example Studio" with a first valuation 2026-03 (value 15000.00)
+  And a monthly house "Example Cabin" with a first valuation 2026-03 (value 15000.00)
   When the user views the yearly values
   Then 2026 shows closing value 325000.00, change 10000.00
 
@@ -818,12 +818,12 @@ Scenario: Sections in order
 @AC-21.2
 Scenario: House rows carry their period, latest value and actions
   Given monthly house "Example House" with 2 valuations, the latest for 2026-09 with value 300000.00
-  And yearly house "Example Flat" with 1 valuation for 2025 with value 80000.00
+  And yearly house "Example Lodge" with 1 valuation for 2025 with value 80000.00
   Then the row of "Example House" shows "Monthly" and "300000.00" for 2026-09
-  And the row of "Example Flat" shows "Yearly" and "80000.00" for 2025
+  And the row of "Example Lodge" shows "Yearly" and "80000.00" for 2025
   And in each row the value is followed by its period in smaller muted text
   And no row shows a number of valuations
-  And each row has the icon buttons Edit (pencil) and Delete (trash) at its right edge, each named for screen readers and in a tooltip, such as "Edit Example Flat"
+  And each row has the icon buttons Edit (pencil) and Delete (trash) at its right edge, each named for screen readers and in a tooltip, such as "Edit Example Lodge"
   And the footer row reads "Total value" with "380000.00"
 
 @AC-21.3
@@ -911,7 +911,7 @@ When the user saves and later opens a project, the app shall restore all houses 
 ```gherkin
 @AC-24.1
 Scenario: Round trip
-  Given a project with a yearly house "Example Flat" (colour slot 1) with a valuation for 2025 (value 80000.00, note "Line one" and "Line two" on two lines)
+  Given a project with a yearly house "Example Lodge" (colour slot 1) with a valuation for 2025 (value 80000.00, note "Line one" and "Line two" on two lines)
   When the user saves the project and opens it again
   Then the house, its colour slot and the valuation exist unchanged, including the two-line note
 

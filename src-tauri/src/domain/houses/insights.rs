@@ -1,4 +1,4 @@
-//! The yearly series behind the Assets Insights chart (CSD-016).
+//! The yearly series behind the Houses Insights chart (CSD-016).
 
 use rust_decimal::Decimal;
 use serde::Serialize;
@@ -6,26 +6,26 @@ use serde::Serialize;
 use crate::domain::income::YearMonth;
 use crate::domain::money::zero;
 
-use super::{AssetId, Assets};
+use super::{HouseId, Houses};
 
-/// An asset in the legend of the chart (CSD-016 REQ-9).
+/// A house in the legend of the chart (CSD-016 REQ-9).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-pub struct InsightsAsset {
-    pub id: AssetId,
+pub struct InsightsHouse {
+    pub id: HouseId,
     pub name: String,
     pub colour_slot: u8,
 }
 
-/// The part of a year's bar that belongs to one asset (CSD-016 REQ-5).
+/// The part of a year's bar that belongs to one house (CSD-016 REQ-5).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct InsightsSegment {
-    pub asset_id: AssetId,
+    pub house_id: HouseId,
     pub value: Decimal,
 }
 
 /// One year of the insights chart (CSD-016 REQ-2).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-pub struct AssetInsightsYear {
+pub struct HouseInsightsYear {
     pub year: i32,
     pub closing_value: Decimal,
     pub change: Option<Decimal>,
@@ -34,40 +34,40 @@ pub struct AssetInsightsYear {
     pub segments: Vec<InsightsSegment>,
 }
 
-/// The payload of `get_asset_insights` (CSD-016 section 5).
+/// The payload of `get_house_insights` (CSD-016 section 5).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-pub struct AssetInsights {
-    pub assets: Vec<InsightsAsset>,
-    pub years: Vec<AssetInsightsYear>,
+pub struct HouseInsights {
+    pub houses: Vec<InsightsHouse>,
+    pub years: Vec<HouseInsightsYear>,
 }
 
-impl Assets {
+impl Houses {
     /// One figure set per calendar year from the first valuation up to and
-    /// including the current year, oldest first, and the assets that have a
+    /// including the current year, oldest first, and the houses that have a
     /// segment in them, in creation order (CSD-016). Years without valuations
     /// are zero and have no segments. The current year is partial. Valuations
     /// after the current year, which only a project file can contain, are not
     /// shown.
     #[must_use]
-    pub fn insights(&self, today: YearMonth) -> AssetInsights {
+    pub fn insights(&self, today: YearMonth) -> HouseInsights {
         let counts = self.counted_valuations_per_year();
         let Some(&first) = counts.keys().next() else {
-            return AssetInsights {
-                assets: Vec::new(),
+            return HouseInsights {
+                houses: Vec::new(),
                 years: Vec::new(),
             };
         };
-        let years: Vec<AssetInsightsYear> = (first..=today.year())
+        let years: Vec<HouseInsightsYear> = (first..=today.year())
             .map(|year| {
                 let segments: Vec<InsightsSegment> = self
                     .year_segments(year)
                     .into_iter()
-                    .map(|(asset, value)| InsightsSegment {
-                        asset_id: asset.id,
+                    .map(|(house, value)| InsightsSegment {
+                        house_id: house.id,
                         value,
                     })
                     .collect();
-                AssetInsightsYear {
+                HouseInsightsYear {
                     year,
                     closing_value: segments
                         .iter()
@@ -79,22 +79,22 @@ impl Assets {
                 }
             })
             .collect();
-        let assets = self
-            .assets
+        let houses = self
+            .houses
             .iter()
-            .filter(|asset| {
+            .filter(|house| {
                 years.iter().any(|year| {
                     year.segments
                         .iter()
-                        .any(|segment| segment.asset_id == asset.id)
+                        .any(|segment| segment.house_id == house.id)
                 })
             })
-            .map(|asset| InsightsAsset {
-                id: asset.id,
-                name: asset.name.clone(),
-                colour_slot: asset.colour_slot,
+            .map(|house| InsightsHouse {
+                id: house.id,
+                name: house.name.clone(),
+                colour_slot: house.colour_slot,
             })
             .collect();
-        AssetInsights { assets, years }
+        HouseInsights { houses, years }
     }
 }

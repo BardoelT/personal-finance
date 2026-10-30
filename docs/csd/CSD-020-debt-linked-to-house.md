@@ -98,16 +98,16 @@ If a link would give a debt a second house, point to a debt that does not exist,
 @AC-2.1
 Scenario Outline: A forbidden link is rejected
   Given "Example Mortgage" is linked to "Example House"
-  And a held house "Example Flat", and a house "Example Shed" sold on 10/06/2026
+  And a held house "Example Lodge", and a house "Example Guesthouse" sold on 10/06/2026
   When the user saves "<house>" with the debts "<debts>"
   Then it is rejected with error code "<code>"
   And no link changed
 
   Examples:
     | house         | debts                       | code                       |
-    | Example Flat  | Example Mortgage            | HOUSE_DEBT_LINKED_ELSEWHERE |
-    | Example Flat  | (a debt that was deleted)   | DEBT_NOT_FOUND             |
-    | Example Shed  | Example Mortgage            | HOUSE_LINKS_LOCKED_SOLD    |
+    | Example Lodge  | Example Mortgage            | HOUSE_DEBT_LINKED_ELSEWHERE |
+    | Example Lodge  | (a debt that was deleted)   | DEBT_NOT_FOUND             |
+    | Example Guesthouse  | Example Mortgage            | HOUSE_LINKS_LOCKED_SOLD    |
 ```
 
 ### 4.2 Sale and settlement
@@ -346,7 +346,7 @@ Scenario: Linked debts under the house
 
 @AC-13.2
 Scenario: The form offers the right debts
-  Given debts "A" (linked to "Example House"), "B" (unlinked) and "C" (linked to "Example Flat")
+  Given debts "A" (linked to "Example House"), "B" (unlinked) and "C" (linked to "Example Lodge")
   When the user opens the Edit form of "Example House"
   Then the debt choices are "A" (selected) and "B"
 ```

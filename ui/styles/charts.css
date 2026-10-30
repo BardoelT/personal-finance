@@ -29,7 +29,7 @@
 .swatch.slot-5, .bar-slot-5 { background: var(--bank-5); fill: var(--bank-5); }
 .swatch.slot-6, .bar-slot-6 { background: var(--bank-6); fill: var(--bank-6); }
 .swatch.slot-7, .bar-slot-7 { background: var(--bank-7); fill: var(--bank-7); }
-.swatch.nw-assets, .bar-nw-assets { background: var(--nw-assets); fill: var(--nw-assets); }
+.swatch.nw-houses, .bar-nw-houses { background: var(--nw-houses); fill: var(--nw-houses); }
 .swatch.nw-investments, .bar-nw-investments { background: var(--nw-investments); fill: var(--nw-investments); }
 .swatch.nw-cash, .bar-nw-cash { background: var(--nw-cash); fill: var(--nw-cash); }
 .swatch.nw-debts, .bar-nw-debts { background: var(--nw-debts); fill: var(--nw-debts); }

@@ -109,7 +109,7 @@ Scenario: Undo a sale
 
 @AC-2.3
 Scenario: A sale on the day of purchase is allowed
-  Given a held house "Example Studio" bought on 01/09/2026 for 10000.00
+  Given a held house "Example Cabin" bought on 01/09/2026 for 10000.00
   When the user sets sell date 01/09/2026 and sell amount 9500.00
   Then the house is sold on 01/09/2026
 ```
@@ -161,7 +161,7 @@ Scenario Outline: Invalid amounts rejected
 
 @AC-4.2
 Scenario: A worthless sale and a free purchase are valid
-  When the user adds a house "Example Shed" with purchase date 15/03/2024 and purchase amount 0.00 and sell date 10/06/2026 and sell amount 0.00
+  When the user adds a house "Example Guesthouse" with purchase date 15/03/2024 and purchase amount 0.00 and sell date 10/06/2026 and sell amount 0.00
   Then the house is sold with result 0.00
 ```
 
@@ -234,7 +234,7 @@ Scenario Outline: Period outside the window rejected
 
 @AC-7.2
 Scenario: A yearly house is compared by year
-  Given a yearly house "Example Flat" bought on 15/03/2024
+  Given a yearly house "Example Lodge" bought on 15/03/2024
   When the user adds a valuation for 2023 with value 1000.00
   Then it is rejected with error code "HOUSE_VALUATION_OUTSIDE_HOLDING"
   When the user adds a valuation for 2024 with value 1000.00
@@ -295,7 +295,7 @@ Scenario Outline: Sold house with its result
 
 @AC-9.3
 Scenario: A sold house stays in the list
-  Given a sold house "Example House" and a held house "Example Flat"
+  Given a sold house "Example House" and a held house "Example Lodge"
   Then both are listed alphabetically
 ```
 
@@ -305,14 +305,14 @@ The app shall compute the total value of CSD-015 REQ-17 over held houses only. A
 ```gherkin
 @AC-10.1
 Scenario: Sold house not in the total
-  Given a held house "Example Flat" with latest valuation 2026-09 (value 50000.00)
+  Given a held house "Example Lodge" with latest valuation 2026-09 (value 50000.00)
   And a sold house "Example House" with latest valuation 2026-05 (value 300000.00)
   Then the total value is 50000.00
   And "Example House" shows latest value 300000.00 for 2026-05
 
 @AC-10.2
 Scenario: Selling a house lowers the total
-  Given held houses "Example House" (latest value 300000.00) and "Example Flat" (latest value 50000.00)
+  Given held houses "Example House" (latest value 300000.00) and "Example Lodge" (latest value 50000.00)
   When the user sells "Example House" on 10/06/2026 for 310000.00
   Then the total value is 50000.00
 ```
@@ -349,7 +349,7 @@ Scenario: Year-end boundary
 
 @AC-11.4
 Scenario: Other houses are unaffected
-  Given a sold house "Example House" and a held house "Example Flat" with a valuation 2026-03 (value 50000.00)
+  Given a sold house "Example House" and a held house "Example Lodge" with a valuation 2026-03 (value 50000.00)
   When the user views the yearly values
   Then 2026 shows closing value 50000.00
 
