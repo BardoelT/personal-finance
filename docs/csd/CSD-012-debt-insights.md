@@ -3,7 +3,7 @@ id: CSD-012
 title: Debt insights
 status: approved
 owner: Thijs Bardoel
-version: 0.3
+version: 0.5
 last_updated: 29/10/2026
 related: [CSD-010, CSD-011]
 ---
@@ -24,7 +24,7 @@ The Debts page lists debts, statements and a table of yearly totals, but a table
 - NG-2: A filter, a selection or a hiding of debts.
 - NG-3: A percentage of the debt repaid, a payoff forecast, and any figure other than the balances, the total debt, the amount repaid.
 - NG-4: Click-through, zooming, or exporting the chart.
-- NG-5: Charts on the Dashboard or on the Reports page.
+- NG-5: Charts on the Dashboard or on the Net worth page, which has its own chart (CSD-017).
 - NG-6: A chart library or any other new dependency.
 - NG-7: Estimating balances for years without a statement (CSD-011 NG-11), and carrying a balance forward into a year in which a debt has no statement.
 - NG-8: Letting the user choose the colour of a debt.
@@ -463,7 +463,7 @@ Scenario: Reduced motion
 ```
 
 **REQ-13: Refined look and accessible segments** *(ubiquitous)*
-The Insights tab shall draw the chart as CSD-010 REQ-13 describes the look of the bank chart: bars at most 50% of the width of their slot and at most 44 px wide, the top corners of the highest segment rounded by 3 px and a 1 px gap between stacked segments in place of an outline, 1 px gridlines at 55% opacity of the border colour, a 1 px zero line in the muted text colour at 70% opacity, axis and year labels in the muted text colour at regular font weight, marker values in 10 px medium weight, and a plot height of 390 px and a minimum slot width of 64 px per year, the same as the bank accounts chart (CSD-010) so that all yearly charts have one size, and tooltips of 10 px corner radius, 12 px by 14 px padding, a shadow of at least 16 px blur and at most 12% opacity, a 12 px title in semibold and row labels in the muted text colour, in light and in dark mode. Every segment shall carry an accessible label with the debt, the year and the balance.
+The Insights tab shall draw the chart as CSD-010 REQ-13 describes the look of the bank chart: bars at most 50% of the width of their slot and at most 44 px wide, the top corners of the highest segment rounded by 3 px and a 1 px gap between stacked segments in place of an outline, 1 px gridlines at 55% opacity of the border colour, a 1 px zero line in the muted text colour at 70% opacity, axis and year labels in the muted text colour at regular font weight, marker values in 10 px medium weight, and a plot height that scales with the height of the window and a minimum slot width of 64 px per year, the same as the bank accounts chart (CSD-010) so that all yearly charts have one size, and tooltips of 10 px corner radius, 12 px by 14 px padding, a shadow of at least 16 px blur and at most 12% opacity, a 12 px title in semibold and row labels in the muted text colour, in light and in dark mode. Every segment shall carry an accessible label with the debt, the year and the balance.
 
 ```gherkin
 @AC-13.1
@@ -496,7 +496,7 @@ Scenario: Segment labels
 @AC-13.5
 Scenario: Same size as the bank accounts chart
   Given the Insights tab of the Debts page and that of the Bank accounts page
-  Then both plots are 390 px high
+  Then both plots scale with the height of the window
   And both give every year a slot of at least 64 px
 ```
 
@@ -581,6 +581,8 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.5 (29/10/2026): The plot height scales with the height of the window instead of being a fixed 390 px: with the page scrolled to the top the chart ends at the bottom of the window, and the plot is never lower than 260 px. It is recomputed when the window is resized.
+- 0.4 (29/10/2026): The Reports page is replaced by the Net worth page of CSD-017 (NG-5; GitHub issue 24). No other change.
 - 0.3 (29/10/2026): The plot of every yearly chart is 390 px high (was 260 px), 50% taller. No other behaviour change.
 - 0.1 (28/10/2026): initial draft, from GitHub issue 15 and the grill-me interview. It follows CSD-010 (tabs, year series, partial year, marker, tooltip, highlight, motion, look), with one segment per debt, no negative values, and the amount repaid in the tooltip.
 - 0.2 (29/10/2026): No statement count is displayed any more (NG-3, REQ-10, AC-10.1, AC-10.3, AC-10.7, AC-5.1, AC-5.3, AC-5.5; the count stays in IPC, section 5). The tooltip lists its rows in the order the bar shows them, top to bottom (REQ-10, new AC-10.8 and AC-10.9, manual checklist), and an empty year shows the note "No statements". The chart has the size of the bank accounts chart: plot height 260 px, minimum slot width 64 px (REQ-13, new AC-13.5, manual checklist).

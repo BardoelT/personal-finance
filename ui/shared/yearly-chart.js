@@ -32,8 +32,30 @@ export function axisLabel(value) {
   return value < 0 ? `−${compact(-value)}` : compact(value);
 }
 
-/** The size every yearly chart shares, so the charts look alike from page to page. */
-export const CHART_SIZE = { plotHeight: 390, minSlotWidth: 64 };
+/** The size every yearly chart shares: a slot per year is at least this wide, and the plot is never lower than this. */
+export const CHART_SIZE = { minPlotHeight: 260, minSlotWidth: 64 };
+
+/** The space below the chart in the page: the padding of the chart box, the margin of its panel and the padding of the content area. */
+function spaceBelow(inner) {
+  const px = (element, property) => (element ? Number.parseFloat(getComputedStyle(element)[property]) || 0 : 0);
+  return (
+    px(inner.closest('.chart-scroll'), 'paddingBottom') +
+    px(inner.closest('.panel'), 'marginBottom') +
+    px(inner.closest('.content'), 'paddingBottom')
+  );
+}
+
+/**
+ * The plot height that lets the chart end at the bottom of the window with the page
+ * scrolled to the top, and never less than `CHART_SIZE.minPlotHeight` (CSD-010 REQ-13).
+ */
+function plotHeightFor(inner, margin) {
+  const scroller = inner.closest('.content');
+  const top = inner.getBoundingClientRect().top + (scroller ? scroller.scrollTop : 0);
+  // One pixel less, so rounding never pushes the page into a scrollbar.
+  const room = window.innerHeight - top - margin.top - margin.bottom - spaceBelow(inner) - 1;
+  return Math.max(CHART_SIZE.minPlotHeight, Math.floor(room));
+}
 
 /**
  * The closing-balance marker of a year: a short line across the bar, wider than the bar,
@@ -55,7 +77,7 @@ export function levelMarker(level, { centre, barWidth, yOf }) {
  * `${id}-chart`. The strategy:
  *
  * - `command`, `ariaLabel`: the Rust command that returns `{ years }`, and the chart's name
- * - the size is `CHART_SIZE`, the same for every chart
+ * - the size is the same for every chart: slots as wide as `CHART_SIZE` says, and a plot as high as the window allows
  * - `piecesOf(row)`: the stacked pieces `{ key, cssClass, low, high, hangs }` in drawing order;
  *   a piece may also carry `label` (its accessible name) and `rounding` (`'top'`, `'bottom'` or `false`),
  *   which otherwise rounds the top of the highest piece
@@ -82,8 +104,9 @@ export function createYearlyChart(strategy) {
     const slot = plotWidth / count;
     const barWidth = Math.min(slot * 0.5, MAX_BAR_WIDTH);
     const width = margin.left + plotWidth + margin.right;
-    const height = margin.top + CHART_SIZE.plotHeight + margin.bottom;
-    const bottomEdge = margin.top + CHART_SIZE.plotHeight;
+    const plotHeight = plotHeightFor(inner, margin);
+    const height = margin.top + plotHeight + margin.bottom;
+    const bottomEdge = margin.top + plotHeight;
 
     const pieces = years.map(strategy.piecesOf);
     const extras = years.flatMap((row) => strategy.extraLevels?.(row) ?? []);
@@ -94,7 +117,7 @@ export function createYearlyChart(strategy) {
     const below = Math.ceil(-lowest / step);
     const bottom = -below * step;
     const allTicks = [...Array.from({ length: below }, (_, i) => -(below - i) * step), ...ticks];
-    const yOf = (value) => margin.top + ((top - value) / (top - bottom)) * CHART_SIZE.plotHeight;
+    const yOf = (value) => margin.top + ((top - value) / (top - bottom)) * plotHeight;
 
     const chart = svg('svg', { viewBox: `0 0 ${width} ${height}`, role: 'group', 'aria-label': strategy.ariaLabel });
     // The container is as wide as the chart, so the tooltip is placed against the whole chart.
@@ -118,7 +141,7 @@ export function createYearlyChart(strategy) {
         role: 'img',
         'aria-label': strategy.describe(row),
       });
-      const hit = svg('rect', { class: 'chart-hit', x: centre - slot / 2, y: margin.top, width: slot, height: CHART_SIZE.plotHeight + margin.bottom });
+      const hit = svg('rect', { class: 'chart-hit', x: centre - slot / 2, y: margin.top, width: slot, height: plotHeight + margin.bottom });
       group.append(hit);
 
       const yearPieces = pieces[index];

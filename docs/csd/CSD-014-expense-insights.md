@@ -3,7 +3,7 @@ id: CSD-014
 title: Expense insights
 status: approved
 owner: Thijs Bardoel
-version: 0.4
+version: 0.6
 last_updated: 29/10/2026
 related: [CSD-010, CSD-012, CSD-013]
 ---
@@ -25,7 +25,7 @@ The Expenses page lists expenses and a table of yearly totals, but a table does 
 - NG-3: Any figure other than the amount per category and the total of a year (the number of expenses is not displayed): no average, no percentage, no comparison with income and no forecast.
 - NG-4: A list of the largest expenses, and a view of single expenses.
 - NG-5: Click-through, zooming, or exporting the chart.
-- NG-6: Charts on the Dashboard or on the Reports page.
+- NG-6: Charts on the Dashboard or on the Net worth page, which has its own chart (CSD-017).
 - NG-7: A chart library or any other new dependency.
 - NG-8: Spreading an expense over several periods, and estimating spending for a year without expenses.
 - NG-9: Letting the user choose the colour of a category.
@@ -481,13 +481,13 @@ AC-13.4 (removed in v0.3): the Overview tab has no filter any more, so there is 
 ```
 
 **REQ-14: One size for every yearly chart** *(ubiquitous)*
-The Insights tab shall draw the chart with a plot height of 390 px and a minimum slot width of 64 px, with the zero line styled as on the bank accounts chart, and with a legend of one item per series (REQ-7), the same as the bank accounts chart (CSD-010), so that the yearly charts of all pages have the same size and behaviour.
+The Insights tab shall draw the chart with a plot height that scales with the height of the window and a minimum slot width of 64 px, with the zero line styled as on the bank accounts chart, and with a legend of one item per series (REQ-7), the same as the bank accounts chart (CSD-010), so that the yearly charts of all pages have the same size and behaviour.
 
 ```gherkin
 @AC-14.1
 Scenario: Same plot height and slot width as the bank accounts chart
   Given the Insights tab shows the chart
-  Then the plot is 390 px high
+  Then the plot height scales with the height of the window
   And each year's slot is at least 64 px wide
   And the zero line is styled as on the bank accounts chart
 
@@ -540,7 +540,7 @@ The series is computed in Rust, so REQ-1 to REQ-4 are proven by `cargo test`. Te
 | Requirement | Command |
 |---|---|
 | REQ-1 to REQ-4 and AC-13.3 (the data) | `cargo test test_csd014_` |
-| REQ-5 to REQ-12 and REQ-14 (all ACs), AC-13.1, AC-13.2 (the screen) | Manual checklist: stacking, axis range, no marker, colours of both modes, legend order and wrapping, chart size (390 px plot, 64 px slots), tooltip placement, rows in the order of the bar and the "No expenses" note without a count, highlight from a segment and from the legend including keyboard and a category without expenses, motion and reduced motion, the look, accessible labels and the empty note. There is no frontend test setup |
+| REQ-5 to REQ-12 and REQ-14 (all ACs), AC-13.1, AC-13.2 (the screen) | Manual checklist: stacking, axis range, no marker, colours of both modes, legend order and wrapping, chart size (plot height scaling with the window, 64 px slots), tooltip placement, rows in the order of the bar and the "No expenses" note without a count, highlight from a segment and from the legend including keyboard and a category without expenses, motion and reduced motion, the look, accessible labels and the empty note. There is no frontend test setup |
 | One requirement, e.g. REQ-4 | `cargo test test_csd014_ac_4_` |
 
 Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
@@ -549,6 +549,8 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.6 (29/10/2026): The plot height scales with the height of the window instead of being a fixed 390 px: with the page scrolled to the top the chart ends at the bottom of the window, and the plot is never lower than 260 px. It is recomputed when the window is resized.
+- 0.5 (29/10/2026): The Reports page is replaced by the Net worth page of CSD-017 (NG-5; GitHub issue 24). No other change.
 - 0.4 (29/10/2026): The plot of every yearly chart is 390 px high (was 260 px), 50% taller. No other behaviour change.
 - 0.3 (29/10/2026): The yearly charts share one size and behaviour with the bank accounts chart (CSD-010): new REQ-14 (plot height 260 px, minimum slot width 64 px, zero line; AC-14.1, AC-14.2), REQ-5 refers to it. REQ-8: the tooltip lists the rows in the order of the bar (highest segment first, then Total, AC-8.1, AC-8.8), shows no number of expenses and shows the note "No expenses" without a Total row for an empty year (AC-8.3, AC-8.6, AC-8.7 amended). AC-13.4 removed (the Overview filter is gone, CSD-013 0.3); NG-2 and NG-3 reworded. `expense_count` stays in the payload but is not displayed. The legend highlight of REQ-9 is unchanged.
 - 0.2 (29/10/2026): Renamed from "Major expenses" to "Expenses": title, file name, page and navigation labels, and wording. No behaviour change. The file is now `CSD-014-expense-insights.md`.

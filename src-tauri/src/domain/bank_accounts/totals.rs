@@ -57,4 +57,25 @@ impl BankAccounts {
             })
             .collect()
     }
+
+    /// The increase of the bank accounts in `year`: for each account with an
+    /// entry in the year and an earlier one, the balance of its latest entry in
+    /// the year minus that of its latest earlier entry. `None` when no account
+    /// has both (CSD-018 section 3).
+    #[must_use]
+    pub fn increase(&self, year: i32) -> Option<Decimal> {
+        let mut increase: Option<Decimal> = None;
+        for (account, closing) in self.year_segments(year) {
+            let opening = self
+                .entries
+                .iter()
+                .filter(|e| e.account_id == account.id && e.period.year() < year)
+                .max_by_key(|e| e.period.sort_key())
+                .map(|e| e.balance.value());
+            if let Some(opening) = opening {
+                increase = Some(increase.unwrap_or_else(zero) + closing - opening);
+            }
+        }
+        increase
+    }
 }

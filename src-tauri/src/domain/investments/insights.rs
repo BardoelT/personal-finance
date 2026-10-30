@@ -2,11 +2,11 @@
 
 use std::collections::BTreeMap;
 
-use rust_decimal::{Decimal, RoundingStrategy};
+use rust_decimal::Decimal;
 use serde::Serialize;
 
 use crate::domain::income::YearMonth;
-use crate::domain::money::zero;
+use crate::domain::money::{percent_of, zero};
 
 use super::{InvestmentYearlyTotal, Investments};
 
@@ -26,19 +26,10 @@ pub struct InvestmentInsightsYear {
     pub is_partial: bool,
 }
 
-/// Capital growth in percent of the opening balance, to one decimal with
-/// banker's rounding (CSD-007 REQ-6). `None` when the opening balance is zero.
+/// Capital growth in percent of the opening balance (CSD-007 REQ-6). `None`
+/// when the opening balance is zero.
 fn growth_percent(growth: Decimal, opening: Decimal) -> Option<Decimal> {
-    let percent = growth
-        .checked_mul(Decimal::ONE_HUNDRED)?
-        .checked_div(opening)?;
-    let mut rounded = percent.round_dp_with_strategy(1, RoundingStrategy::MidpointNearestEven);
-    if rounded.is_zero() {
-        // A decrease that rounds to zero shows no sign.
-        rounded = Decimal::ZERO;
-    }
-    rounded.rescale(1);
-    Some(rounded)
+    percent_of(growth, opening)
 }
 
 impl Investments {

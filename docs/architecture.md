@@ -30,6 +30,8 @@ Two rules shape everything:
 | `domain/debts/` | Debts, statements with non-negative balances, the change per statement, colour slots, yearly totals with the amount repaid, insights per debt. Reuses the investments' `Period` and `Note` |
 | `domain/expenses/` | Expenses (dated, with a fixed category and a note), the year and month filter, yearly totals with the largest expense, insights per category. Reuses the investments' `Note` |
 | `domain/bank_accounts/` | Bank accounts, entries with signed balances, colour slots, yearly totals, insights per bank. Reuses the investments' `Period` and `Note` |
+| `domain/net_worth/` | The yearly net worth: combines the yearly closing figures of assets, investments, bank accounts and debts (it keeps no data of its own) |
+| `domain/ratios/` | The yearly ratios between income, wealth, growth and expenses, built from the figures the other areas already give. The bank accounts add one figure of their own, the increase of a year |
 | `domain/money.rs`, `settings.rs`, `error.rs`, `project_data.rs` | Amounts and currency, project settings, the domain error enum, the project's data sections |
 | `commands/` | `#[tauri::command]` handlers, one file per area. Thin: parse and bound the input, call `domain`, map errors |
 | `storage/` | Reading and writing the project file (atomic write), remembering the last project |
@@ -55,7 +57,7 @@ shared/             helpers pages share
 styles/             CSS by area
 ```
 
-**`pages/`** files are named `<page>-<view>.js`: `income-overview.js`, `income-insights.js`, `investments-overview.js`, `investments-insights.js`, `bank-overview.js`, `bank-insights.js`, `assets-overview.js`, `assets-insights.js`, `debts-overview.js`, `debts-insights.js`, `expenses-overview.js`, `expenses-insights.js`. Each exports `init<Page><View>()` (wire the events once) and `reload<Page><View>()` (fetch from Rust and render). `dashboard.js`, `settings.js` and `project.js` are pages without views.
+**`pages/`** files are named `<page>-<view>.js`: `income-overview.js`, `income-insights.js`, `investments-overview.js`, `investments-insights.js`, `bank-overview.js`, `bank-insights.js`, `assets-overview.js`, `assets-insights.js`, `debts-overview.js`, `debts-insights.js`, `expenses-overview.js`, `expenses-insights.js`. Each exports `init<Page><View>()` (wire the events once) and `reload<Page><View>()` (fetch from Rust and render). `dashboard.js`, `net-worth.js`, `ratios.js`, `settings.js` and `project.js` are pages without views; `ratios.js` lays out the table of the Ratios page; `net-worth.js` draws the one chart of the Net worth page with `createYearlyChart`.
 
 **Element ids** follow `<page>-<view>-<part>`: `income-insights-chart`, `investments-insights-legend`, `investments-tab-insights`. The shared chart code finds its parts from the one id it is given.
 
@@ -67,7 +69,7 @@ styles/             CSS by area
 | `dom.js` | `h` (element builder), icons, toast, the confirm dialog, `showError` |
 | `format.js` | Display formatting and today's year or month. No figures are computed |
 | `chart.js` | Chart building blocks: SVG helper, bar segments, tooltip rows (listed top to bottom like the bar), legend items, the highlight |
-| `yearly-chart.js` | The frame every insights chart shares: one size (`CHART_SIZE`), axis, bars, closing-balance marker, tooltip, loading, resize |
+| `yearly-chart.js` | The frame every insights chart shares: one size rule (`CHART_SIZE` and a plot height that follows the window), axis, bars, closing-balance marker, tooltip, loading, resize |
 | `tabs.js` | Tabs such as Overview and Insights |
 
 **Composition, not inheritance.** The insights charts differ only in their data, so `createYearlyChart(strategy)` takes a small object (the stacked pieces, tooltip rows, extra marks, labels under the axis) and draws the rest. The CRUD dialogs of the two overview pages stay separate on purpose: their forms differ (the statement form calculates balance and growth), and one generic dialog would be harder to read than two plain files.

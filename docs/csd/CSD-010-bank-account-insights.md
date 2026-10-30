@@ -3,7 +3,7 @@ id: CSD-010
 title: Bank account insights
 status: approved
 owner: Thijs Bardoel
-version: 0.4
+version: 0.6
 last_updated: 29/10/2026
 related: [CSD-007, CSD-009]
 ---
@@ -24,7 +24,7 @@ The Bank accounts page lists accounts, entries and a table of yearly totals, but
 - NG-2: A filter, a selection or a hiding of banks.
 - NG-3: Growth, a percentage, a year-over-year change, a forecast, or any other figure than the balances and the closing balance. The number of entries is never displayed.
 - NG-4: Click-through, zooming, or exporting the chart.
-- NG-5: Charts on the Dashboard or on the Reports page.
+- NG-5: Charts on the Dashboard or on the Net worth page, which has its own chart (CSD-017).
 - NG-6: A chart library or any other new dependency.
 - NG-7: Estimating balances for years without an entry (CSD-009 NG-8), and carrying a balance forward into a year in which a bank has no entry.
 - NG-8: Letting the user choose the colour of a bank.
@@ -464,7 +464,7 @@ Scenario: Reduced motion
 ```
 
 **REQ-13: Refined look and accessible segments** *(ubiquitous)*
-The Insights tab shall draw the chart with bars at most 50% of the width of their slot and at most 44 px wide, with the top corners of the topmost positive segment and the bottom corners of the lowest negative segment rounded by 3 px and a 1 px gap between stacked segments in place of an outline, so that neighbouring segments of the same hue stay apart, with a plot height of 390 px and a year slot at least 64 px wide, the same size and behaviour as every other yearly chart of the app, with 1 px gridlines at 55% opacity of the border colour and a 1 px zero line in the muted text colour at 70% opacity that is always drawn, also when no segment is negative, with axis and year labels in the muted text colour at regular font weight, with marker values in 10 px medium weight, and with tooltips of 10 px corner radius, 12 px by 14 px padding, a shadow of at least 16 px blur and at most 12% opacity, a 12 px title in semibold and row labels in the muted text colour, in light and in dark mode. Every segment shall carry an accessible label with the bank, the year and the balance.
+The Insights tab shall draw the chart with bars at most 50% of the width of their slot and at most 44 px wide, with the top corners of the topmost positive segment and the bottom corners of the lowest negative segment rounded by 3 px and a 1 px gap between stacked segments in place of an outline, so that neighbouring segments of the same hue stay apart, with a plot height that scales with the height of the window and a year slot at least 64 px wide, the same size and behaviour as every other yearly chart of the app, with 1 px gridlines at 55% opacity of the border colour and a 1 px zero line in the muted text colour at 70% opacity that is always drawn, also when no segment is negative, with axis and year labels in the muted text colour at regular font weight, with marker values in 10 px medium weight, and with tooltips of 10 px corner radius, 12 px by 14 px padding, a shadow of at least 16 px blur and at most 12% opacity, a 12 px title in semibold and row labels in the muted text colour, in light and in dark mode. Every segment shall carry an accessible label with the bank, the year and the balance.
 
 ```gherkin
 @AC-13.1
@@ -503,8 +503,15 @@ Scenario: The zero line is always drawn
 @AC-13.6
 Scenario: Same size as the other yearly charts
   Given the Insights tab shows the chart
-  Then the plot is 390 px high
+  Then the plot height scales with the height of the window
   And each year slot is at least 64 px wide
+
+@AC-13.7
+Scenario: The plot follows the height of the window
+  Given the Insights tab shows the chart and the page is scrolled to the top
+  When the user makes the window 200 px higher
+  Then the plot is about 200 px higher and the chart still ends at the bottom of the window
+  And when the window is made so low that the plot would be below 260 px, the plot stays 260 px high
 ```
 
 **REQ-14: No entries yet** *(state-driven)*
@@ -579,7 +586,7 @@ The series is computed in Rust, so REQ-2 to REQ-5 are proven by `cargo test`. Te
 | Requirement | Command |
 |---|---|
 | REQ-2 to REQ-5, AC-15.1 to AC-15.3 (the data) | `cargo test test_csd010_` |
-| REQ-1, REQ-6 to REQ-14 (all ACs, including AC-10.7, AC-10.8, AC-13.5 and AC-13.6), AC-15.1 to AC-15.3 (the screen) | Manual checklist: tabs, tooltip row order and no entry count, plot height 390 px and slot width of at least 64 px, zero line always drawn, stacking and negative segments, axis range, markers, colours of both modes and of the ninth bank, legend order, wrapping and ellipsis, tooltip placement, highlight from a segment and from the legend including keyboard, motion and reduced motion, the look, accessible labels and the empty note. There is no frontend test setup |
+| REQ-1, REQ-6 to REQ-14 (all ACs, including AC-10.7, AC-10.8, AC-13.5, AC-13.6 and AC-13.7), AC-15.1 to AC-15.3 (the screen) | Manual checklist: tabs, tooltip row order and no entry count, plot height scaling with the window and slot width of at least 64 px, zero line always drawn, stacking and negative segments, axis range, markers, colours of both modes and of the ninth bank, legend order, wrapping and ellipsis, tooltip placement, highlight from a segment and from the legend including keyboard, motion and reduced motion, the look, accessible labels and the empty note. There is no frontend test setup |
 | One requirement, e.g. REQ-5 | `cargo test test_csd010_ac_5_` |
 
 Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
@@ -588,6 +595,8 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 - OQ-1: (resolved in v0.2) The legend lists only banks that have at least one entry (REQ-9), because a bank without entries has no segment to identify.
 
 ## 9. Changelog
+- 0.6 (29/10/2026): The plot height scales with the height of the window instead of being a fixed 390 px: with the page scrolled to the top the chart ends at the bottom of the window, and the plot is never lower than 260 px. It is recomputed when the window is resized.
+- 0.5 (29/10/2026): The Reports page is replaced by the Net worth page of CSD-017 (NG-5; GitHub issue 24). No other change.
 - 0.4 (29/10/2026): The plot of every yearly chart is 390 px high (was 260 px), 50% taller. No other behaviour change.
 - 0.3 (29/10/2026): Entry counts are no longer displayed: REQ-10 (AC-10.1, AC-10.3 amended) drops the count from the tooltip and the screen-reader description, an empty year shows "No entries" (AC-10.6), NG-3 and REQ-5 say the count is returned but never shown. REQ-10 orders the tooltip rows as the bar shows them, top to bottom, segments below the zero line last (AC-10.7, AC-10.8 added). REQ-13 sets the shared chart size (plot height 260 px, slot at least 64 px) and an always-drawn zero line (AC-13.5, AC-13.6 added). The legend hover and focus highlight of REQ-11 is unchanged. New ACs are manual checklist items.
 - 0.2 (28/10/2026): Resolved OQ-1: the legend lists only banks with at least one entry, as REQ-9 says.

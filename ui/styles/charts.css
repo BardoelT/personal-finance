@@ -29,6 +29,10 @@
 .swatch.slot-5, .bar-slot-5 { background: var(--bank-5); fill: var(--bank-5); }
 .swatch.slot-6, .bar-slot-6 { background: var(--bank-6); fill: var(--bank-6); }
 .swatch.slot-7, .bar-slot-7 { background: var(--bank-7); fill: var(--bank-7); }
+.swatch.nw-assets, .bar-nw-assets { background: var(--nw-assets); fill: var(--nw-assets); }
+.swatch.nw-investments, .bar-nw-investments { background: var(--nw-investments); fill: var(--nw-investments); }
+.swatch.nw-cash, .bar-nw-cash { background: var(--nw-cash); fill: var(--nw-cash); }
+.swatch.nw-debts, .bar-nw-debts { background: var(--nw-debts); fill: var(--nw-debts); }
 .swatch.marker { width: 14px; height: 0; border-radius: 0; border-top: 2px solid var(--muted); }
 .swatch-spacer { width: 10px; height: 10px; flex: none; }
 
@@ -51,7 +55,7 @@
 .chart-inner .partial .bar-opening, .chart-inner .partial .bar-deposits,
 .chart-inner .partial .bar-growth-up, .chart-inner .partial .bar-growth-down { opacity: .55; }
 .chart-inner .chart-year-group [data-legend].dim { opacity: .7; }
-.chart-inner .partial [class*="bar-slot-"] { opacity: .55; }
+.chart-inner .partial [class*="bar-slot-"], .chart-inner .partial [class*="bar-nw-"] { opacity: .55; }
 .chart-inner .partial [data-legend].dim { opacity: .4; }
 .chart-inner .bar-deposits.withdrawal { fill-opacity: .35; stroke: var(--series-deposits); stroke-width: 1; stroke-dasharray: 3 2; }
 .chart-grid { stroke: var(--border); stroke-opacity: .55; stroke-width: 1; }
