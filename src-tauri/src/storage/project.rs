@@ -1721,10 +1721,16 @@ mod assets_tests {
     fn asset(project: &mut Project, name: &str, period: &str) -> AssetId {
         project
             .assets_mut()
-            .create_asset(&AssetInput {
-                name: name.to_owned(),
-                valuation_period: Some(period.to_owned()),
-            })
+            .create_asset(
+                &AssetInput {
+                    name: name.to_owned(),
+                    valuation_period: Some(period.to_owned()),
+                    purchase_date: Some("01/01/1900".to_owned()),
+                    purchase_amount: Some("0.00".to_owned()),
+                    ..AssetInput::default()
+                },
+                time::macros::date!(2026 - 10 - 29),
+            )
             .unwrap()
             .id
     }

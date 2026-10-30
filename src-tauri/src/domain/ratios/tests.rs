@@ -134,10 +134,16 @@ fn add_debt(data: &mut ProjectData, statements: &[(&str, &str)]) {
 fn add_asset(data: &mut ProjectData, at: &str, value: &str) {
     let id = data
         .assets
-        .create_asset(&AssetInput {
-            name: "Example House".to_owned(),
-            valuation_period: Some("Yearly".to_owned()),
-        })
+        .create_asset(
+            &AssetInput {
+                name: "Example House".to_owned(),
+                valuation_period: Some("Yearly".to_owned()),
+                purchase_date: Some("01/01/1900".to_owned()),
+                purchase_amount: Some("0.00".to_owned()),
+                ..AssetInput::default()
+            },
+            time::macros::date!(2026 - 10 - 29),
+        )
         .unwrap()
         .id;
     data.assets

@@ -1,4 +1,4 @@
-//! Yearly values over all assets (CSD-015 REQ-20).
+//! Yearly values over all assets (CSD-015 REQ-20, CSD-019 REQ-11).
 
 use std::collections::BTreeMap;
 
@@ -28,11 +28,7 @@ impl Assets {
     /// valuation counts in the year of its own period only.
     #[must_use]
     pub fn yearly_values(&self) -> Vec<AssetYearlyValue> {
-        let mut counts: BTreeMap<i32, usize> = BTreeMap::new();
-        for valuation in &self.valuations {
-            *counts.entry(valuation.period.year()).or_default() += 1;
-        }
-        counts
+        self.counted_valuations_per_year()
             .into_iter()
             .rev()
             .map(|(year, valuation_count)| AssetYearlyValue {
@@ -47,11 +43,29 @@ impl Assets {
             .collect()
     }
 
-    /// For each asset with a valuation in `year`, in creation order, the value
-    /// of its latest valuation in that year.
+    /// How many valuations count in each calendar year: those of assets held at
+    /// the end of that year (CSD-019 REQ-11).
+    pub(super) fn counted_valuations_per_year(&self) -> BTreeMap<i32, usize> {
+        let mut counts: BTreeMap<i32, usize> = BTreeMap::new();
+        for valuation in &self.valuations {
+            let year = valuation.period.year();
+            let held = self
+                .assets
+                .iter()
+                .any(|asset| asset.id == valuation.asset_id && asset.held_at_end_of(year));
+            if held {
+                *counts.entry(year).or_default() += 1;
+            }
+        }
+        counts
+    }
+
+    /// For each asset held at the end of `year` with a valuation in it, in
+    /// creation order, the value of its latest valuation in that year.
     pub(super) fn year_segments(&self, year: i32) -> Vec<(&Asset, Decimal)> {
         self.assets
             .iter()
+            .filter(|asset| asset.held_at_end_of(year))
             .filter_map(|asset| {
                 self.valuations
                     .iter()

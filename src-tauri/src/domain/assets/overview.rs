@@ -16,10 +16,15 @@ pub struct AssetSummary {
     pub valuation_count: usize,
     pub latest_period: Option<Period>,
     pub latest_value: Option<Decimal>,
+    /// Whether the asset has no sale (CSD-019 REQ-9).
+    pub held: bool,
+    /// The sell amount minus the purchase amount of a sold asset.
+    pub result: Option<Decimal>,
 }
 
-/// The assets with the total of their latest values (CSD-015 REQ-17). The
-/// total is `None` while no asset has a valuation.
+/// The assets with the total of the latest values of the held assets (CSD-015
+/// REQ-17, CSD-019 REQ-10). The total is `None` while no held asset has a
+/// valuation.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct AssetsOverview {
     pub assets: Vec<AssetSummary>,
@@ -41,10 +46,15 @@ impl Assets {
                     valuation_count: self.valuation_count(asset.id),
                     latest_period: latest.map(|valuation| valuation.period),
                     latest_value: latest.map(|valuation| valuation.value.value()),
+                    held: asset.is_held(),
+                    result: asset.result(),
                 }
             })
             .collect();
-        let mut values = assets.iter().filter_map(|summary| summary.latest_value);
+        let mut values = assets
+            .iter()
+            .filter(|summary| summary.held)
+            .filter_map(|summary| summary.latest_value);
         let total = values
             .next()
             .map(|first| values.fold(first, |sum, value| sum + value));

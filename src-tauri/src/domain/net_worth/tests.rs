@@ -18,10 +18,16 @@ fn period(text: &str) -> Period {
 fn add_asset(data: &mut ProjectData, at: &str, amount: &str) {
     let id = data
         .assets
-        .create_asset(&AssetInput {
-            name: "Example House".to_owned(),
-            valuation_period: Some("Yearly".to_owned()),
-        })
+        .create_asset(
+            &AssetInput {
+                name: "Example House".to_owned(),
+                valuation_period: Some("Yearly".to_owned()),
+                purchase_date: Some("01/01/1900".to_owned()),
+                purchase_amount: Some("0.00".to_owned()),
+                ..AssetInput::default()
+            },
+            time::macros::date!(2026 - 10 - 29),
+        )
         .unwrap()
         .id;
     data.assets
@@ -278,4 +284,35 @@ fn test_csd017_section_5_amounts_cross_ipc_as_decimal_strings() {
     assert_eq!(json["years"][0]["assets"], "300000.00");
     assert_eq!(json["years"][0]["debts"], "0.00");
     assert_eq!(json["years"][0]["has_records"], true);
+}
+
+#[test]
+fn test_csd019_ac_11_6_net_worth_drops_a_sold_asset() {
+    let mut data = ProjectData::default();
+    let id = data
+        .assets
+        .create_asset(
+            &AssetInput {
+                name: "Example House".to_owned(),
+                valuation_period: Some("Yearly".to_owned()),
+                purchase_date: Some("15/03/2024".to_owned()),
+                purchase_amount: Some("250000.00".to_owned()),
+                sell_date: Some("10/06/2026".to_owned()),
+                sell_amount: Some("300000.00".to_owned()),
+            },
+            time::macros::date!(2026 - 10 - 29),
+        )
+        .unwrap()
+        .id;
+    data.assets
+        .add_valuation(
+            id,
+            crate::domain::assets::parse_period("2025").unwrap(),
+            AssetValue::parse("210000.00").unwrap(),
+            Note::default(),
+            today(),
+        )
+        .unwrap();
+    assert_eq!(year(&data, 2025).assets.to_string(), "210000.00");
+    assert_eq!(year(&data, 2026).assets.to_string(), "0.00");
 }

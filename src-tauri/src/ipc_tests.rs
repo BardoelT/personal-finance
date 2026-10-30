@@ -1781,7 +1781,12 @@ fn test_csd011_new_project_clears_the_debts() {
 }
 
 fn asset_input(name: &str, period: &str) -> Value {
-    json!({ "name": name, "valuation_period": period })
+    json!({
+        "name": name,
+        "valuation_period": period,
+        "purchase_date": "01/01/1900",
+        "purchase_amount": "0.00",
+    })
 }
 
 #[test]
@@ -2105,4 +2110,47 @@ fn test_csd018_the_ratios_reach_the_frontend_and_follow_the_project() {
     assert_eq!(years[0]["wealth_accumulation"], Value::Null);
     app.ok("new_project", json!({}));
     assert_eq!(app.ok("get_ratios", json!({})), json!({ "years": [] }));
+}
+
+#[test]
+fn test_csd019_ac_14_1_the_purchase_and_sale_need_no_currency_confirmation() {
+    let app = harness();
+    app.ok(
+        "create_asset",
+        json!({ "input": {
+            "name": "Example House",
+            "valuation_period": "Monthly",
+            "purchase_date": "15/03/2024",
+            "purchase_amount": "250000.00",
+            "sell_date": "10/06/2026",
+            "sell_amount": "300000.00",
+        } }),
+    );
+    assert_eq!(app.ok("get_settings", json!({}))["entry_count"], 0);
+}
+
+#[test]
+fn test_csd019_ac_9_2_the_sale_and_its_result_reach_the_frontend() {
+    let app = harness();
+    let asset = app.ok(
+        "create_asset",
+        json!({ "input": {
+            "name": "Example House",
+            "valuation_period": "Monthly",
+            "purchase_date": "15/03/2024",
+            "purchase_amount": "250000.00",
+            "sell_date": "10/06/2026",
+            "sell_amount": "300000.00",
+        } }),
+    );
+    assert_eq!(asset["purchase_date"], "2024-03-15");
+    assert_eq!(asset["sell_date"], "2026-06-10");
+    let overview = app.ok("list_assets", json!({}));
+    assert_eq!(overview["assets"][0]["held"], false);
+    assert_eq!(overview["assets"][0]["result"], "50000.00");
+    let error = app.err(
+        "create_asset",
+        json!({ "input": { "name": "Example Land", "valuation_period": "Monthly" } }),
+    );
+    assert_eq!(error["code"], "ASSET_PURCHASE_DATE_REQUIRED");
 }

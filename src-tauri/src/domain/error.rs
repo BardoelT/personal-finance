@@ -205,6 +205,30 @@ pub enum DomainError {
     AssetValuationNoteTooLong,
     #[error("The asset data is not consistent.")]
     AssetDataInvalid,
+    #[error("Enter the purchase date.")]
+    AssetPurchaseDateRequired,
+    #[error("Enter the purchase amount.")]
+    AssetPurchaseAmountRequired,
+    #[error("Enter the date as dd/mm/yyyy, from 01/01/1900.")]
+    AssetDateInvalid,
+    #[error("The date cannot be in the future.")]
+    AssetDateInFuture,
+    #[error("The sell date cannot be before the purchase date.")]
+    AssetSellBeforePurchase,
+    #[error("Enter both the sell date and the sell amount, or neither.")]
+    AssetSaleIncomplete,
+    #[error("Enter the amount as a number such as 250000.00.")]
+    AssetAmountInvalid,
+    #[error("The amount cannot be negative.")]
+    AssetAmountNegative,
+    #[error("The amount can have at most 2 decimal places.")]
+    AssetAmountPrecision,
+    #[error("The amount can be at most 1000000000.00.")]
+    AssetAmountTooLarge,
+    #[error("A valuation must be between the purchase and the sale of the asset.")]
+    AssetValuationOutsideHolding,
+    #[error("These dates leave existing valuations outside the purchase and sale of the asset.")]
+    AssetDatesExcludeValuations,
     #[error("Enter a name for the expense.")]
     ExpenseNameRequired,
     #[error("The expense name can be at most 100 characters.")]
@@ -338,6 +362,18 @@ impl DomainError {
             Self::AssetValuationValueTooLarge => "ASSET_VALUATION_VALUE_TOO_LARGE",
             Self::AssetValuationNoteTooLong => "ASSET_VALUATION_NOTE_TOO_LONG",
             Self::AssetDataInvalid => "ASSET_DATA_INVALID",
+            Self::AssetPurchaseDateRequired => "ASSET_PURCHASE_DATE_REQUIRED",
+            Self::AssetPurchaseAmountRequired => "ASSET_PURCHASE_AMOUNT_REQUIRED",
+            Self::AssetDateInvalid => "ASSET_DATE_INVALID",
+            Self::AssetDateInFuture => "ASSET_DATE_IN_FUTURE",
+            Self::AssetSellBeforePurchase => "ASSET_SELL_BEFORE_PURCHASE",
+            Self::AssetSaleIncomplete => "ASSET_SALE_INCOMPLETE",
+            Self::AssetAmountInvalid => "ASSET_AMOUNT_INVALID",
+            Self::AssetAmountNegative => "ASSET_AMOUNT_NEGATIVE",
+            Self::AssetAmountPrecision => "ASSET_AMOUNT_PRECISION",
+            Self::AssetAmountTooLarge => "ASSET_AMOUNT_TOO_LARGE",
+            Self::AssetValuationOutsideHolding => "ASSET_VALUATION_OUTSIDE_HOLDING",
+            Self::AssetDatesExcludeValuations => "ASSET_DATES_EXCLUDE_VALUATIONS",
             Self::ExpenseNameRequired => "EXPENSE_NAME_REQUIRED",
             Self::ExpenseNameTooLong => "EXPENSE_NAME_TOO_LONG",
             Self::ExpenseCategoryUnsupported => "EXPENSE_CATEGORY_UNSUPPORTED",

@@ -8,16 +8,20 @@
 
 mod amounts;
 mod asset;
+mod dates;
 mod insights;
 mod overview;
 mod totals;
 mod valuation;
 
 #[cfg(test)]
+mod purchase_tests;
+#[cfg(test)]
 mod tests;
 
 pub use amounts::{asset_note, AssetValue};
 pub use asset::{Asset, AssetId, AssetInput};
+pub use dates::AssetDate;
 pub use insights::AssetInsights;
 pub use overview::AssetsOverview;
 pub use totals::AssetYearlyValue;
@@ -26,6 +30,7 @@ pub use valuation::{parse_period, AssetValuation, ValuationPrefill};
 use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
+use time::Date;
 
 use crate::domain::error::DomainError;
 use crate::domain::income::YearMonth;
@@ -45,12 +50,14 @@ pub struct Assets {
 
 impl Assets {
     /// Creates an asset, monthly unless the input says Yearly, with the colour
-    /// slot of REQ-3 (REQ-1, REQ-2).
+    /// slot of REQ-3 (REQ-1, REQ-2). `today` is the current date, which bounds
+    /// the purchase and sell dates (CSD-019).
     ///
     /// # Errors
-    /// Returns the name errors of REQ-2 or `AssetPeriodUnsupported`.
-    pub fn create_asset(&mut self, input: &AssetInput) -> Result<Asset, DomainError> {
-        let valid = input.validate()?;
+    /// Returns the name errors of REQ-2, `AssetPeriodUnsupported` or the
+    /// purchase and sale errors of CSD-019 REQ-1 to REQ-5.
+    pub fn create_asset(&mut self, input: &AssetInput, today: Date) -> Result<Asset, DomainError> {
+        let valid = input.validate(today)?;
         if self.name_taken(&valid.name, None) {
             return Err(DomainError::AssetNameDuplicate);
         }
@@ -59,20 +66,30 @@ impl Assets {
             name: valid.name,
             valuation_period: valid.valuation_period.unwrap_or_default(),
             colour_slot: self.next_colour_slot(),
+            purchase_date: Some(valid.purchase_date),
+            purchase_amount: Some(valid.purchase_amount),
+            sell_date: valid.sale.map(|(date, _)| date),
+            sell_amount: valid.sale.map(|(_, amount)| amount),
         };
         self.assets.push(asset.clone());
         Ok(asset)
     }
 
-    /// Changes the name and valuation period of an asset. The valuations and the
-    /// colour slot stay; the period is locked once the asset has any valuation
-    /// (REQ-4, REQ-5).
+    /// Changes the name, valuation period, purchase and sale of an asset. The
+    /// valuations and the colour slot stay; the period is locked once the asset
+    /// has any valuation, and the dates may not leave a valuation outside the
+    /// holding window (REQ-4, REQ-5, CSD-019 REQ-6, REQ-8).
     ///
     /// # Errors
-    /// Returns a validation error, `AssetNotFound`, `AssetNameDuplicate` or
-    /// `AssetPeriodLocked`.
-    pub fn update_asset(&mut self, id: AssetId, input: &AssetInput) -> Result<Asset, DomainError> {
-        let valid = input.validate()?;
+    /// Returns a validation error, `AssetNotFound`, `AssetNameDuplicate`,
+    /// `AssetPeriodLocked` or `AssetDatesExcludeValuations`.
+    pub fn update_asset(
+        &mut self,
+        id: AssetId,
+        input: &AssetInput,
+        today: Date,
+    ) -> Result<Asset, DomainError> {
+        let valid = input.validate(today)?;
         let current = self.asset(id)?.valuation_period;
         if self.name_taken(&valid.name, Some(id)) {
             return Err(DomainError::AssetNameDuplicate);
@@ -81,10 +98,22 @@ impl Assets {
         if valuation_period != current && self.valuation_count(id) > 0 {
             return Err(DomainError::AssetPeriodLocked);
         }
-        let asset = self.asset_mut(id)?;
-        asset.name = valid.name;
-        asset.valuation_period = valuation_period;
-        Ok(asset.clone())
+        let mut updated = self.asset(id)?.clone();
+        updated.name = valid.name;
+        updated.valuation_period = valuation_period;
+        updated.purchase_date = Some(valid.purchase_date);
+        updated.purchase_amount = Some(valid.purchase_amount);
+        updated.sell_date = valid.sale.map(|(date, _)| date);
+        updated.sell_amount = valid.sale.map(|(_, amount)| amount);
+        if self
+            .valuations
+            .iter()
+            .any(|valuation| valuation.asset_id == id && !updated.window_contains(valuation.period))
+        {
+            return Err(DomainError::AssetDatesExcludeValuations);
+        }
+        *self.asset_mut(id)? = updated.clone();
+        Ok(updated)
     }
 
     /// Removes an asset and all its valuations (REQ-6).
@@ -242,6 +271,7 @@ impl Assets {
                 || asset.colour_slot >= COLOUR_SLOTS
                 || !ids.insert(asset.id)
                 || !names.insert(name.to_lowercase())
+                || !purchase_and_sale_consistent(asset)
             {
                 return Err(invalid);
             }
@@ -251,7 +281,11 @@ impl Assets {
             let matches_asset = self
                 .asset(valuation.asset_id)
                 .is_ok_and(|asset| asset.valuation_period == valuation.period.kind());
+            let in_window = self
+                .asset(valuation.asset_id)
+                .is_ok_and(|asset| asset.window_contains(valuation.period));
             if !matches_asset
+                || !in_window
                 || !seen.insert((valuation.asset_id, valuation.period))
                 || AssetValue::new(valuation.value.value()).is_err()
                 || asset_note(valuation.note.as_str()).is_err()
@@ -283,18 +317,23 @@ impl Assets {
     }
 
     /// The rules a period must follow for an asset to hold a valuation for it:
-    /// the kind of the asset, not after `today`, not taken (REQ-7 to REQ-9).
+    /// the kind of the asset, not after `today`, inside the holding window
+    /// (CSD-019 REQ-7), not taken (REQ-7 to REQ-9).
     fn check_new_period(
         &self,
         asset_id: AssetId,
         period: Period,
         today: YearMonth,
     ) -> Result<(), DomainError> {
-        if self.asset(asset_id)?.valuation_period != period.kind() {
+        let asset = self.asset(asset_id)?;
+        if asset.valuation_period != period.kind() {
             return Err(DomainError::AssetPeriodMismatch);
         }
         if period.is_after(today) {
             return Err(DomainError::AssetValuationInFuture);
+        }
+        if !asset.window_contains(period) {
+            return Err(DomainError::AssetValuationOutsideHolding);
         }
         if self.valuation(asset_id, period).is_some() {
             return Err(DomainError::AssetValuationDuplicate);
@@ -332,6 +371,28 @@ impl Assets {
             .iter()
             .any(|asset| Some(asset.id) != except && asset.name.to_lowercase() == wanted)
     }
+}
+
+/// Whether the purchase and sale of an asset read from a file follow CSD-019:
+/// a purchase is both fields or neither, a sale needs a purchase and is both
+/// fields, the sell date is not before the purchase date and the amounts are
+/// valid.
+fn purchase_and_sale_consistent(asset: &Asset) -> bool {
+    let amounts_valid = [asset.purchase_amount, asset.sell_amount]
+        .into_iter()
+        .flatten()
+        .all(|amount| AssetValue::new(amount.value()).is_ok());
+    let purchase = match (asset.purchase_date, asset.purchase_amount) {
+        (Some(date), Some(_)) => Some(date),
+        (None, None) => None,
+        _ => return false,
+    };
+    let sale_valid = match (asset.sell_date, asset.sell_amount) {
+        (None, None) => true,
+        (Some(sold), Some(_)) => purchase.is_some_and(|bought| sold >= bought),
+        _ => false,
+    };
+    amounts_valid && sale_valid
 }
 
 /// Alphabetical order ignoring case, with the id as a stable tie-break.

@@ -53,8 +53,9 @@ pub fn list_assets(state: State<'_, AppState>) -> Result<AssetsOverview, AppErro
 
 #[tauri::command]
 pub fn create_asset(state: State<'_, AppState>, input: AssetInput) -> Result<Asset, AppError> {
+    let today = state.today_date();
     let mut project = state.project()?;
-    Ok(project.assets_mut().create_asset(&input)?)
+    Ok(project.assets_mut().create_asset(&input, today)?)
 }
 
 #[tauri::command]
@@ -63,10 +64,11 @@ pub fn update_asset(
     asset_id: String,
     input: AssetInput,
 ) -> Result<Asset, AppError> {
+    let today = state.today_date();
     let mut project = state.project()?;
     Ok(project
         .assets_mut()
-        .update_asset(AssetId::parse(&asset_id)?, &input)?)
+        .update_asset(AssetId::parse(&asset_id)?, &input, today)?)
 }
 
 #[tauri::command]

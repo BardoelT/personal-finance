@@ -1,7 +1,5 @@
 //! The yearly series behind the Assets Insights chart (CSD-016).
 
-use std::collections::BTreeMap;
-
 use rust_decimal::Decimal;
 use serde::Serialize;
 
@@ -52,10 +50,7 @@ impl Assets {
     /// shown.
     #[must_use]
     pub fn insights(&self, today: YearMonth) -> AssetInsights {
-        let mut counts: BTreeMap<i32, usize> = BTreeMap::new();
-        for valuation in &self.valuations {
-            *counts.entry(valuation.period.year()).or_default() += 1;
-        }
+        let counts = self.counted_valuations_per_year();
         let Some(&first) = counts.keys().next() else {
             return AssetInsights {
                 assets: Vec::new(),

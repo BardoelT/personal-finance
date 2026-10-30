@@ -18,11 +18,21 @@ fn input(name: &str, period: &str) -> AssetInput {
     AssetInput {
         name: name.to_owned(),
         valuation_period: Some(period.to_owned()),
+        purchase_date: Some("01/01/1900".to_owned()),
+        purchase_amount: Some("0.00".to_owned()),
+        ..AssetInput::default()
     }
 }
 
+fn today_date() -> Date {
+    time::macros::date!(2026 - 10 - 29)
+}
+
 fn asset(assets: &mut Assets, name: &str, period: &str) -> AssetId {
-    assets.create_asset(&input(name, period)).unwrap().id
+    assets
+        .create_asset(&input(name, period), today_date())
+        .unwrap()
+        .id
 }
 
 fn add(assets: &mut Assets, id: AssetId, at: &str, amount: &str) {
@@ -80,10 +90,16 @@ fn change(assets: &Assets, id: AssetId, at: &str) -> String {
 fn test_csd015_ac_1_1_an_asset_is_monthly_by_default() {
     let mut assets = Assets::default();
     let created = assets
-        .create_asset(&AssetInput {
-            name: "Example House".to_owned(),
-            valuation_period: None,
-        })
+        .create_asset(
+            &AssetInput {
+                name: "Example House".to_owned(),
+                valuation_period: None,
+                purchase_date: Some("01/01/1900".to_owned()),
+                purchase_amount: Some("0.00".to_owned()),
+                ..AssetInput::default()
+            },
+            today_date(),
+        )
         .unwrap();
     assert_eq!(created.valuation_period, PayPeriod::Monthly);
     assert_eq!(assets.valuation_count(created.id), 0);
@@ -99,7 +115,7 @@ fn test_csd015_ac_1_2_a_yearly_asset() {
 #[test]
 fn test_csd015_ac_1_3_an_unknown_period_is_rejected() {
     let mut assets = Assets::default();
-    let result = assets.create_asset(&input("Example House", "Weekly"));
+    let result = assets.create_asset(&input("Example House", "Weekly"), today_date());
     assert_eq!(code(result), "ASSET_PERIOD_UNSUPPORTED");
     assert_eq!(assets.assets().len(), 0);
 }
@@ -115,7 +131,7 @@ fn test_csd015_ac_2_1_invalid_names_are_rejected() {
         ("example house", "ASSET_NAME_DUPLICATE"),
     ] {
         assert_eq!(
-            code(assets.create_asset(&input(name, "Monthly"))),
+            code(assets.create_asset(&input(name, "Monthly"), today_date())),
             expected,
             "{name:?}"
         );
@@ -127,9 +143,9 @@ fn test_csd015_ac_2_1_invalid_names_are_rejected() {
 fn test_csd015_ac_2_2_name_length_boundary() {
     let mut assets = Assets::default();
     assert!(assets
-        .create_asset(&input(&"a".repeat(100), "Monthly"))
+        .create_asset(&input(&"a".repeat(100), "Monthly"), today_date())
         .is_ok());
-    let result = assets.create_asset(&input(&"b".repeat(101), "Monthly"));
+    let result = assets.create_asset(&input(&"b".repeat(101), "Monthly"), today_date());
     assert_eq!(code(result), "ASSET_NAME_TOO_LONG");
 }
 
@@ -137,7 +153,7 @@ fn test_csd015_ac_2_2_name_length_boundary() {
 fn test_csd015_ac_2_3_the_name_is_stored_trimmed() {
     let mut assets = Assets::default();
     let created = assets
-        .create_asset(&input("  Example House  ", "Monthly"))
+        .create_asset(&input("  Example House  ", "Monthly"), today_date())
         .unwrap();
     assert_eq!(created.name, "Example House");
 }
@@ -147,7 +163,7 @@ fn test_csd015_ac_2_4_renaming_to_an_existing_name_is_rejected() {
     let mut assets = Assets::default();
     asset(&mut assets, "Example House", "Monthly");
     let land = asset(&mut assets, "Example Land", "Monthly");
-    let result = assets.update_asset(land, &input("example house", "Monthly"));
+    let result = assets.update_asset(land, &input("example house", "Monthly"), today_date());
     assert_eq!(code(result), "ASSET_NAME_DUPLICATE");
 }
 
@@ -156,7 +172,7 @@ fn test_csd015_ac_2_5_changing_only_the_case_of_its_own_name_is_allowed() {
     let mut assets = Assets::default();
     let land = asset(&mut assets, "Example Land", "Monthly");
     let renamed = assets
-        .update_asset(land, &input("EXAMPLE LAND", "Monthly"))
+        .update_asset(land, &input("EXAMPLE LAND", "Monthly"), today_date())
         .unwrap();
     assert_eq!(renamed.name, "EXAMPLE LAND");
 }
@@ -170,7 +186,7 @@ fn test_csd015_ac_3_1_slots_follow_creation_order() {
         .iter()
         .map(|name| {
             assets
-                .create_asset(&input(name, "Monthly"))
+                .create_asset(&input(name, "Monthly"), today_date())
                 .unwrap()
                 .colour_slot
         })
@@ -186,7 +202,7 @@ fn test_csd015_ac_3_2_slots_cycle_after_eight_assets() {
     }
     assert_eq!(
         assets
-            .create_asset(&input("Asset 9", "Monthly"))
+            .create_asset(&input("Asset 9", "Monthly"), today_date())
             .unwrap()
             .colour_slot,
         0
@@ -213,7 +229,7 @@ fn test_csd015_ac_3_4_a_freed_slot_is_used_first() {
     assets.delete_asset(second).unwrap();
     assert_eq!(
         assets
-            .create_asset(&input("D", "Monthly"))
+            .create_asset(&input("D", "Monthly"), today_date())
             .unwrap()
             .colour_slot,
         1
@@ -227,7 +243,7 @@ fn test_csd015_ac_3_5_renaming_keeps_the_slot() {
     asset(&mut assets, "B", "Monthly");
     let third = asset(&mut assets, "C", "Monthly");
     let renamed = assets
-        .update_asset(third, &input("Renamed", "Monthly"))
+        .update_asset(third, &input("Renamed", "Monthly"), today_date())
         .unwrap();
     assert_eq!(renamed.colour_slot, 2);
 }
@@ -241,7 +257,7 @@ fn test_csd015_ac_4_1_rename_keeps_valuations() {
     add(&mut assets, id, "2026-08", "100.00");
     add(&mut assets, id, "2026-09", "90.00");
     assets
-        .update_asset(id, &input("Example Home", "Monthly"))
+        .update_asset(id, &input("Example Home", "Monthly"), today_date())
         .unwrap();
     assert_eq!(assets.valuation_count(id), 2);
 }
@@ -251,7 +267,7 @@ fn test_csd015_ac_4_2_the_period_of_an_asset_without_valuations_can_change() {
     let mut assets = Assets::default();
     let id = asset(&mut assets, "Example House", "Monthly");
     let changed = assets
-        .update_asset(id, &input("Example House", "Yearly"))
+        .update_asset(id, &input("Example House", "Yearly"), today_date())
         .unwrap();
     assert_eq!(changed.valuation_period, PayPeriod::Yearly);
 }
@@ -262,7 +278,7 @@ fn test_csd015_ac_4_3_an_invalid_edit_changes_nothing() {
     asset(&mut assets, "Example House", "Monthly");
     let land = asset(&mut assets, "Example Land", "Monthly");
     assert_eq!(
-        code(assets.update_asset(land, &input("  ", "Monthly"))),
+        code(assets.update_asset(land, &input("  ", "Monthly"), today_date())),
         "ASSET_NAME_REQUIRED"
     );
     assert!(assets.assets().iter().any(|d| d.name == "Example Land"));
@@ -273,7 +289,7 @@ fn test_csd015_ac_5_1_the_period_is_locked_once_valuations_exist() {
     let mut assets = Assets::default();
     let id = asset(&mut assets, "Example House", "Monthly");
     add(&mut assets, id, "2026-09", "100.00");
-    let result = assets.update_asset(id, &input("Example House", "Yearly"));
+    let result = assets.update_asset(id, &input("Example House", "Yearly"), today_date());
     assert_eq!(code(result), "ASSET_PERIOD_LOCKED");
     assert_eq!(assets.assets()[0].valuation_period, PayPeriod::Monthly);
 }
@@ -285,7 +301,7 @@ fn test_csd015_ac_5_2_the_period_can_change_after_deleting_the_last_valuation() 
     add(&mut assets, id, "2026-09", "100.00");
     assets.delete_valuation(id, period("2026-09")).unwrap();
     assert!(assets
-        .update_asset(id, &input("Example House", "Yearly"))
+        .update_asset(id, &input("Example House", "Yearly"), today_date())
         .is_ok());
 }
 

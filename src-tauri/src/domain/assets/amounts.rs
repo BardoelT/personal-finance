@@ -43,6 +43,21 @@ impl AssetValue {
             .and_then(Self::new)
     }
 
+    /// Parses a purchase or sell amount typed by the user. The rules are those
+    /// of a value, with the error codes of CSD-019 REQ-4.
+    ///
+    /// # Errors
+    /// Returns `AssetAmountInvalid`, `AssetAmountNegative`,
+    /// `AssetAmountPrecision` or `AssetAmountTooLarge`.
+    pub fn parse_amount(text: &str) -> Result<Self, DomainError> {
+        Self::parse(text).map_err(|error| match error {
+            DomainError::AssetValuationValueNegative => DomainError::AssetAmountNegative,
+            DomainError::AssetValuationValuePrecision => DomainError::AssetAmountPrecision,
+            DomainError::AssetValuationValueTooLarge => DomainError::AssetAmountTooLarge,
+            _ => DomainError::AssetAmountInvalid,
+        })
+    }
+
     /// The value as a decimal.
     #[must_use]
     pub fn value(self) -> Decimal {
