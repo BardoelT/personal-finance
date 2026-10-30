@@ -1,11 +1,11 @@
 ---
 id: CSD-018
 title: Ratios
-status: approved
+status: draft
 owner: Thijs Bardoel
-version: 0.2
-last_updated: 29/10/2026
-related: [CSD-000, CSD-001, CSD-004, CSD-005, CSD-007, CSD-009, CSD-011, CSD-013, CSD-017, CSD-019]
+version: 0.3
+last_updated: 30/10/2026
+related: [CSD-000, CSD-001, CSD-004, CSD-005, CSD-007, CSD-009, CSD-011, CSD-013, CSD-017, CSD-019, CSD-020]
 ---
 
 # CSD-018: Ratios
@@ -25,7 +25,7 @@ The charts show how each area develops, but not how the owner's income relates t
 - NG-4: Estimating a figure for a year in which an area has no record, and carrying a figure forward into such a year (as CSD-016 NG-8).
 - NG-5: Choosing, hiding or reordering rows or years, and exporting the table.
 - NG-6: Tabs on the page.
-- NG-7: Counting assets in the wealth accumulation: only cash, investments and debts count (REQ-5).
+- NG-7: Counting houses in the wealth accumulation: only cash, investments and debts count (REQ-5).
 
 ## 3. Definitions
 | Term | Meaning |
@@ -37,7 +37,7 @@ The charts show how each area develops, but not how the owner's income relates t
 | **Net worth** | As in CSD-017 section 3. |
 | **Bank increase (in a year)** | The sum, over the bank accounts that have an entry in that year and an earlier entry, of the balance of its latest entry in that year minus the balance of its latest entry before that year. It is negative when those accounts shrank. A bank account without an earlier entry adds nothing, because it is not known what it grew from. It is none when no bank account has both. |
 | **Net deposits (in a year)** | The net deposits of the year over all investment accounts (CSD-005 REQ-26). |
-| **Repaid (in a year)** | As in CSD-011 section 3. It is negative when debts grew, and none when no debt has an opening balance in the year. |
+| **Repaid (in a year)** | As in CSD-011 section 3, minus the settled amount of every debt that was Cancelled on the sale of its house in that year and that is part of that sum (CSD-020 REQ-12). A debt that was Repaid counts in full, as any drop in balance does. It is negative when debts grew or when more was cancelled than repaid, and none when no debt has an opening balance in the year. |
 | **Wealth accumulation (from cash)** | Bank increase plus net deposits plus repaid, where a part that is none counts as 0.00. |
 | **Disposable income** | Wealth accumulation plus expenses: what was set aside and what was spent. |
 
@@ -71,7 +71,7 @@ Scenario: One panel, no tabs
 ```
 
 **REQ-2: Year series** *(ubiquitous)*
-The app shall return, oldest first, one figure set for every calendar year from the earliest year in which any of income, expenses, assets, investments, bank accounts or debts has a record up to and including the current year, computed in Rust, and shall show the years as columns from the oldest on the left to the newest on the right, with the current year labelled with "YTD" (as "2026 YTD").
+The app shall return, oldest first, one figure set for every calendar year from the earliest year in which any of income, expenses, houses, investments, bank accounts or debts has a record up to and including the current year, computed in Rust, and shall show the years as columns from the oldest on the left to the newest on the right, with the current year labelled with "YTD" (as "2026 YTD").
 
 ```gherkin
 @AC-2.1
@@ -156,6 +156,26 @@ Scenario: A new bank account adds nothing in its first year
   Given "Example Bank" has a balance of 1000.00 for 2024 and no earlier entry
   When the series is computed
   Then the bank increase of 2024 is none
+
+@AC-5.6
+Scenario: A repaid mortgage counts in full
+  Given debt "Example Mortgage" has a statement for 2025-12 with balance 200000.00 and was Repaid on the sale of its house on 10/06/2026 (settled amount 190000.00, statement 2026-06 with balance 0.00)
+  And nothing else changes in 2026
+  When the series is computed
+  Then the repaid amount of 2026 is 200000.00
+
+@AC-5.7
+Scenario: A cancelled mortgage does not count as cash repaid
+  Given debt "Example Mortgage" has a statement for 2025-12 with balance 200000.00 and was Cancelled on the sale of its house on 10/06/2026 (settled amount 190000.00, statement 2026-06 with balance 0.00)
+  And nothing else changes in 2026
+  When the series is computed
+  Then the repaid amount of 2026 is 10000.00
+
+@AC-5.8
+Scenario: A debt cancelled in the year it started adds nothing
+  Given debt "Example Loan" has its first statement in 2026-02 with balance 5000.00 and was Cancelled on 10/06/2026 (settled amount 5000.00)
+  When the series is computed
+  Then the repaid amount of 2026 is none, as the debt has no opening balance in 2026
 
 @AC-5.5
 Scenario: No part available
@@ -286,7 +306,7 @@ Scenario: Many years
 ```
 
 **REQ-11: No data yet** *(state-driven)*
-While no area has a record, the app shall show the note "No data yet. The table appears once there is income, an asset, an investment, a bank account entry, a debt or an expense." and no table.
+While no area has a record, the app shall show the note "No data yet. The table appears once there is income, a house, an investment, a bank account entry, a debt or an expense." and no table.
 
 ```gherkin
 @AC-11.1
@@ -347,5 +367,6 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
-- 0.2 (29/10/2026): Wealth growth follows the net worth, which no longer counts a sold asset from its sale year (CSD-017, CSD-019 REQ-11; GitHub issue 27). No requirement changes.
+- 0.3 (30/10/2026): Houses replace assets in the wording. The definition of Repaid and REQ-5 gain the treatment of a Cancelled debt (CSD-020): its settled amount is subtracted from the repaid amount of the sale year (AC-5.6 to AC-5.8). NG-7 is unchanged. Back to `draft` until re-approved (GitHub issue 31).
+- 0.2 (29/10/2026): Wealth growth follows the net worth, which no longer counts a sold house from its sale year (CSD-017, CSD-019 REQ-11; GitHub issue 27). No requirement changes.
 - 0.1 (29/10/2026): initial draft, from GitHub issue 25 and the grill-me interview. Beyond the interview, a year in which no bank account has an increase, no investment account has a statement and no debt has a repaid amount has no wealth accumulation (REQ-5, AC-5.5), and the growth of total wealth is none when the year itself has no records (REQ-8). Approving it also changes CSD-004 REQ-1 (the Insights group holds Net worth and Ratios).

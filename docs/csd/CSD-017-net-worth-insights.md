@@ -1,27 +1,27 @@
 ---
 id: CSD-017
 title: Net worth insights
-status: approved
+status: draft
 owner: Thijs Bardoel
-version: 0.4
-last_updated: 29/10/2026
-related: [CSD-000, CSD-004, CSD-007, CSD-010, CSD-012, CSD-016, CSD-019]
+version: 0.5
+last_updated: 30/10/2026
+related: [CSD-000, CSD-004, CSD-007, CSD-010, CSD-012, CSD-016, CSD-019, CSD-020]
 ---
 
 # CSD-017: Net worth insights
 
 ## 1. Intent
-Each area of the app (assets, investments, bank accounts, debts) has its own yearly chart, but none shows the owner's overall financial state. This capability adds one page, "Net worth", that only provides insights: a chart with one stacked bar per calendar year, with what the owner has (assets, investments and cash) rising above the zero line and what the owner owes (debts) hanging below it, and a marker at the net worth of the year. It is for the owner looking back over their own finances. It reuses the yearly figures of the four areas and adds no data of its own. It is GitHub issue 24.
+Each area of the app (houses, investments, bank accounts, debts) has its own yearly chart, but none shows the owner's overall financial state. This capability adds one page, "Net worth", that only provides insights: a chart with one stacked bar per calendar year, with what the owner has (houses, investments and cash) rising above the zero line and what the owner owes (debts) hanging below it, and a marker at the net worth of the year. It is for the owner looking back over their own finances. It reuses the yearly figures of the four areas and adds no data of its own. It is GitHub issue 24.
 
 ## 2. Scope
 ### 2.1 In scope
 - A page "Net worth" in the left pane that replaces the "Reports" placeholder (CSD-004 REQ-1).
-- A yearly stacked bar chart with four segments (Assets, Investments, Cash, Debts), a net worth marker, a legend, a tooltip and the highlight of one series.
+- A yearly stacked bar chart with four segments (Houses, Investments, Cash, Debts), a net worth marker, a legend, a tooltip and the highlight of one series.
 - Its empty state.
 
 ### 2.2 Non-goals
 - NG-1: A monthly view, or any granularity other than a calendar year.
-- NG-2: A breakdown per asset, investment account, bank or debt. The segments are the four totals.
+- NG-2: A breakdown per house, investment account, bank or debt. The segments are the four totals.
 - NG-3: A percentage of growth, a forecast, and any figure other than the four totals and the net worth.
 - NG-4: A filter, or hiding a series.
 - NG-5: Click-through, zooming, or exporting the chart.
@@ -35,11 +35,11 @@ Each area of the app (assets, investments, bank accounts, debts) has its own yea
 |---|---|
 | **Year** | A calendar year. |
 | **Current year** | The calendar year of today, in local time. Its figures run up to the latest record so far and are therefore partial. |
-| **Assets** | The total value of a year of CSD-016 (the closing value of CSD-015 REQ-20, counting assets held at the end of the year, CSD-019 REQ-11). |
+| **Houses** | The total value of a year of CSD-016 (the closing value of CSD-015 REQ-20, counting houses held at the end of the year, CSD-019 REQ-11). |
 | **Investments** | The closing balance of a year of CSD-007 (CSD-005 REQ-26). |
 | **Cash** | The closing balance of a year over all bank accounts of CSD-010 (CSD-009 REQ-19). It is the sum of the latest balances of the banks, so an overdrawn bank reduces it. |
 | **Debts** | The total debt of a year of CSD-012 (the closing balance of CSD-011 REQ-19), never negative. |
-| **Net worth (of a year)** | Assets plus Investments plus Cash minus Debts. It can be negative. |
+| **Net worth (of a year)** | Houses plus Investments plus Cash minus Debts. It can be negative. |
 
 ## 4. Requirements
 
@@ -71,43 +71,43 @@ Scenario: One panel, no tabs
 ```
 
 **REQ-2: Year series** *(ubiquitous)*
-The app shall return, oldest first, one figure set for every calendar year from the earliest year in which any of assets, investments, bank accounts or debts has a record up to and including the current year, each with Assets, Investments, Cash, Debts and Net worth, computed in Rust.
+The app shall return, oldest first, one figure set for every calendar year from the earliest year in which any of houses, investments, bank accounts or debts has a record up to and including the current year, each with Houses, Investments, Cash, Debts and Net worth, computed in Rust.
 
 ```gherkin
 @AC-2.1
 Scenario: Range over all four areas
   Given today is 29/10/2026
   And the first record is a bank account entry for 2024-12
-  And the first asset valuation is for 2025-03
+  And the first house valuation is for 2025-03
   When the series is computed
   Then it holds the years 2024, 2025 and 2026
 
 @AC-2.2
 Scenario: No records at all
-  Given a project with no asset valuations, investment statements, bank account entries or debt statements
+  Given a project with no house valuations, investment statements, bank account entries or debt statements
   When the series is computed
   Then it holds no years
 ```
 
 **REQ-3: Figures of a year** *(ubiquitous)*
-For each year the app shall take Assets, Investments, Cash and Debts from the yearly figures of their own areas (section 3) and shall compute Net worth as Assets plus Investments plus Cash minus Debts, so that every figure of this page equals the one on the chart of its area.
+For each year the app shall take Houses, Investments, Cash and Debts from the yearly figures of their own areas (section 3) and shall compute Net worth as Houses plus Investments plus Cash minus Debts, so that every figure of this page equals the one on the chart of its area.
 
 ```gherkin
 @AC-3.1
 Scenario: Net worth of a year
-  Given 2025 has assets 300000.00, investments 20000.00, cash 5000.00 and debts 9000.00
+  Given 2025 has houses 300000.00, investments 20000.00, cash 5000.00 and debts 9000.00
   When the series is computed
   Then Net worth of 2025 is 316000.00
 
 @AC-3.2
 Scenario: Figures equal those of the area charts
-  Given the Assets chart shows total value 300000.00 for 2025
+  Given the Houses chart shows total value 300000.00 for 2025
   And the Debts chart shows total debt 9000.00 for 2025
-  Then this page shows Assets 300000.00 and Debts 9000.00 for 2025
+  Then this page shows Houses 300000.00 and Debts 9000.00 for 2025
 
 @AC-3.3
 Scenario: Debts above everything
-  Given 2025 has assets 0.00, investments 0.00, cash 1000.00 and debts 9000.00
+  Given 2025 has houses 0.00, investments 0.00, cash 1000.00 and debts 9000.00
   When the series is computed
   Then Net worth of 2025 is -8000.00
 ```
@@ -147,14 +147,14 @@ Scenario: A past year
 ```
 
 **REQ-6: Chart** *(ubiquitous)*
-The app shall draw a stacked bar per year in which Assets, Investments and Cash rise from the zero line in that order from the bottom up and Debts hangs down from it, with the top corners of the highest segment and the bottom corners of Debts rounded, with the look, the size and the motion of the bank accounts chart (CSD-010 REQ-12 and REQ-13): bars at most 50% of the slot and at most 44 px wide, a 1 px gap between segments, a plot height that scales with the height of the window and a minimum slot of 64 px per year. A series of 0.00 adds no height. The axis shall reach the highest bar, the deepest Debts and the net worth markers.
+The app shall draw a stacked bar per year in which Houses, Investments and Cash rise from the zero line in that order from the bottom up and Debts hangs down from it, with the top corners of the highest segment and the bottom corners of Debts rounded, with the look, the size and the motion of the bank accounts chart (CSD-010 REQ-12 and REQ-13): bars at most 50% of the slot and at most 44 px wide, a 1 px gap between segments, a plot height that scales with the height of the window and a minimum slot of 64 px per year. A series of 0.00 adds no height. The axis shall reach the highest bar, the deepest Debts and the net worth markers.
 
 ```gherkin
 @AC-6.1
 Scenario: Order of the segments
-  Given 2025 has assets 300000.00, investments 20000.00, cash 5000.00 and debts 9000.00
+  Given 2025 has houses 300000.00, investments 20000.00, cash 5000.00 and debts 9000.00
   When the user opens "Net worth"
-  Then the 2025 bar rises from Assets at the bottom to Investments and then Cash at the top
+  Then the 2025 bar rises from Houses at the bottom to Investments and then Cash at the top
   And Debts hangs below the zero line
 
 @AC-6.2
@@ -165,7 +165,7 @@ Scenario: Same size as the other charts
 @AC-6.3
 Scenario: Nothing to draw for a series
   Given 2024 has only cash 5000.00
-  Then the 2024 bar has one segment, Cash, and Assets, Investments and Debts add no height
+  Then the 2024 bar has one segment, Cash, and Houses, Investments and Debts add no height
 
 @AC-6.4
 Scenario: Negative net worth reaches the axis
@@ -189,13 +189,13 @@ Scenario: A negative marker
 ```
 
 **REQ-8: Colours and legend** *(ubiquitous)*
-The app shall give Assets, Investments and Cash three distinct colours of the shared palette and Debts the loss colour of the Investments chart, defined once as colour tokens per mode, and shall show a legend with the items "Assets", "Investments", "Cash", "Debts" and the marker "Net worth".
+The app shall give Houses, Investments and Cash three distinct colours of the shared palette and Debts the loss colour of the Investments chart, defined once as colour tokens per mode, and shall show a legend with the items "Houses", "Investments", "Cash", "Debts" and the marker "Net worth".
 
 ```gherkin
 @AC-8.1
 Scenario: Legend
   When the user opens "Net worth"
-  Then the legend shows "Assets", "Investments", "Cash", "Debts" and "Net worth" with their swatches
+  Then the legend shows "Houses", "Investments", "Cash", "Debts" and "Net worth" with their swatches
 
 @AC-8.2
 Scenario: Both modes
@@ -221,14 +221,14 @@ Scenario: Leave
 ```
 
 **REQ-10: Details of a year** *(event-driven)*
-When the user hovers over or focuses a year, the app shall show a tooltip with the year as its title and the rows in the order the bar shows them, from top to bottom: Cash, Investments, Assets, Debts (with a minus sign) and Net worth, with no count of records. A year in which no area has a record shows the note "No records".
+When the user hovers over or focuses a year, the app shall show a tooltip with the year as its title and the rows in the order the bar shows them, from top to bottom: Cash, Investments, Houses, Debts (with a minus sign) and Net worth, with no count of records. A year in which no area has a record shows the note "No records".
 
 ```gherkin
 @AC-10.1
 Scenario: Rows read like the bar
-  Given 2025 has assets 300000.00, investments 20000.00, cash 5000.00 and debts 9000.00
+  Given 2025 has houses 300000.00, investments 20000.00, cash 5000.00 and debts 9000.00
   When the user hovers over the 2025 bar
-  Then the tooltip lists Cash 5000.00, Investments 20000.00, Assets 300000.00, Debts -9000.00 and Net worth 316000.00 in that order
+  Then the tooltip lists Cash 5000.00, Investments 20000.00, Houses 300000.00, Debts -9000.00 and Net worth 316000.00 in that order
 
 @AC-10.2
 Scenario: A year without records
@@ -254,7 +254,7 @@ Scenario: Screen reader
 ```
 
 **REQ-12: No records yet** *(state-driven)*
-While no area has a record, the app shall show the note "No data yet. The chart appears once there is an asset, investment, bank account entry or debt." and no chart. While only some areas have records, the others shall contribute 0.00 and stay in the legend.
+While no area has a record, the app shall show the note "No data yet. The chart appears once there is a house, investment, bank account entry or debt." and no chart. While only some areas have records, the others shall contribute 0.00 and stay in the legend.
 
 ```gherkin
 @AC-12.1
@@ -267,7 +267,7 @@ Scenario: Empty project
 Scenario: Only one area has records
   Given only bank account entries exist
   When the user opens "Net worth"
-  Then the chart shows Cash and the legend still lists Assets, Investments and Debts
+  Then the chart shows Cash and the legend still lists Houses, Investments and Debts
 ```
 
 **REQ-13: Current figures** *(event-driven)*
@@ -289,9 +289,9 @@ Command: `get_net_worth_insights()` returns the series, oldest year first, and a
 ```json
 {
   "years": [
-    { "year": 2025, "assets": "300000.00", "investments": "20000.00", "cash": "5000.00",
+    { "year": 2025, "houses": "300000.00", "investments": "20000.00", "cash": "5000.00",
       "debts": "9000.00", "net_worth": "316000.00", "has_records": true, "is_partial": false },
-    { "year": 2026, "assets": "0.00", "investments": "0.00", "cash": "0.00",
+    { "year": 2026, "houses": "0.00", "investments": "0.00", "cash": "0.00",
       "debts": "0.00", "net_worth": "0.00", "has_records": false, "is_partial": true }
   ]
 }
@@ -322,7 +322,8 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
-- 0.4 (29/10/2026): The Assets figure counts assets held at the end of the year, so a sold asset drops out from its sale year (definition of Assets, CSD-019 REQ-11; GitHub issue 27). No other change.
+- 0.5 (30/10/2026): The segment Assets is renamed Houses (legend, tooltip, note and the `houses` field of the figures). A settled debt (CSD-020) counts like any debt: its 0.00 statement takes it out of Debts. No other requirement changes. Back to `draft` until re-approved (GitHub issue 31).
+- 0.4 (29/10/2026): The Houses figure counts houses held at the end of the year, so a sold house drops out from its sale year (definition of Houses, CSD-019 REQ-11; GitHub issue 27). No other change.
 - 0.3 (29/10/2026): The plot height scales with the height of the window instead of being a fixed 390 px: with the page scrolled to the top the chart ends at the bottom of the window, and the plot is never lower than 260 px. It is recomputed when the window is resized.
-- 0.2 (29/10/2026): The tooltip rows (REQ-10, AC-10.1) read Cash, Investments, Assets, Debts, Net worth, so they follow the bar from top to bottom as AC-6.1 stacks it; 0.1 listed them in the opposite order, which contradicted AC-6.1.
+- 0.2 (29/10/2026): The tooltip rows (REQ-10, AC-10.1) read Cash, Investments, Houses, Debts, Net worth, so they follow the bar from top to bottom as AC-6.1 stacks it; 0.1 listed them in the opposite order, which contradicted AC-6.1.
 - 0.1 (29/10/2026): initial draft, from GitHub issue 24 and the grill-me interview. It follows CSD-010 and CSD-016 (yearly series, partial year, marker, tooltip, highlight, look and size), with four fixed series, Debts below the zero line and a net worth marker. Approving it also changes CSD-004 REQ-1 (the "Reports" placeholder becomes "Net worth") and the combined-chart non-goals of CSD-012 NG-5 and CSD-016 NG-5.

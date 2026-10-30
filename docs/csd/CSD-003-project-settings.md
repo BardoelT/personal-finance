@@ -1,11 +1,11 @@
 ---
 id: CSD-003
 title: Project settings
-status: approved
+status: draft
 owner: Thijs Bardoel
-version: 0.11
-last_updated: 29/10/2026
-related: [CSD-001, CSD-002, CSD-005, CSD-008, CSD-009, CSD-011, CSD-013, CSD-015]
+version: 0.12
+last_updated: 30/10/2026
+related: [CSD-001, CSD-002, CSD-005, CSD-008, CSD-009, CSD-011, CSD-013, CSD-015, CSD-020]
 ---
 
 # CSD-003: Project settings
@@ -135,7 +135,7 @@ Scenario: Choosing the current currency changes nothing
 ```
 
 **REQ-5: Confirm when amounts exist** *(event-driven)*
-While the project has entries (paychecks, annual statements, investment statements, bank entries, debt statements, expenses or asset valuations), when the user chooses another currency, the app shall ask for confirmation before changing the currency, with the text "Existing amounts keep their values and only the currency changes. Amounts are not converted.", without stating a number of entries.
+While the project has entries (paychecks, annual statements, investment statements, bank entries, debt statements, expenses or house valuations), when the user chooses another currency, the app shall ask for confirmation before changing the currency, with the text "Existing amounts keep their values and only the currency changes. Amounts are not converted.", without stating a number of entries.
 
 ```gherkin
 @AC-5.1
@@ -221,15 +221,15 @@ Scenario: A project without expenses needs no confirmation for them
   And the project currency is "USD"
 
 @AC-5.13
-Scenario: Confirmation with only an asset valuation
-  Given a project in "EUR" with no jobs, no investments, no bank accounts, no debts, no expenses and an asset with 1 valuation for 2026-09 with value 300000.00
+Scenario: Confirmation with only a house valuation
+  Given a project in "EUR" with no jobs, no investments, no bank accounts, no debts, no expenses and a house with 1 valuation for 2026-09 with value 300000.00
   When the user chooses "USD"
   Then a confirmation says the amounts are not converted
   And choosing "Cancel" keeps "EUR" and the value 300000.00
 
 @AC-5.14
-Scenario: An asset without valuations needs no confirmation
-  Given a project in "EUR" with an asset and no valuations
+Scenario: A house without valuations needs no confirmation
+  Given a project in "EUR" with a house and no valuations
   When the user chooses "USD"
   Then no confirmation is asked
   And the project currency is "USD"
@@ -244,7 +244,7 @@ Scenario Outline: The confirmation states no number of entries
   Examples:
     | entries                                |
     | 1 paycheck                             |
-    | 3 debt statements and 2 asset valuations |
+    | 3 debt statements and 2 house valuations |
 ```
 
 **REQ-6: Unsupported currency** *(unwanted behaviour)*
@@ -301,7 +301,7 @@ Scenario: Other views show no currency
 
 ## 5. Interfaces and contracts
 
-Commands: `get_settings()` returns `{ currency, entry_count }` (the frontend reads the currency only for the Settings page), and `set_currency(currency)` returns the same. `entry_count` (paychecks, annual statements, investment statements, bank entries, debt statements, expenses and asset valuations) lets the frontend decide whether REQ-5 applies; the number is not displayed.
+Commands: `get_settings()` returns `{ currency, entry_count }` (the frontend reads the currency only for the Settings page), and `set_currency(currency)` returns the same. `entry_count` (paychecks, annual statements, investment statements, bank entries, debt statements, expenses and house valuations) lets the frontend decide whether REQ-5 applies; the number is not displayed.
 
 Menu: the item `open-settings` is added to the app menu, below About, with the accelerator ⌘,. Choosing it emits the event `menu-action` with that id, as the File menu items do (CSD-002 REQ-9).
 
@@ -331,8 +331,9 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.12 (30/10/2026): House valuations (formerly asset valuations) count for the currency confirmation: wording only. Back to `draft` until re-approved (GitHub issue 31).
 - 0.11 (29/10/2026): The currency confirmation states no number of entries: it reads "Existing amounts keep their values and only the currency changes. Amounts are not converted." and is still shown only when the project has at least one entry (REQ-5, new AC-5.15, manual checklist). `entry_count` stays in IPC and is not displayed.
-- 0.10 (29/10/2026): Asset valuations (CSD-015) also count as entries for the currency confirmation: REQ-5 reworded, AC-5.13 and AC-5.14 added, `entry_count` counts them. Back to `draft` until the owner approves.
+- 0.10 (29/10/2026): House valuations (CSD-015) also count as entries for the currency confirmation: REQ-5 reworded, AC-5.13 and AC-5.14 added, `entry_count` counts them. Back to `draft` until the owner approves.
 - 0.9 (29/10/2026): Wording only: "major expenses" (CSD-013) is now "expenses" in REQ-5, AC-5.11, AC-5.12 and section 5. No behaviour change.
 - 0.8 (29/10/2026): Major expenses (CSD-013) also count as entries for the currency confirmation: REQ-5 reworded, AC-5.11 and AC-5.12 added, `entry_count` counts them. Back to `draft` until the owner approves.
 - 0.7 (28/10/2026): Debt statements (CSD-011) also count as entries for the currency confirmation: REQ-5 reworded, AC-5.9 and AC-5.10 added, `entry_count` counts them. Back to `draft` until the owner approves.

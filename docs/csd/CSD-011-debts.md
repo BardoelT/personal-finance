@@ -1,11 +1,11 @@
 ---
 id: CSD-011
 title: Debts
-status: approved
+status: draft
 owner: Thijs Bardoel
-version: 0.3
-last_updated: 29/10/2026
-related: [CSD-000, CSD-002, CSD-003, CSD-005, CSD-009, CSD-012]
+version: 0.4
+last_updated: 30/10/2026
+related: [CSD-000, CSD-002, CSD-003, CSD-005, CSD-009, CSD-012, CSD-020]
 ---
 
 # CSD-011: Debts
@@ -27,11 +27,11 @@ The app tracks wealth, but has no view of what the user owes: a mortgage, a stud
 ### 2.2 Non-goals
 - NG-1: Interest rates, terms, monthly payments and repayment schedules.
 - NG-2: A forecast of when a debt is paid off, and any percentage of the debt repaid.
-- NG-3: A collateral or an asset linked to a debt.
+- NG-3: (removed in v0.4) A house linked to a debt is now CSD-020. A collateral or a lien stays out of scope.
 - NG-4: Netting the debts against bank accounts and investments, and integration with net worth and the dashboard (CSD-004).
 - NG-5: Money owed to the user.
 - NG-6: Data fetched from a lender, and import of statements (CSV, PDF, lender export).
-- NG-7: Archiving or marking a debt as repaid. A debt at 0.00 stays a normal row.
+- NG-7: Archiving a debt. A debt at 0.00 stays a normal row. (Marking it Repaid or Cancelled on the sale of its house is CSD-020.)
 - NG-8: Lender identifiers and other details: an account or contract number, a lender name apart from the name of the debt, a debt type, and a note on the debt itself.
 - NG-9: A currency per debt. All amounts are in the project currency (CSD-003).
 - NG-10: Individual payments, a stored original amount, and negative balances.
@@ -1014,6 +1014,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.4 (30/10/2026): A debt may be linked to a house and settled when that house is sold (CSD-020). NG-3 and NG-7 no longer exclude the link and the Repaid/Cancelled marking; NG-8 stays (there is no debt type). Back to `draft` until re-approved (GitHub issue 31).
 - 0.3 (29/10/2026): The position in the left pane is stated in CSD-004 REQ-1 and no longer repeated here (GitHub issue 21).
 - 0.1 (28/10/2026): initial draft, from GitHub issue 15 and the grill-me interview. It follows CSD-009 (debts, colour slot, period lock, statements, changing the period, copy previous, yearly totals, layout), with a balance of 0.00 or more, a change per statement (REQ-25) and an amount repaid in the yearly totals.
 - 0.2 (29/10/2026): No counts are displayed any more: the yearly totals have the columns Year, Closing balance and Repaid (REQ-19, REQ-20, AC-12.6, AC-19.x, AC-20.2, AC-20.8), debt rows show only the period (REQ-20, REQ-21, AC-21.2), and the delete confirmation states no count (REQ-6, new AC-6.4). The count fields stay in IPC but are not displayed (section 5). The Statements section keeps its "No statements yet." note.
