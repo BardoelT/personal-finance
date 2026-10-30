@@ -28,33 +28,9 @@ function latestValue(house) {
   return h('span', { class: 'account-amount' }, formatAmount(house.latest_value), h('small', {}, house.latest_period));
 }
 
-/** The purchase and the sale of a house as one line (CSD-019 REQ-9). Display only. */
+/** Only the valuation period and Held or Sold; the purchase and sale are in the edit form (CSD-019 REQ-9). */
 function holdingText(house) {
-  if (house.purchase_date === null) return `${house.valuation_period} · Held`;
-  const bought = `Bought ${formatDate(house.purchase_date)} for ${formatAmount(house.purchase_amount)}`;
-  const state = house.held
-    ? 'Held'
-    : `Sold on ${formatDate(house.sell_date)} for ${formatAmount(house.sell_amount)}, result ${formatAmount(house.result)}`;
-  return `${house.valuation_period} · ${bought} · ${state}`;
-}
-
-/** The debts linked to a house with their latest balance and, once settled, the outcome (CSD-020 REQ-13). */
-function linkedDebtList(house) {
-  if (house.linked_debts.length === 0) return '';
-  return h(
-    'ul',
-    { class: 'linked-debts', 'aria-label': `Debts of ${house.name}` },
-    ...house.linked_debts.map((debt) =>
-      h(
-        'li',
-        {},
-        h('span', {}, `${debt.debt_name} ${debt.latest_balance === null ? '—' : formatAmount(debt.latest_balance)}`),
-        debt.settlement
-          ? h('span', { class: 'badge' }, `${debt.settlement.outcome} ${formatAmount(debt.settlement.amount)}`)
-          : '',
-      ),
-    ),
-  );
+  return `${house.valuation_period} · ${house.held ? 'Held' : 'Sold'}`;
 }
 
 function renderHouses(overview) {
@@ -66,7 +42,7 @@ function renderHouses(overview) {
     ...houses.map((house) =>
       h(
         'li',
-        { class: house.linked_debts.length > 0 ? 'job-row has-linked' : 'job-row' },
+        { class: 'job-row' },
         h('span', { class: 'job-name' }, house.name),
         h('span', { class: 'job-meta' }, holdingText(house)),
         latestValue(house),
@@ -76,7 +52,6 @@ function renderHouses(overview) {
           iconButton('edit', `Edit ${house.name}`, () => openHouseDialog(house)),
           iconButton('delete', `Delete ${house.name}`, () => deleteHouse(house)),
         ),
-        linkedDebtList(house),
       ),
     ),
   );
@@ -144,17 +119,19 @@ async function changed() {
 
 let editingHouse = null;
 
-/** The debts linked to the house, read-only: they are linked in the debt form (CSD-020 REQ-13). */
+/** The debts linked to the house as a read-only table: they are linked in the debt form (CSD-020 REQ-13). */
 function fillLinkedDebts(house) {
   const linked = house ? house.linked_debts : [];
   $('house-debts').hidden = linked.length === 0;
-  $('house-debt-list').replaceChildren(
+  $('house-debt-rows').replaceChildren(
     ...linked.map((debt) =>
       h(
-        'li',
+        'tr',
         {},
-        h('span', {}, `${debt.debt_name} · ${debt.category} · ${debt.latest_balance === null ? '—' : formatAmount(debt.latest_balance)}`),
-        debt.settlement ? h('span', { class: 'badge' }, `${debt.settlement.outcome} ${formatAmount(debt.settlement.amount)}`) : '',
+        h('th', { scope: 'row', class: 'wrap' }, debt.debt_name),
+        h('td', {}, debt.category),
+        h('td', { class: 'num' }, debt.latest_balance === null ? '—' : formatAmount(debt.latest_balance)),
+        h('td', {}, debt.settlement ? `${debt.settlement.outcome} ${formatAmount(debt.settlement.amount)}` : '—'),
       ),
     ),
   );

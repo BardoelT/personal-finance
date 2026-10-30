@@ -950,7 +950,19 @@
       </div>
       <div class="field" id="house-debts" hidden>
         <span id="house-debts-label">Linked debts</span>
-        <ul class="linked-debts" id="house-debt-list" aria-labelledby="house-debts-label"></ul>
+        <div class="table-wrap in-dialog">
+          <table class="data-table compact" aria-labelledby="house-debts-label">
+            <thead>
+              <tr>
+                <th scope="col">Debt</th>
+                <th scope="col">Category</th>
+                <th scope="col" class="num">Balance</th>
+                <th scope="col">Outcome</th>
+              </tr>
+            </thead>
+            <tbody id="house-debt-rows"></tbody>
+          </table>
+        </div>
         <span class="field-hint">Debts are linked to a house in the Debts page.</span>
       </div>
       <p class="form-error" id="house-error" role="alert" hidden></p>
