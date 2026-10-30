@@ -32,9 +32,10 @@ Two rules shape everything:
 | `domain/bank_accounts/` | Bank accounts, entries with signed balances, colour slots, yearly totals, insights per bank. Reuses the investments' `Period` and `Note` |
 | `domain/net_worth/` | The yearly net worth: combines the yearly closing figures of houses, investments, bank accounts and debts (it keeps no data of its own) |
 | `domain/ratios/` | The yearly ratios between income, wealth, growth and expenses, built from the figures the other areas already give. The bank accounts add one figure of their own, the increase of a year |
+| `domain/series.rs` | What the named series share: the name limit, the colour slot choice, the case-insensitive name check and the alphabetical order (investment accounts, bank accounts, debts, houses, expenses) |
 | `domain/money.rs`, `settings.rs`, `error.rs`, `project_data.rs` | Amounts and currency, project settings, the domain error enum, the project's data sections |
 | `commands/` | `#[tauri::command]` handlers, one file per area. Thin: parse and bound the input, call `domain`, map errors |
-| `storage/` | Reading and writing the project file (atomic write), remembering the last project |
+| `storage/` | Reading and writing the project file (atomic write), remembering the last project. `storage/project/` keeps the tests of each area in its own file |
 
 A big domain module is a folder. Its `mod.rs` holds the data struct (`Income`, `Investments`) and the rules for changing it. The other files add value types (`dates`, `job`, `entry`; `period`, `amounts`, `account`, `statement`) and the figures derived from the data (`totals`, `insights`, `overview`, `growth`). Each file starts with a one-line `//!` comment saying what it is. Tests sit next to the code in `tests.rs`.
 

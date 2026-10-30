@@ -11,13 +11,9 @@ use uuid::Uuid;
 use crate::domain::error::DomainError;
 use crate::domain::income::PayPeriod;
 use crate::domain::investments::Period;
+use crate::domain::series::MAX_NAME_CHARS;
 
 use super::{HouseDate, HouseValue};
-
-pub(super) const MAX_NAME_CHARS: usize = 100;
-
-/// How many colours the Insights chart has (CSD-015 REQ-3, CSD-016 REQ-8).
-pub(super) const COLOUR_SLOTS: u8 = 8;
 
 /// Identifies a house.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]

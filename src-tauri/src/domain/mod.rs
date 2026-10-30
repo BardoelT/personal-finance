@@ -12,6 +12,7 @@ pub mod net_worth;
 pub mod preferences;
 pub mod project_data;
 pub mod ratios;
+pub(crate) mod series;
 pub mod settings;
 
 pub use bank_accounts::{

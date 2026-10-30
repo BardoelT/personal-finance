@@ -7,8 +7,7 @@ use uuid::Uuid;
 
 use crate::domain::error::DomainError;
 use crate::domain::income::PayPeriod;
-
-pub(super) const MAX_NAME_CHARS: usize = 100;
+use crate::domain::series::MAX_NAME_CHARS;
 
 /// Identifies an investment account.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]

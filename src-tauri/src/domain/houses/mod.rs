@@ -39,7 +39,7 @@ use crate::domain::error::DomainError;
 use crate::domain::income::YearMonth;
 use crate::domain::investments::{Note, Period};
 
-use house::{COLOUR_SLOTS, MAX_NAME_CHARS};
+use crate::domain::series::{self, COLOUR_SLOTS, MAX_NAME_CHARS};
 
 /// All houses with their valuations. Houses are kept in the order they were
 /// created (CSD-015 section 5).
@@ -360,25 +360,18 @@ impl Houses {
 
     /// The lowest colour slot used by the fewest houses (REQ-3).
     fn next_colour_slot(&self) -> u8 {
-        (0..COLOUR_SLOTS)
-            .min_by_key(|slot| {
-                (
-                    self.houses
-                        .iter()
-                        .filter(|house| house.colour_slot == *slot)
-                        .count(),
-                    *slot,
-                )
-            })
-            .unwrap_or_default()
+        series::next_colour_slot(self.houses.iter().map(|house| house.colour_slot))
     }
 
     /// Whether another house already has this name, ignoring case (REQ-2).
     fn name_taken(&self, name: &str, except: Option<HouseId>) -> bool {
-        let wanted = name.to_lowercase();
-        self.houses
-            .iter()
-            .any(|house| Some(house.id) != except && house.name.to_lowercase() == wanted)
+        series::name_taken(
+            self.houses
+                .iter()
+                .map(|house| (house.id, house.name.as_str())),
+            name,
+            except,
+        )
     }
 }
 
@@ -406,5 +399,5 @@ fn purchase_and_sale_consistent(house: &House) -> bool {
 
 /// Alphabetical order ignoring case, with the id as a stable tie-break.
 fn house_order(house: &House) -> (String, String) {
-    (house.name.to_lowercase(), house.id.to_string())
+    series::name_order(&house.name, &house.id)
 }

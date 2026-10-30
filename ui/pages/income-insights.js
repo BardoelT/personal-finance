@@ -73,7 +73,6 @@ const chart = createYearlyChart({
   labelLines: (row) => [{ text: yearLabel(row), className: 'chart-year' }],
 });
 
-export const reloadIncomeInsights = chart.reload;
 /** Reloads the chart only while the Insights tab is showing (after a project is opened). */
 export const reloadIncomeInsightsIfOpen = chart.reloadIfOpen;
 

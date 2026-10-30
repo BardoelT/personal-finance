@@ -20,6 +20,11 @@ import { reloadDashboard } from './pages/dashboard.js';
 import { initNetWorth, reloadNetWorthIfOpen } from './pages/net-worth.js';
 import { initRatios, reloadRatiosIfOpen } from './pages/ratios.js';
 
+async function refreshStatusAndSettings() {
+  await refreshProjectStatus();
+  await reloadSettings();
+}
+
 async function start() {
   // The theme comes first: the page stays hidden until it is applied (CSD-008 REQ-6).
   // If it cannot be loaded the app still starts, with the theme macOS gives it.
@@ -50,42 +55,27 @@ async function start() {
   initInvestmentsInsights();
   // Investment statements count for the currency confirmation of the settings page.
   initInvestmentsOverview({
-    onChanged: async () => {
-      await refreshProjectStatus();
-      await reloadSettings();
-    },
+    onChanged: refreshStatusAndSettings,
   });
   initBankInsights();
   // Bank entries count for the currency confirmation of the settings page (CSD-009 REQ-24).
   initBankOverview({
-    onChanged: async () => {
-      await refreshProjectStatus();
-      await reloadSettings();
-    },
+    onChanged: refreshStatusAndSettings,
   });
   initDebtsInsights();
   // Debt statements count for the currency confirmation of the settings page (CSD-011 REQ-24).
   initDebtsOverview({
-    onChanged: async () => {
-      await refreshProjectStatus();
-      await reloadSettings();
-    },
+    onChanged: refreshStatusAndSettings,
   });
   initHousesInsights();
   // House valuations count for the currency confirmation of the settings page (CSD-015 REQ-25).
   initHousesOverview({
-    onChanged: async () => {
-      await refreshProjectStatus();
-      await reloadSettings();
-    },
+    onChanged: refreshStatusAndSettings,
   });
   initExpensesInsights();
   // Expenses count for the currency confirmation of the settings page (CSD-013 REQ-17).
   initExpensesOverview({
-    onChanged: async () => {
-      await refreshProjectStatus();
-      await reloadSettings();
-    },
+    onChanged: refreshStatusAndSettings,
   });
   initNetWorth();
   initRatios();

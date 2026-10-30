@@ -1,6 +1,6 @@
-use super::account::COLOUR_SLOTS;
 use super::*;
 use crate::domain::income::PayPeriod;
+use crate::domain::series::COLOUR_SLOTS;
 
 fn period(text: &str) -> Period {
     parse_period(text).unwrap()

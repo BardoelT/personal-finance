@@ -8,10 +8,9 @@ use uuid::Uuid;
 
 use crate::domain::error::DomainError;
 use crate::domain::investments::Note;
+use crate::domain::series::MAX_NAME_CHARS;
 
 use super::{expense_note, Category, ExpenseAmount, ExpenseDate};
-
-pub(super) const MAX_NAME_CHARS: usize = 100;
 
 /// Identifies an expense.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
