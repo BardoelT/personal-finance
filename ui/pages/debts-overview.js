@@ -37,7 +37,12 @@ function renderDebts(overview) {
         'li',
         { class: 'job-row' },
         h('span', { class: 'job-name' }, debt.name),
-        h('span', { class: 'job-meta' }, debt.statement_period),
+        h(
+          'span',
+          { class: 'job-meta' },
+          debt.house_name ? `${debt.statement_period} · ${debt.house_name} ` : debt.statement_period,
+          debt.settlement ? h('span', { class: 'badge' }, `${debt.settlement.outcome} ${formatAmount(debt.settlement.amount)}`) : '',
+        ),
         latestBalance(debt),
         h(
           'span',

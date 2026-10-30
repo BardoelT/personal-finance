@@ -7,6 +7,7 @@ import { formatAmount, formatDate, currentYear, currentMonth } from '../shared/f
 const $ = (id) => document.getElementById(id);
 
 let houses = [];
+let debts = [];
 let onChanged = async () => {};
 
 /** The first line of a note, with an ellipsis when there is more (CSD-015 REQ-20). */
@@ -37,6 +38,25 @@ function holdingText(house) {
   return `${house.valuation_period} · ${bought} · ${state}`;
 }
 
+/** The debts linked to a house with their latest balance and, once settled, the outcome (CSD-020 REQ-13). */
+function linkedDebtList(house) {
+  if (house.linked_debts.length === 0) return '';
+  return h(
+    'ul',
+    { class: 'linked-debts', 'aria-label': `Debts of ${house.name}` },
+    ...house.linked_debts.map((debt) =>
+      h(
+        'li',
+        {},
+        h('span', {}, `${debt.debt_name} ${debt.latest_balance === null ? '—' : formatAmount(debt.latest_balance)}`),
+        debt.settlement
+          ? h('span', { class: 'badge' }, `${debt.settlement.outcome} ${formatAmount(debt.settlement.amount)}`)
+          : '',
+      ),
+    ),
+  );
+}
+
 function renderHouses(overview) {
   houses = overview.houses;
   const hasHouses = houses.length > 0;
@@ -46,7 +66,7 @@ function renderHouses(overview) {
     ...houses.map((house) =>
       h(
         'li',
-        { class: 'job-row' },
+        { class: house.linked_debts.length > 0 ? 'job-row has-linked' : 'job-row' },
         h('span', { class: 'job-name' }, house.name),
         h('span', { class: 'job-meta' }, holdingText(house)),
         latestValue(house),
@@ -56,6 +76,7 @@ function renderHouses(overview) {
           iconButton('edit', `Edit ${house.name}`, () => openHouseDialog(house)),
           iconButton('delete', `Delete ${house.name}`, () => deleteHouse(house)),
         ),
+        linkedDebtList(house),
       ),
     ),
   );
@@ -106,7 +127,8 @@ function renderValuations(valuations) {
 
 /** Reloads everything from Rust. */
 export async function reloadHousesOverview() {
-  const overview = await invoke('list_houses');
+  const [overview, debtOverview] = await Promise.all([invoke('list_houses'), invoke('list_debts')]);
+  debts = debtOverview.debts;
   renderHouses(overview);
   if (overview.houses.length === 0) return;
   const [totals, valuations] = await Promise.all([invoke('yearly_house_values'), invoke('list_house_valuations')]);
@@ -129,6 +151,7 @@ function openHouseDialog(house) {
   form.reset();
   $('house-error').hidden = true;
   $('house-dialog-title').textContent = house ? 'Edit house' : 'Add house';
+  fillDebtChoices(house);
   // The valuation period is locked once the house has valuations (CSD-015 REQ-5).
   const locked = Boolean(house && house.valuation_count > 0);
   form.elements.valuation_period.disabled = locked;
@@ -146,6 +169,87 @@ function openHouseDialog(house) {
   form.elements.name.focus();
 }
 
+/** The debts a house can be linked to: unlinked ones and its own (CSD-020 REQ-13). The links of a sold house are locked. */
+function fillDebtChoices(house) {
+  const choices = debts.filter((debt) => !debt.house_id || (house && debt.house_id === house.id));
+  const locked = Boolean(house && !house.held);
+  $('house-debts').hidden = choices.length === 0;
+  $('house-debt-choices').replaceChildren(
+    ...choices.map((debt) =>
+      h(
+        'label',
+        { class: 'debt-choice' },
+        h('input', {
+          type: 'checkbox',
+          name: 'debt',
+          value: debt.id,
+          ...(house && debt.house_id === house.id ? { checked: true } : {}),
+          ...(locked ? { disabled: true } : {}),
+        }),
+        debt.name,
+      ),
+    ),
+  );
+}
+
+function checkedDebtIds() {
+  return [...$('house-debt-choices').querySelectorAll('input:checked')].map((box) => box.value);
+}
+
+/** Asks Repaid or Cancelled for each open debt; resolves to the choices, or null for Back (CSD-020 REQ-15). */
+function askSettlements(openDebts) {
+  const dialog = $('house-settle-dialog');
+  const save = $('house-settle-save');
+  const rows = $('house-settle-rows');
+  const chosen = new Map();
+  save.disabled = true;
+  rows.replaceChildren(
+    ...openDebts.map((debt) =>
+      h(
+        'div',
+        { class: 'settle-row' },
+        h('span', {}, `${debt.debt_name} ${formatAmount(debt.amount)}`),
+        h(
+          'span',
+          { class: 'settle-choices', role: 'radiogroup', 'aria-label': `Outcome of ${debt.debt_name}` },
+          ...['Repaid', 'Cancelled'].map((outcome) =>
+            h(
+              'label',
+              { class: 'debt-choice' },
+              h('input', {
+                type: 'radio',
+                name: `settle-${debt.debt_id}`,
+                value: outcome,
+                onchange: () => {
+                  chosen.set(debt.debt_id, outcome);
+                  save.disabled = chosen.size < openDebts.length;
+                },
+              }),
+              outcome,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  return new Promise((resolve) => {
+    const finish = (result) => {
+      $('house-settle-form').onsubmit = null;
+      $('house-settle-back').onclick = null;
+      dialog.oncancel = null;
+      if (dialog.open) dialog.close();
+      resolve(result);
+    };
+    $('house-settle-form').onsubmit = (event) => {
+      event.preventDefault();
+      finish([...chosen].map(([debt_id, outcome]) => ({ debt_id, outcome })));
+    };
+    $('house-settle-back').onclick = () => finish(null);
+    dialog.oncancel = () => finish(null);
+    dialog.showModal();
+  });
+}
+
 async function submitHouse(event) {
   event.preventDefault();
   const form = $('house-form');
@@ -159,11 +263,33 @@ async function submitHouse(event) {
   if (!form.elements.valuation_period.disabled) {
     input.valuation_period = form.elements.valuation_period.value;
   }
+  const links = { debt_ids: checkedDebtIds(), settlements: [], confirm_undo: false };
   try {
+    const sellDate = input.sell_date.trim();
+    const sold = editingHouse !== null && !editingHouse.held;
+    if (sellDate && !sold) {
+      // A new sale: linked debts with an open balance need Repaid or Cancelled (CSD-020 REQ-3).
+      const open = await invoke('list_open_debts', { debtIds: links.debt_ids, sellDate });
+      if (open.length > 0) {
+        const choices = await askSettlements(open);
+        if (choices === null) return;
+        links.settlements = choices;
+      }
+    } else if (!sellDate && sold && editingHouse.linked_debts.some((debt) => debt.settlement)) {
+      // Undoing the sale also undoes the settled debts (CSD-020 REQ-6).
+      const confirmed = await confirmAction({
+        title: 'Undo the sale?',
+        message: 'The debts settled on this sale go back to their earlier balances.',
+        confirmLabel: 'Undo sale',
+        danger: true,
+      });
+      if (!confirmed) return;
+      links.confirm_undo = true;
+    }
     if (editingHouse) {
-      await invoke('update_house', { houseId: editingHouse.id, input });
+      await invoke('update_house', { houseId: editingHouse.id, input, links });
     } else {
-      await invoke('create_house', { input });
+      await invoke('create_house', { input, links });
     }
     $('house-dialog').close();
     await changed();

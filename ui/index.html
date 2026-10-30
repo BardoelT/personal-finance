@@ -948,10 +948,27 @@
           <input type="text" name="sell_amount" inputmode="decimal" autocomplete="off">
         </label>
       </div>
+      <fieldset class="field debt-choices" id="house-debts">
+        <legend>Linked debts (optional)</legend>
+        <div id="house-debt-choices"></div>
+        <span class="field-hint" id="house-debts-hint">Link existing debts, such as a mortgage or a loan. When the house is sold you choose per debt whether it was repaid or cancelled.</span>
+      </fieldset>
       <p class="form-error" id="house-error" role="alert" hidden></p>
       <div class="dialog-actions">
         <button type="button" class="btn" data-cancel>Cancel</button>
         <button type="submit" class="btn primary">Save house</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="house-settle-dialog" aria-labelledby="house-settle-title">
+    <form method="dialog" id="house-settle-form" novalidate>
+      <h2 id="house-settle-title">Settle linked debts</h2>
+      <p class="field-hint">Repaid counts as wealth accumulation from cash, Cancelled does not.</p>
+      <div id="house-settle-rows"></div>
+      <div class="dialog-actions">
+        <button type="button" class="btn" id="house-settle-back">Back</button>
+        <button type="submit" class="btn primary" id="house-settle-save" disabled>Save sale</button>
       </div>
     </form>
   </dialog>

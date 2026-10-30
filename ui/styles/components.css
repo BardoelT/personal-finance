@@ -136,6 +136,15 @@
   padding: 11px 20px;
 }
 .job-name { font-size: 14px; font-weight: 600; }
+.job-row.has-linked { flex-wrap: wrap; }
+.linked-debts { flex-basis: 100%; margin: 0; padding: 0; list-style: none; font-size: 12px; color: var(--muted); }
+.linked-debts li { display: flex; gap: 8px; padding: 2px 0; }
+.badge { display: inline-block; padding: 0 8px; border: 1px solid var(--border); border-radius: 999px; font-size: 11px; color: var(--muted); }
+.debt-choices { border: 0; padding: 0; margin: 0 0 12px; }
+.debt-choices legend { padding: 0; margin-bottom: 6px; }
+.debt-choice { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-weight: 400; }
+.settle-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.settle-choices { display: flex; gap: 14px; }
 .job-meta { flex: 1; font-size: 12px; color: var(--muted); min-width: 0; }
 .job-actions { display: flex; gap: 8px; flex-shrink: 0; }
 .field textarea { resize: vertical; min-height: 72px; }
