@@ -82,7 +82,11 @@ pub fn ratios(sources: &RatioSources<'_>, today: YearMonth) -> Ratios {
         .debts
         .yearly_totals()
         .into_iter()
-        .map(|total| (total.year, total.repaid))
+        .map(|total| {
+            // A Cancelled debt was not paid with cash (CSD-020 REQ-12).
+            let cancelled = sources.debts.cancelled_in(total.year);
+            (total.year, total.repaid.map(|repaid| repaid - cancelled))
+        })
         .collect();
     let investment_growth: BTreeMap<i32, Option<Decimal>> = sources
         .investments

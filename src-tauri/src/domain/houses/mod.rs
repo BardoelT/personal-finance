@@ -10,10 +10,13 @@ mod amounts;
 mod dates;
 mod house;
 mod insights;
+pub mod linking;
 mod overview;
 mod totals;
 mod valuation;
 
+#[cfg(test)]
+mod linking_tests;
 #[cfg(test)]
 mod purchase_tests;
 #[cfg(test)]
@@ -23,7 +26,7 @@ pub use amounts::{house_note, HouseValue};
 pub use dates::HouseDate;
 pub use house::{House, HouseId, HouseInput};
 pub use insights::HouseInsights;
-pub use overview::HousesOverview;
+pub use overview::HouseSummary;
 pub use totals::HouseYearlyValue;
 pub use valuation::{parse_period, HouseValuation, ValuationPrefill};
 
@@ -294,6 +297,12 @@ impl Houses {
             }
         }
         Ok(())
+    }
+
+    /// A house by id.
+    #[must_use]
+    pub fn get(&self, id: HouseId) -> Option<&House> {
+        self.houses.iter().find(|house| house.id == id)
     }
 
     fn house(&self, id: HouseId) -> Result<&House, DomainError> {

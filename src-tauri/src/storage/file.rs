@@ -99,6 +99,9 @@ pub(super) fn from_json(text: &str) -> Result<ProjectData, StorageError> {
     file.houses
         .validate()
         .map_err(|_| StorageError::InvalidFile)?;
+    file.debts
+        .validate_links(&file.houses)
+        .map_err(|_| StorageError::InvalidFile)?;
     Ok(ProjectData {
         income: file.income,
         investments: file.investments,

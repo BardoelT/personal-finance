@@ -8,10 +8,11 @@ use serde::Serialize;
 use tauri::State;
 
 use super::AppState;
+use crate::domain::debts::OpenDebt;
+use crate::domain::houses::linking::{self, DebtLinksInput, HousesView};
 use crate::domain::houses::{house_note, parse_period, HouseInput, HouseValue};
 use crate::domain::{
     House, HouseId, HouseInsights, HouseValuation, HouseValuationPrefill, HouseYearlyValue, Houses,
-    HousesOverview,
 };
 use crate::error::AppError;
 use crate::storage::Project;
@@ -46,16 +47,45 @@ impl ValuationView {
 
 /// The houses with their latest values and the total house (REQ-17).
 #[tauri::command]
-pub fn list_houses(state: State<'_, AppState>) -> Result<HousesOverview, AppError> {
+pub fn list_houses(state: State<'_, AppState>) -> Result<HousesView, AppError> {
     let project = state.project()?;
-    Ok(project.houses().overview())
+    Ok(linking::houses_view(project.houses(), project.debts()))
+}
+
+/// The linked debts with an open balance at a sale on `sell_date`, for the
+/// settlement prompt (CSD-020 REQ-15).
+#[tauri::command]
+pub fn list_open_debts(
+    state: State<'_, AppState>,
+    debt_ids: Vec<String>,
+    sell_date: String,
+) -> Result<Vec<OpenDebt>, AppError> {
+    let today = state.today_date();
+    let project = state.project()?;
+    Ok(linking::open_debts(
+        project.debts(),
+        &debt_ids,
+        &sell_date,
+        today,
+    )?)
 }
 
 #[tauri::command]
-pub fn create_house(state: State<'_, AppState>, input: HouseInput) -> Result<House, AppError> {
+pub fn create_house(
+    state: State<'_, AppState>,
+    input: HouseInput,
+    links: Option<DebtLinksInput>,
+) -> Result<House, AppError> {
     let today = state.today_date();
     let mut project = state.project()?;
-    Ok(project.houses_mut().create_house(&input, today)?)
+    let (houses, debts) = project.houses_and_debts_mut();
+    Ok(linking::create_house(
+        houses,
+        debts,
+        &input,
+        &links.unwrap_or_default(),
+        today,
+    )?)
 }
 
 #[tauri::command]
@@ -63,20 +93,26 @@ pub fn update_house(
     state: State<'_, AppState>,
     house_id: String,
     input: HouseInput,
+    links: Option<DebtLinksInput>,
 ) -> Result<House, AppError> {
     let today = state.today_date();
     let mut project = state.project()?;
-    Ok(project
-        .houses_mut()
-        .update_house(HouseId::parse(&house_id)?, &input, today)?)
+    let (houses, debts) = project.houses_and_debts_mut();
+    Ok(linking::update_house(
+        houses,
+        debts,
+        HouseId::parse(&house_id)?,
+        &input,
+        &links.unwrap_or_default(),
+        today,
+    )?)
 }
 
 #[tauri::command]
 pub fn delete_house(state: State<'_, AppState>, house_id: String) -> Result<(), AppError> {
     let mut project = state.project()?;
-    project
-        .houses_mut()
-        .delete_house(HouseId::parse(&house_id)?)?;
+    let (houses, debts) = project.houses_and_debts_mut();
+    linking::delete_house(houses, debts, HouseId::parse(&house_id)?)?;
     Ok(())
 }
 

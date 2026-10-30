@@ -9,9 +9,9 @@ use tauri::State;
 
 use super::AppState;
 use crate::domain::debts::{debt_note, parse_period, DebtBalance, DebtInput};
+use crate::domain::houses::linking::{self, DebtsView};
 use crate::domain::{
     Debt, DebtId, DebtInsights, DebtStatement, DebtStatementPrefill, DebtYearlyTotal, Debts,
-    DebtsOverview,
 };
 use crate::error::AppError;
 use crate::storage::Project;
@@ -46,9 +46,9 @@ impl StatementView {
 
 /// The debts with their latest balances and the total debt (REQ-17).
 #[tauri::command]
-pub fn list_debts(state: State<'_, AppState>) -> Result<DebtsOverview, AppError> {
+pub fn list_debts(state: State<'_, AppState>) -> Result<DebtsView, AppError> {
     let project = state.project()?;
-    Ok(project.debts().overview())
+    Ok(linking::debts_view(project.debts(), project.houses()))
 }
 
 #[tauri::command]

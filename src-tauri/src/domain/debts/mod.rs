@@ -10,6 +10,7 @@ mod amounts;
 mod debt;
 mod insights;
 mod overview;
+mod settlement;
 mod statement;
 mod totals;
 
@@ -19,7 +20,8 @@ mod tests;
 pub use amounts::{debt_note, DebtBalance};
 pub use debt::{Debt, DebtId, DebtInput};
 pub use insights::DebtInsights;
-pub use overview::DebtsOverview;
+pub use overview::DebtSummary;
+pub use settlement::{OpenDebt, Outcome, Settlement};
 pub use statement::{parse_period, DebtStatement, StatementPrefill};
 pub use totals::DebtYearlyTotal;
 
@@ -59,6 +61,8 @@ impl Debts {
             name: valid.name,
             statement_period: valid.statement_period.unwrap_or_default(),
             colour_slot: self.next_colour_slot(),
+            house_id: None,
+            settlement: None,
         };
         self.debts.push(debt.clone());
         Ok(debt)
@@ -78,6 +82,9 @@ impl Debts {
             return Err(DomainError::DebtNameDuplicate);
         }
         let statement_period = valid.statement_period.unwrap_or(current);
+        if statement_period != current && self.debt(id)?.settlement.is_some() {
+            return Err(DomainError::DebtSettledLocked);
+        }
         if statement_period != current && self.statement_count(id) > 0 {
             return Err(DomainError::DebtPeriodLocked);
         }
@@ -136,6 +143,7 @@ impl Debts {
         today: YearMonth,
     ) -> Result<DebtStatement, DomainError> {
         self.check_new_period(debt_id, period, today)?;
+        self.check_unsettled_at(debt_id, period)?;
         let statement = DebtStatement {
             debt_id,
             period,
@@ -168,8 +176,10 @@ impl Debts {
         if self.statement(debt_id, period).is_none() {
             return Err(DomainError::DebtStatementNotFound);
         }
+        self.check_unsettled_at(debt_id, period)?;
         if new_period != period {
             self.check_new_period(debt_id, new_period, today)?;
+            self.check_unsettled_at(debt_id, new_period)?;
         }
         let statement = self
             .statements
@@ -189,6 +199,7 @@ impl Debts {
     /// Returns `DebtNotFound` or `DebtStatementNotFound`.
     pub fn delete_statement(&mut self, debt_id: DebtId, period: Period) -> Result<(), DomainError> {
         self.debt(debt_id)?;
+        self.check_unsettled_at(debt_id, period)?;
         let before = self.statements.len();
         self.statements
             .retain(|s| !(s.debt_id == debt_id && s.period == period));

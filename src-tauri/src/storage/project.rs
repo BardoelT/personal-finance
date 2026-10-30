@@ -113,6 +113,12 @@ impl Project {
         &mut self.data.houses
     }
 
+    /// The houses and the debts together, for the changes that touch both
+    /// (CSD-020).
+    pub fn houses_and_debts_mut(&mut self) -> (&mut Houses, &mut Debts) {
+        (&mut self.data.houses, &mut self.data.debts)
+    }
+
     /// The expenses (CSD-013).
     #[must_use]
     pub fn expenses(&self) -> &Expenses {
@@ -1715,6 +1721,7 @@ mod houses_tests {
     use tempfile::TempDir;
 
     use super::*;
+    use crate::domain::houses::linking::{self, DebtLinksInput, SettlementChoice};
     use crate::domain::houses::{house_note, parse_period, HouseInput, HouseValue};
     use crate::domain::{HouseId, YearMonth};
 
@@ -1873,6 +1880,104 @@ mod houses_tests {
             r#"{"format_version":1,"income":{"jobs":[],"paychecks":[]},
                 "houses":{"houses":[],"valuations":[
                 {"house_id":"671166f4-5827-4794-bcdc-54d7824fb650","period":"2026-09","value":"1.00"}]}}"#,
+        )
+        .unwrap();
+        let mut project = Project::new();
+        let error = project.open(&path).unwrap_err();
+        assert_eq!(error.code(), "PROJECT_INVALID_FILE");
+    }
+
+    #[test]
+    fn test_csd020_ac_16_1_links_and_settlements_survive_the_round_trip() {
+        let dir = TempDir::new().unwrap();
+        let mut project = Project::new();
+        let today = time::macros::date!(2026 - 10 - 29);
+        let month = YearMonth::parse("2026-10").unwrap();
+        let loan = project
+            .debts_mut()
+            .create_debt(&crate::domain::debts::DebtInput {
+                name: "Example Loan".to_owned(),
+                statement_period: None,
+            })
+            .unwrap()
+            .id;
+        project
+            .debts_mut()
+            .add_statement(
+                loan,
+                crate::domain::debts::parse_period("2026-06").unwrap(),
+                crate::domain::debts::DebtBalance::parse("3500.00").unwrap(),
+                crate::domain::debts::debt_note("Mid-June").unwrap(),
+                month,
+            )
+            .unwrap();
+        let input = HouseInput {
+            name: "Example House".to_owned(),
+            purchase_date: Some("15/03/2024".to_owned()),
+            purchase_amount: Some("250000.00".to_owned()),
+            ..HouseInput::default()
+        };
+        let linked = DebtLinksInput {
+            debt_ids: vec![loan.to_string()],
+            ..DebtLinksInput::default()
+        };
+        let (houses, debts) = project.houses_and_debts_mut();
+        let house = linking::create_house(houses, debts, &input, &linked, today)
+            .unwrap()
+            .id;
+        let sold = HouseInput {
+            sell_date: Some("10/06/2026".to_owned()),
+            sell_amount: Some("300000.00".to_owned()),
+            ..input
+        };
+        let settle = DebtLinksInput {
+            settlements: vec![SettlementChoice {
+                debt_id: loan.to_string(),
+                outcome: "Cancelled".to_owned(),
+            }],
+            ..linked
+        };
+        let (houses, debts) = project.houses_and_debts_mut();
+        linking::update_house(houses, debts, house, &sold, &settle, today).unwrap();
+        let path = dir.path().join("example-a.wealth");
+        project.save_as(path.clone()).unwrap();
+        let mut reopened = Project::new();
+        reopened.open(&path).unwrap();
+        assert_eq!(reopened.debts(), project.debts());
+        assert_eq!(reopened.debts().house_of(loan), Some(house));
+        assert!(reopened.debts().is_settled(loan));
+    }
+
+    #[test]
+    fn test_csd020_ac_16_2_a_file_without_links_opens_without_links() {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("example-a.wealth");
+        fs::write(
+            &path,
+            r#"{"format_version":1,"income":{"jobs":[],"paychecks":[]},
+                "debts":{"debts":[{"id":"671166f4-5827-4794-bcdc-54d7824fb650",
+                "name":"Example Loan","statement_period":"Monthly","colour_slot":0}],
+                "statements":[]}}"#,
+        )
+        .unwrap();
+        let mut project = Project::new();
+        project.open(&path).unwrap();
+        let debt_id = project.debts().debts()[0].id;
+        assert_eq!(project.debts().house_of(debt_id), None);
+        assert!(!project.debts().is_settled(debt_id));
+    }
+
+    #[test]
+    fn test_csd020_ac_16_3_a_damaged_link_is_an_invalid_file() {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("example-a.wealth");
+        fs::write(
+            &path,
+            r#"{"format_version":1,"income":{"jobs":[],"paychecks":[]},
+                "debts":{"debts":[{"id":"671166f4-5827-4794-bcdc-54d7824fb650",
+                "name":"Example Loan","statement_period":"Monthly","colour_slot":0,
+                "house_id":"11111111-1111-4111-8111-111111111111"}],
+                "statements":[]}}"#,
         )
         .unwrap();
         let mut project = Project::new();

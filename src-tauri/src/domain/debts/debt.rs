@@ -6,7 +6,10 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::domain::error::DomainError;
+use crate::domain::houses::HouseId;
 use crate::domain::income::PayPeriod;
+
+use super::settlement::Settlement;
 
 pub(super) const MAX_NAME_CHARS: usize = 100;
 
@@ -48,6 +51,12 @@ pub struct Debt {
     pub statement_period: PayPeriod,
     /// 0 to 7, fixed when the debt is created (CSD-011 REQ-3).
     pub colour_slot: u8,
+    /// The house this debt is linked to (CSD-020 REQ-1).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub house_id: Option<HouseId>,
+    /// How the debt was settled on the sale of its house (CSD-020 REQ-5).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub settlement: Option<Settlement>,
 }
 
 /// Debt fields as typed by the user, before validation.

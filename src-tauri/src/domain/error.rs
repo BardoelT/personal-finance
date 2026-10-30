@@ -171,6 +171,24 @@ pub enum DomainError {
     DebtStatementNoteTooLong,
     #[error("The debt data is not consistent.")]
     DebtDataInvalid,
+    #[error("A linked debt has a statement after the month or year of the sale.")]
+    DebtStatementAfterSale,
+    #[error("This debt was settled on the sale of its house, so it can no longer change from that period on.")]
+    DebtSettledLocked,
+    #[error("A debt is already linked to another house.")]
+    HouseDebtLinkedElsewhere,
+    #[error("The debts of a sold house cannot change.")]
+    HouseLinksLockedSold,
+    #[error("Choose Repaid or Cancelled for every linked debt with an open balance.")]
+    HouseSettlementRequired,
+    #[error("That choice does not belong to a linked debt with an open balance.")]
+    HouseSettlementInvalid,
+    #[error("Confirm that undoing the sale also undoes the settled debts.")]
+    HouseSaleUndoUnconfirmed,
+    #[error("The sell date cannot change while debts are settled on it. Undo the sale first.")]
+    HouseSellDateLocked,
+    #[error("Remove the linked debts from this house before deleting it.")]
+    HouseHasLinkedDebts,
     #[error("Enter a house name.")]
     HouseNameRequired,
     #[error("The house name can be at most 100 characters.")]
@@ -345,6 +363,15 @@ impl DomainError {
             Self::DebtStatementBalanceTooLarge => "DEBT_STATEMENT_BALANCE_TOO_LARGE",
             Self::DebtStatementNoteTooLong => "DEBT_STATEMENT_NOTE_TOO_LONG",
             Self::DebtDataInvalid => "DEBT_DATA_INVALID",
+            Self::DebtStatementAfterSale => "DEBT_STATEMENT_AFTER_SALE",
+            Self::DebtSettledLocked => "DEBT_SETTLED_LOCKED",
+            Self::HouseDebtLinkedElsewhere => "HOUSE_DEBT_LINKED_ELSEWHERE",
+            Self::HouseLinksLockedSold => "HOUSE_LINKS_LOCKED_SOLD",
+            Self::HouseSettlementRequired => "HOUSE_SETTLEMENT_REQUIRED",
+            Self::HouseSettlementInvalid => "HOUSE_SETTLEMENT_INVALID",
+            Self::HouseSaleUndoUnconfirmed => "HOUSE_SALE_UNDO_UNCONFIRMED",
+            Self::HouseSellDateLocked => "HOUSE_SELL_DATE_LOCKED",
+            Self::HouseHasLinkedDebts => "HOUSE_HAS_LINKED_DEBTS",
             Self::HouseNameRequired => "HOUSE_NAME_REQUIRED",
             Self::HouseNameTooLong => "HOUSE_NAME_TOO_LONG",
             Self::HouseNameDuplicate => "HOUSE_NAME_DUPLICATE",

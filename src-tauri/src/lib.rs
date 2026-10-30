@@ -86,6 +86,7 @@ fn configure<R: Runtime>(builder: tauri::Builder<R>, utc_offset: UtcOffset) -> t
             debts::yearly_debt_totals,
             debts::get_debt_insights,
             houses::list_houses,
+            houses::list_open_debts,
             houses::create_house,
             houses::update_house,
             houses::delete_house,

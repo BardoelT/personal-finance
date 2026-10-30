@@ -19,7 +19,7 @@ pub use bank_accounts::{
     BankYearlyTotal, EntryPrefill,
 };
 pub use debts::{
-    Debt, DebtId, DebtInsights, DebtStatement, DebtYearlyTotal, Debts, DebtsOverview,
+    Debt, DebtId, DebtInsights, DebtStatement, DebtYearlyTotal, Debts,
     StatementPrefill as DebtStatementPrefill,
 };
 pub use error::DomainError;
@@ -27,7 +27,7 @@ pub use expenses::{
     Expense, ExpenseId, ExpenseInsights, ExpenseList, ExpensePrefill, ExpenseYearlyTotal, Expenses,
 };
 pub use houses::{
-    House, HouseId, HouseInsights, HouseValuation, HouseYearlyValue, Houses, HousesOverview,
+    House, HouseId, HouseInsights, HouseValuation, HouseYearlyValue, Houses,
     ValuationPrefill as HouseValuationPrefill,
 };
 pub use income::{
