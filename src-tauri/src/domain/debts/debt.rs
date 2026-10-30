@@ -43,18 +43,19 @@ impl fmt::Display for DebtId {
     }
 }
 
-/// The kind of a debt; only a Mortgage or a Loan can be linked to a house
-/// (CSD-020 section 3).
+/// The kind of a debt: Mortgage, Loan, Scholarship or Other. Only a Mortgage
+/// or a Loan can be linked to a house (CSD-020 section 3).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Category {
     Mortgage,
     Loan,
+    Scholarship,
     #[default]
     Other,
 }
 
 impl Category {
-    /// Parses `Mortgage`, `Loan` or `Other`.
+    /// Parses `Mortgage`, `Loan`, `Scholarship` or `Other`.
     ///
     /// # Errors
     /// Returns `DebtCategoryInvalid` for any other text.
@@ -62,6 +63,7 @@ impl Category {
         match text.trim() {
             "Mortgage" => Ok(Self::Mortgage),
             "Loan" => Ok(Self::Loan),
+            "Scholarship" => Ok(Self::Scholarship),
             "Other" => Ok(Self::Other),
             _ => Err(DomainError::DebtCategoryInvalid),
         }
@@ -70,7 +72,7 @@ impl Category {
     /// Whether a debt of this category may be linked to a house.
     #[must_use]
     pub fn can_link(self) -> bool {
-        self != Self::Other
+        matches!(self, Self::Mortgage | Self::Loan)
     }
 }
 

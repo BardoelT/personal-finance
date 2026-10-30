@@ -960,3 +960,25 @@ fn test_csd020_ac_17_5_undoing_the_sale_later_undoes_the_settlement() {
     assert_eq!(data.debts.house_of(mortgage), Some(house));
     assert_eq!(balance_of(&data, mortgage, "2026-06"), None);
 }
+
+#[test]
+fn test_csd020_ac_1_6_a_scholarship_cannot_be_linked() {
+    let mut data = ProjectData::default();
+    let house = add_house(&mut data, "Example House", &[]);
+    let study = debt(&mut data, "Example Study Debt", "Yearly");
+    link(&mut data, study, "Scholarship", None).unwrap();
+    assert_eq!(category_of(&data, study), Category::Scholarship);
+    assert_eq!(data.debts.house_of(study), None);
+    assert_eq!(
+        code(link(&mut data, study, "Scholarship", Some(house))),
+        "DEBT_LINK_CATEGORY_INVALID"
+    );
+}
+
+#[test]
+fn test_csd020_ac_1_6_changing_a_linked_loan_to_scholarship_removes_the_link() {
+    let (mut data, _house, _mortgage, loan) = house_with_two_debts();
+    link(&mut data, loan, "Scholarship", None).unwrap();
+    assert_eq!(category_of(&data, loan), Category::Scholarship);
+    assert_eq!(data.debts.house_of(loan), None);
+}

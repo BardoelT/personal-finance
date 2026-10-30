@@ -146,7 +146,7 @@ function fillHouseChoices(debt) {
 /** The House dropdown shows only for a Mortgage or a Loan (CSD-020 REQ-14). */
 function applyCategory() {
   const form = $('debt-form');
-  const linkable = form.elements.category.value !== 'Other';
+  const linkable = ['Mortgage', 'Loan'].includes(form.elements.category.value);
   $('debt-house-field').hidden = !linkable;
   if (!linkable) form.elements.house_id.value = '';
 }
@@ -178,7 +178,7 @@ async function submitDebt(event) {
   const input = {
     name: form.elements.name.value,
     category,
-    house_id: category === 'Other' ? '' : form.elements.house_id.value,
+    house_id: ['Mortgage', 'Loan'].includes(category) ? form.elements.house_id.value : '',
   };
   if (!form.elements.statement_period.disabled) {
     input.statement_period = form.elements.statement_period.value;
