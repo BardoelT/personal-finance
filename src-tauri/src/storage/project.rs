@@ -1933,6 +1933,7 @@ mod houses_tests {
                 },
                 category: Some("Loan".to_owned()),
                 house_id: Some(house.to_string()),
+                settlement: None,
             },
         )
         .unwrap();

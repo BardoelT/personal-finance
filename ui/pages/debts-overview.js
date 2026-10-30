@@ -2,6 +2,7 @@
 import { invoke, errorText } from '../shared/ipc.js';
 import { h, iconButton, confirmAction, showToast, showError } from '../shared/dom.js';
 import { formatAmount, currentYear, currentMonth } from '../shared/format.js';
+import { askSettlements } from '../shared/settle.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -119,12 +120,14 @@ async function changed() {
 
 let editingDebt = null;
 
-/** The House dropdown: no house and the unsold houses, plus the debt's own house (CSD-020 REQ-14). */
+/** The House dropdown: no house and all houses, a sold one marked (CSD-020 REQ-14). */
 function fillHouseChoices(debt) {
   const form = $('debt-form');
   const select = form.elements.house_id;
-  const choices = houses.filter((house) => house.held || (debt && debt.house_id === house.id));
-  select.replaceChildren(h('option', { value: '' }, 'No house'), ...choices.map((house) => h('option', { value: house.id }, house.name)));
+  select.replaceChildren(
+    h('option', { value: '' }, 'No house'),
+    ...houses.map((house) => h('option', { value: house.id }, house.held ? house.name : `${house.name} (sold)`)),
+  );
   select.value = debt?.house_id ?? '';
   // The link of a settled debt, or of a debt whose house is sold, cannot change (CSD-020 REQ-2, REQ-8).
   const locked = Boolean(debt && (debt.settlement || (debt.house_id && !houses.find((house) => house.id === debt.house_id)?.held)));
@@ -175,6 +178,16 @@ async function submitDebt(event) {
     input.statement_period = form.elements.statement_period.value;
   }
   try {
+    // Linking to a house that is already sold settles the debt: Repaid or Cancelled (CSD-020 REQ-17).
+    const chosen = houses.find((house) => house.id === input.house_id);
+    if (editingDebt && chosen && !chosen.held && editingDebt.house_id !== chosen.id) {
+      const open = await invoke('debt_open_balance', { debtId: editingDebt.id, houseId: chosen.id });
+      if (open) {
+        const choices = await askSettlements([open]);
+        if (choices === null) return;
+        input.settlement = choices[0].outcome;
+      }
+    }
     if (editingDebt) {
       await invoke('update_debt', { debtId: editingDebt.id, input });
     } else {

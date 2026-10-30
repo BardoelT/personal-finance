@@ -75,6 +75,7 @@ fn configure<R: Runtime>(builder: tauri::Builder<R>, utc_offset: UtcOffset) -> t
             bank_accounts::yearly_bank_totals,
             bank_accounts::get_bank_insights,
             debts::list_debts,
+            debts::debt_open_balance,
             debts::create_debt,
             debts::update_debt,
             debts::delete_debt,

@@ -8,8 +8,10 @@ use serde::Serialize;
 use tauri::State;
 
 use super::AppState;
+use crate::domain::debts::OpenDebt;
 use crate::domain::debts::{debt_note, parse_period, DebtBalance};
 use crate::domain::houses::linking::{self, DebtFormInput, DebtsView};
+use crate::domain::HouseId;
 use crate::domain::{
     Debt, DebtId, DebtInsights, DebtStatement, DebtStatementPrefill, DebtYearlyTotal, Debts,
 };
@@ -79,6 +81,23 @@ pub fn delete_debt(state: State<'_, AppState>, debt_id: String) -> Result<(), Ap
     let mut project = state.project()?;
     project.debts_mut().delete_debt(DebtId::parse(&debt_id)?)?;
     Ok(())
+}
+
+/// The open balance of a debt at the sale of the house it would be linked to,
+/// for the settlement prompt (CSD-020 REQ-15, REQ-17).
+#[tauri::command]
+pub fn debt_open_balance(
+    state: State<'_, AppState>,
+    debt_id: String,
+    house_id: String,
+) -> Result<Option<OpenDebt>, AppError> {
+    let project = state.project()?;
+    Ok(linking::debt_open_balance(
+        project.houses(),
+        project.debts(),
+        DebtId::parse(&debt_id)?,
+        HouseId::parse(&house_id)?,
+    )?)
 }
 
 /// The statements of all debts, newest period first (REQ-18).

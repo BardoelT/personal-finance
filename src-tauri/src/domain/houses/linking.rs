@@ -142,6 +142,10 @@ pub struct DebtFormInput {
     /// The house of a Mortgage or Loan; none or empty for no house.
     #[serde(default)]
     pub house_id: Option<String>,
+    /// `Repaid` or `Cancelled` when the debt is linked to a house that is
+    /// already sold and has an open balance (CSD-020 REQ-17).
+    #[serde(default)]
+    pub settlement: Option<String>,
 }
 
 /// Creates a debt with its category and optional house (CSD-020 REQ-1,
@@ -198,27 +202,81 @@ fn apply_category_and_link(
     if wanted.is_some() && !category.can_link() {
         return Err(DomainError::DebtLinkCategoryInvalid);
     }
+    let outcome = match input.settlement.as_deref().map(str::trim) {
+        Some(text) if !text.is_empty() => Some(Outcome::parse(text)?),
+        _ => None,
+    };
     let current = debts.house_of(id);
     debts.set_category(id, category)?;
     if wanted == current {
-        return Ok(());
+        return if outcome.is_some() {
+            Err(DomainError::HouseSettlementInvalid)
+        } else {
+            Ok(())
+        };
     }
     if debts.is_settled(id) {
         return Err(DomainError::DebtSettledLocked);
     }
-    let sold = |house_id: HouseId| houses.get(house_id).is_some_and(|house| !house.is_held());
-    if current.is_some_and(sold) {
+    if current.is_some_and(|house_id| houses.get(house_id).is_some_and(|house| !house.is_held())) {
         return Err(DomainError::HouseLinksLockedSold);
     }
-    if let Some(house_id) = wanted {
-        if houses.get(house_id).is_none() {
-            return Err(DomainError::HouseNotFound);
-        }
-        if sold(house_id) {
-            return Err(DomainError::HouseLinksLockedSold);
-        }
+    let Some(house_id) = wanted else {
+        debts.set_house(id, None)?;
+        return if outcome.is_some() {
+            Err(DomainError::HouseSettlementInvalid)
+        } else {
+            Ok(())
+        };
+    };
+    let house = houses.get(house_id).ok_or(DomainError::HouseNotFound)?;
+    debts.set_house(id, Some(house_id))?;
+    match house.sell_date {
+        Some(date) => settle_on_link(debts, id, house, date, outcome),
+        None if outcome.is_some() => Err(DomainError::HouseSettlementInvalid),
+        None => Ok(()),
     }
-    debts.set_house(id, wanted)
+}
+
+/// Settles a debt that is linked to a house sold on `date`, when it has an
+/// open balance (CSD-020 REQ-17).
+fn settle_on_link(
+    debts: &mut Debts,
+    id: DebtId,
+    house: &House,
+    date: HouseDate,
+    outcome: Option<Outcome>,
+) -> Result<(), DomainError> {
+    match (debts.open_balance(id, date)?, outcome) {
+        (Some(_), Some(outcome)) => debts.settle(id, outcome, &house.name, date),
+        (Some(_), None) => Err(DomainError::HouseSettlementRequired),
+        (None, Some(_)) => Err(DomainError::HouseSettlementInvalid),
+        (None, None) => Ok(()),
+    }
+}
+
+/// The open balance of a debt at the sell date of the sold house it would be
+/// linked to, `None` for a held house or without an open balance, for the
+/// settlement prompt (CSD-020 REQ-15, REQ-17).
+///
+/// # Errors
+/// Returns `DebtNotFound` or `HouseNotFound`.
+pub fn debt_open_balance(
+    houses: &Houses,
+    debts: &Debts,
+    debt_id: DebtId,
+    house_id: HouseId,
+) -> Result<Option<OpenDebt>, DomainError> {
+    let house = houses.get(house_id).ok_or(DomainError::HouseNotFound)?;
+    let debt = debts.get(debt_id).ok_or(DomainError::DebtNotFound)?;
+    let Some(date) = house.sell_date else {
+        return Ok(None);
+    };
+    Ok(debts.open_balance(debt_id, date)?.map(|amount| OpenDebt {
+        debt_id,
+        debt_name: debt.name.clone(),
+        amount,
+    }))
 }
 
 /// Applies the debt side of a saved house. `old` is the house before the save,
