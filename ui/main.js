@@ -1,6 +1,7 @@
 // Entry point: wires the project controls, the income, investments, bank accounts, assets, debts and expenses views (each with an insights chart), the net worth chart, the ratios table, the settings and the dashboard.
 import { errorText, listen } from './shared/ipc.js';
 import { showToast } from './shared/dom.js';
+import { initDateMasks } from './shared/date-mask.js';
 import { initProject, refreshProjectStatus } from './pages/project.js';
 import { initIncomeOverview, reloadIncomeOverview } from './pages/income-overview.js';
 import { initIncomeInsights, reloadIncomeInsightsIfOpen } from './pages/income-insights.js';
@@ -29,6 +30,8 @@ async function start() {
   } finally {
     document.documentElement.classList.add('theme-ready');
   }
+
+  initDateMasks();
 
   document.querySelectorAll('dialog [data-cancel]').forEach((button) => {
     button.addEventListener('click', () => button.closest('dialog').close());

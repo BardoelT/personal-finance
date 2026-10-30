@@ -762,11 +762,11 @@
         <input type="text" name="title" maxlength="200" autocomplete="off">
       </label>
       <div class="field-row">
-        <label class="field">Start date (dd/mm/yyyy)
-          <input type="text" name="start_date" inputmode="numeric" placeholder="01/03/2024" maxlength="10" autocomplete="off" required>
+        <label class="field">Start date
+          <input data-mask="date" type="text" name="start_date" inputmode="numeric" placeholder="dd/mm/yyyy" maxlength="10" autocomplete="off" required>
         </label>
         <label class="field">End date (optional)
-          <input type="text" name="end_date" inputmode="numeric" placeholder="dd/mm/yyyy" maxlength="10" autocomplete="off">
+          <input data-mask="date" type="text" name="end_date" inputmode="numeric" placeholder="dd/mm/yyyy" maxlength="10" autocomplete="off">
         </label>
       </div>
       <label class="field">Pay period
@@ -793,8 +793,8 @@
       <div class="field-action">
         <button type="button" class="btn" id="paycheck-copy">Copy previous month</button>
       </div>
-      <label class="field"><span id="paycheck-period-label">Month (YYYY-MM)</span>
-        <input type="text" name="period" inputmode="numeric" placeholder="2026-09" maxlength="7" autocomplete="off" required>
+      <label class="field"><span id="paycheck-period-label">Month</span>
+        <input data-mask="month" type="text" name="period" inputmode="numeric" placeholder="yyyy-mm" maxlength="7" autocomplete="off" required>
       </label>
       <label class="field">Gross salary
         <input type="text" name="gross_salary" inputmode="decimal" placeholder="0.00" autocomplete="off" required>
@@ -844,8 +844,8 @@
       <div class="field-action">
         <button type="button" class="btn" id="statement-copy">Copy previous month</button>
       </div>
-      <label class="field"><span id="statement-period-label">Month (YYYY-MM)</span>
-        <input type="text" name="period" inputmode="numeric" placeholder="2026-09" maxlength="7" autocomplete="off" required>
+      <label class="field"><span id="statement-period-label">Month</span>
+        <input data-mask="month" type="text" name="period" inputmode="numeric" placeholder="yyyy-mm" maxlength="7" autocomplete="off" required>
       </label>
       <label class="field">Balance <span class="calc-tag" id="balance-calculated" hidden>calculated</span>
         <input type="text" name="balance" inputmode="decimal" placeholder="0.00" autocomplete="off" required>
@@ -901,8 +901,8 @@
       <div class="field-action">
         <button type="button" class="btn" id="bank-entry-copy">Copy previous month</button>
       </div>
-      <label class="field"><span id="bank-entry-period-label">Month (YYYY-MM)</span>
-        <input type="text" name="period" inputmode="numeric" placeholder="2026-09" maxlength="7" autocomplete="off" required>
+      <label class="field"><span id="bank-entry-period-label">Month</span>
+        <input data-mask="month" type="text" name="period" inputmode="numeric" placeholder="yyyy-mm" maxlength="7" autocomplete="off" required>
       </label>
       <label class="field">Balance
         <input type="text" name="balance" inputmode="decimal" placeholder="0.00" autocomplete="off" required>
@@ -933,16 +933,16 @@
         <span class="field-hint" id="asset-period-hint" hidden>The valuation period cannot change once the asset has valuations.</span>
       </label>
       <div class="field-row">
-        <label class="field">Purchase date (dd/mm/yyyy)
-          <input type="text" name="purchase_date" inputmode="numeric" placeholder="15/03/2024" maxlength="10" autocomplete="off" required>
+        <label class="field">Purchase date
+          <input data-mask="date" type="text" name="purchase_date" inputmode="numeric" placeholder="dd/mm/yyyy" maxlength="10" autocomplete="off" required>
         </label>
         <label class="field">Purchase amount
           <input type="text" name="purchase_amount" inputmode="decimal" placeholder="250000.00" autocomplete="off" required>
         </label>
       </div>
       <div class="field-row">
-        <label class="field">Sell date (optional, dd/mm/yyyy)
-          <input type="text" name="sell_date" inputmode="numeric" placeholder="dd/mm/yyyy" maxlength="10" autocomplete="off">
+        <label class="field">Sell date (optional)
+          <input data-mask="date" type="text" name="sell_date" inputmode="numeric" placeholder="dd/mm/yyyy" maxlength="10" autocomplete="off">
         </label>
         <label class="field">Sell amount (optional)
           <input type="text" name="sell_amount" inputmode="decimal" autocomplete="off">
@@ -965,8 +965,8 @@
       <div class="field-action">
         <button type="button" class="btn" id="asset-valuation-copy">Copy previous month</button>
       </div>
-      <label class="field"><span id="asset-valuation-period-label">Month (YYYY-MM)</span>
-        <input type="text" name="period" inputmode="numeric" placeholder="2026-09" maxlength="7" autocomplete="off" required>
+      <label class="field"><span id="asset-valuation-period-label">Month</span>
+        <input data-mask="month" type="text" name="period" inputmode="numeric" placeholder="yyyy-mm" maxlength="7" autocomplete="off" required>
       </label>
       <label class="field">Value
         <input type="text" name="value" inputmode="decimal" placeholder="0.00" autocomplete="off" required>
@@ -1013,8 +1013,8 @@
       <div class="field-action">
         <button type="button" class="btn" id="debt-statement-copy">Copy previous month</button>
       </div>
-      <label class="field"><span id="debt-statement-period-label">Month (YYYY-MM)</span>
-        <input type="text" name="period" inputmode="numeric" placeholder="2026-09" maxlength="7" autocomplete="off" required>
+      <label class="field"><span id="debt-statement-period-label">Month</span>
+        <input data-mask="month" type="text" name="period" inputmode="numeric" placeholder="yyyy-mm" maxlength="7" autocomplete="off" required>
       </label>
       <label class="field">Balance
         <input type="text" name="balance" inputmode="decimal" placeholder="0.00" autocomplete="off" required>
@@ -1044,8 +1044,8 @@
         <label class="field">Amount
           <input type="text" name="amount" inputmode="decimal" placeholder="0.00" autocomplete="off" required>
         </label>
-        <label class="field">Date (dd/mm/yyyy)
-          <input type="text" name="date" inputmode="numeric" placeholder="15/09/2026" maxlength="10" autocomplete="off" required>
+        <label class="field">Date
+          <input data-mask="date" type="text" name="date" inputmode="numeric" placeholder="dd/mm/yyyy" maxlength="10" autocomplete="off" required>
         </label>
       </div>
       <label class="field">Category

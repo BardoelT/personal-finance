@@ -209,8 +209,8 @@ function chosenAsset() {
 function applyValuationPeriod({ resetPeriod }) {
   const form = $('asset-valuation-form');
   const yearly = chosenAsset()?.valuation_period === 'Yearly';
-  $('asset-valuation-period-label').textContent = yearly ? 'Year (YYYY)' : 'Month (YYYY-MM)';
-  form.elements.period.placeholder = yearly ? String(new Date().getFullYear() - 1) : '2026-09';
+  $('asset-valuation-period-label').textContent = yearly ? 'Year' : 'Month';
+  form.elements.period.placeholder = yearly ? String(new Date().getFullYear() - 1) : 'yyyy-mm';
   form.elements.period.maxLength = yearly ? 4 : 7;
   $('asset-valuation-copy').textContent = yearly ? 'Copy previous year' : 'Copy previous month';
   if (resetPeriod && yearly !== formIsYearly) {
@@ -231,7 +231,7 @@ function openValuationDialog(valuation = null) {
   if (valuation) {
     // The period is editable too; the asset is not (CSD-015 REQ-12).
     $('asset-valuation-dialog-title').textContent = `Edit valuation ${valuation.period}`;
-    $('asset-valuation-period-label').textContent = valuation.period.length === 4 ? 'Year (YYYY)' : 'Month (YYYY-MM)';
+    $('asset-valuation-period-label').textContent = valuation.period.length === 4 ? 'Year' : 'Month';
     form.elements.period.maxLength = valuation.period.length;
     form.elements.period.value = valuation.period;
     formIsYearly = valuation.period.length === 4;

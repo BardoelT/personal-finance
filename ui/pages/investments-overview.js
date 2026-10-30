@@ -198,8 +198,8 @@ function chosenAccount() {
 function applyStatementPeriod({ resetPeriod }) {
   const form = $('statement-form');
   const yearly = chosenAccount()?.statement_period === 'Yearly';
-  $('statement-period-label').textContent = yearly ? 'Year (YYYY)' : 'Month (YYYY-MM)';
-  form.elements.period.placeholder = yearly ? String(new Date().getFullYear() - 1) : '2026-09';
+  $('statement-period-label').textContent = yearly ? 'Year' : 'Month';
+  form.elements.period.placeholder = yearly ? String(new Date().getFullYear() - 1) : 'yyyy-mm';
   form.elements.period.maxLength = yearly ? 4 : 7;
   $('statement-copy').textContent = yearly ? 'Copy previous year' : 'Copy previous month';
   if (resetPeriod && yearly !== formIsYearly) {
@@ -300,7 +300,7 @@ function openStatementDialog(statement = null) {
   markCalculated(null);
   if (statement) {
     $('statement-dialog-title').textContent = `Edit statement ${statement.period}`;
-    $('statement-period-label').textContent = statement.period.length === 4 ? 'Year (YYYY)' : 'Month (YYYY-MM)';
+    $('statement-period-label').textContent = statement.period.length === 4 ? 'Year' : 'Month';
     form.elements.period.maxLength = statement.period.length;
     form.elements.period.value = statement.period;
     formIsYearly = statement.period.length === 4;

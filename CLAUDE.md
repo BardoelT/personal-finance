@@ -36,7 +36,7 @@ ui/                   # frontend (UI only — HTML + CSS + JS, no business logic
   main.js             # entry point: wires the pages and reloads them
   navigation.js       # left-pane navigation
   pages/              # one file per page or view, named <page>-<view>.js
-  shared/             # helpers pages share: ipc, dom, format, chart, yearly-chart, tabs
+  shared/             # helpers pages share: ipc, dom, format, date-mask, chart, yearly-chart, tabs
   styles/             # CSS by area: base, layout, components, pages, charts
 src-tauri/
   src/main.rs         # thin entry point

@@ -185,8 +185,8 @@ function chosenAccount() {
 function applyEntryPeriod({ resetPeriod }) {
   const form = $('bank-entry-form');
   const yearly = chosenAccount()?.entry_period === 'Yearly';
-  $('bank-entry-period-label').textContent = yearly ? 'Year (YYYY)' : 'Month (YYYY-MM)';
-  form.elements.period.placeholder = yearly ? String(new Date().getFullYear() - 1) : '2026-09';
+  $('bank-entry-period-label').textContent = yearly ? 'Year' : 'Month';
+  form.elements.period.placeholder = yearly ? String(new Date().getFullYear() - 1) : 'yyyy-mm';
   form.elements.period.maxLength = yearly ? 4 : 7;
   $('bank-entry-copy').textContent = yearly ? 'Copy previous year' : 'Copy previous month';
   if (resetPeriod && yearly !== formIsYearly) {
@@ -207,7 +207,7 @@ function openEntryDialog(entry = null) {
   if (entry) {
     // The period is editable too; the account is not (CSD-009 REQ-12).
     $('bank-entry-dialog-title').textContent = `Edit entry ${entry.period}`;
-    $('bank-entry-period-label').textContent = entry.period.length === 4 ? 'Year (YYYY)' : 'Month (YYYY-MM)';
+    $('bank-entry-period-label').textContent = entry.period.length === 4 ? 'Year' : 'Month';
     form.elements.period.maxLength = entry.period.length;
     form.elements.period.value = entry.period;
     formIsYearly = entry.period.length === 4;

@@ -84,7 +84,7 @@ ui/                 frontend (HTML, CSS, JS; no build step)
   main.js           entry point: wires the pages and reloads them
   navigation.js     left-pane navigation
   pages/            one file per page or view (income-overview, income-insights, ...)
-  shared/           helpers pages share (ipc, dom, format, chart, yearly-chart, tabs)
+  shared/           helpers pages share (ipc, dom, format, date-mask, chart, yearly-chart, tabs)
   styles/           CSS by area (base, layout, components, pages, charts)
 src-tauri/
   src/lib.rs        app setup, command registration
