@@ -175,8 +175,10 @@ pub enum DomainError {
     DebtStatementAfterSale,
     #[error("This debt was settled on the sale of its house, so it can no longer change from that period on.")]
     DebtSettledLocked,
-    #[error("A debt is already linked to another house.")]
-    HouseDebtLinkedElsewhere,
+    #[error("Choose Mortgage, Loan or Other as the category.")]
+    DebtCategoryInvalid,
+    #[error("Only a mortgage or a loan can be linked to a house.")]
+    DebtLinkCategoryInvalid,
     #[error("The debts of a sold house cannot change.")]
     HouseLinksLockedSold,
     #[error("Choose Repaid or Cancelled for every linked debt with an open balance.")]
@@ -365,7 +367,8 @@ impl DomainError {
             Self::DebtDataInvalid => "DEBT_DATA_INVALID",
             Self::DebtStatementAfterSale => "DEBT_STATEMENT_AFTER_SALE",
             Self::DebtSettledLocked => "DEBT_SETTLED_LOCKED",
-            Self::HouseDebtLinkedElsewhere => "HOUSE_DEBT_LINKED_ELSEWHERE",
+            Self::DebtCategoryInvalid => "DEBT_CATEGORY_INVALID",
+            Self::DebtLinkCategoryInvalid => "DEBT_LINK_CATEGORY_INVALID",
             Self::HouseLinksLockedSold => "HOUSE_LINKS_LOCKED_SOLD",
             Self::HouseSettlementRequired => "HOUSE_SETTLEMENT_REQUIRED",
             Self::HouseSettlementInvalid => "HOUSE_SETTLEMENT_INVALID",

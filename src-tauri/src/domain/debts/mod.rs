@@ -18,7 +18,7 @@ mod totals;
 mod tests;
 
 pub use amounts::{debt_note, DebtBalance};
-pub use debt::{Debt, DebtId, DebtInput};
+pub use debt::{Category, Debt, DebtId, DebtInput};
 pub use insights::DebtInsights;
 pub use overview::DebtSummary;
 pub use settlement::{OpenDebt, Outcome, Settlement};
@@ -61,6 +61,7 @@ impl Debts {
             name: valid.name,
             statement_period: valid.statement_period.unwrap_or_default(),
             colour_slot: self.next_colour_slot(),
+            category: Category::default(),
             house_id: None,
             settlement: None,
         };

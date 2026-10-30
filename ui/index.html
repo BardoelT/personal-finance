@@ -948,11 +948,6 @@
           <input type="text" name="sell_amount" inputmode="decimal" autocomplete="off">
         </label>
       </div>
-      <fieldset class="field debt-choices" id="house-debts">
-        <legend>Linked debts (optional)</legend>
-        <div id="house-debt-choices"></div>
-        <span class="field-hint" id="house-debts-hint">Link existing debts, such as a mortgage or a loan. When the house is sold you choose per debt whether it was repaid or cancelled.</span>
-      </fieldset>
       <p class="form-error" id="house-error" role="alert" hidden></p>
       <div class="dialog-actions">
         <button type="button" class="btn" data-cancel>Cancel</button>
@@ -1012,6 +1007,17 @@
           <option value="Yearly">Yearly</option>
         </select>
         <span class="field-hint" id="debt-period-hint" hidden>The statement period cannot change once the debt has statements.</span>
+      </label>
+      <label class="field">Category
+        <select name="category">
+          <option value="Other">Other</option>
+          <option value="Mortgage">Mortgage</option>
+          <option value="Loan">Loan</option>
+        </select>
+      </label>
+      <label class="field" id="debt-house-field" hidden>House (optional)
+        <select name="house_id"></select>
+        <span class="field-hint" id="debt-house-hint" hidden>This debt was settled on the sale of its house, so category and house can no longer change.</span>
       </label>
       <p class="form-error" id="debt-error" role="alert" hidden></p>
       <div class="dialog-actions">

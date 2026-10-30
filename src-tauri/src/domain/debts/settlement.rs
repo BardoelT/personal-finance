@@ -8,7 +8,7 @@ use crate::domain::houses::{HouseDate, HouseId, Houses};
 use crate::domain::income::PayPeriod;
 use crate::domain::investments::{Note, Period};
 
-use super::{DebtBalance, DebtId, DebtStatement, Debts};
+use super::{Category, Debt, DebtBalance, DebtId, DebtStatement, Debts};
 
 /// How a debt ended on the sale of its house (CSD-020 section 3).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -96,16 +96,33 @@ impl Debts {
             .collect()
     }
 
-    /// Whether a debt exists.
+    /// A debt by id.
     #[must_use]
-    pub fn exists(&self, id: DebtId) -> bool {
-        self.debt(id).is_ok()
+    pub fn get(&self, id: DebtId) -> Option<&Debt> {
+        self.debts.iter().find(|debt| debt.id == id)
     }
 
     /// Whether a debt has a settlement.
     #[must_use]
     pub fn is_settled(&self, id: DebtId) -> bool {
         self.debt(id).is_ok_and(|debt| debt.settlement.is_some())
+    }
+
+    /// Sets the category of a debt (CSD-020 REQ-1). A settled debt cannot change.
+    ///
+    /// # Errors
+    /// Returns `DebtNotFound` or `DebtSettledLocked`.
+    pub(crate) fn set_category(
+        &mut self,
+        id: DebtId,
+        category: Category,
+    ) -> Result<(), DomainError> {
+        let debt = self.debt_mut(id)?;
+        if debt.category != category && debt.settlement.is_some() {
+            return Err(DomainError::DebtSettledLocked);
+        }
+        debt.category = category;
+        Ok(())
     }
 
     pub(crate) fn set_house(
@@ -267,6 +284,9 @@ impl Debts {
                 Some(house_id) => Some(houses.get(house_id).ok_or(invalid.clone())?),
                 None => None,
             };
+            if house.is_some() && !debt.category.can_link() {
+                return Err(invalid);
+            }
             let Some(settlement) = &debt.settlement else {
                 continue;
             };

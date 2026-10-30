@@ -6,6 +6,7 @@ import { formatAmount, currentYear, currentMonth } from '../shared/format.js';
 const $ = (id) => document.getElementById(id);
 
 let debts = [];
+let houses = [];
 let onChanged = async () => {};
 
 /** The first line of a note, with an ellipsis when there is more (CSD-011 REQ-20). */
@@ -40,7 +41,7 @@ function renderDebts(overview) {
         h(
           'span',
           { class: 'job-meta' },
-          debt.house_name ? `${debt.statement_period} · ${debt.house_name} ` : debt.statement_period,
+          `${debt.category} · ${debt.statement_period}${debt.house_name ? ` · ${debt.house_name}` : ''} `,
           debt.settlement ? h('span', { class: 'badge' }, `${debt.settlement.outcome} ${formatAmount(debt.settlement.amount)}`) : '',
         ),
         latestBalance(debt),
@@ -100,7 +101,8 @@ function renderStatements(statements) {
 
 /** Reloads everything from Rust. */
 export async function reloadDebtsOverview() {
-  const overview = await invoke('list_debts');
+  const [overview, houseOverview] = await Promise.all([invoke('list_debts'), invoke('list_houses')]);
+  houses = houseOverview.houses;
   renderDebts(overview);
   if (overview.debts.length === 0) return;
   const [totals, statements] = await Promise.all([invoke('yearly_debt_totals'), invoke('list_debt_statements')]);
@@ -117,6 +119,29 @@ async function changed() {
 
 let editingDebt = null;
 
+/** The House dropdown: no house and the unsold houses, plus the debt's own house (CSD-020 REQ-14). */
+function fillHouseChoices(debt) {
+  const form = $('debt-form');
+  const select = form.elements.house_id;
+  const choices = houses.filter((house) => house.held || (debt && debt.house_id === house.id));
+  select.replaceChildren(h('option', { value: '' }, 'No house'), ...choices.map((house) => h('option', { value: house.id }, house.name)));
+  select.value = debt?.house_id ?? '';
+  // The link of a settled debt, or of a debt whose house is sold, cannot change (CSD-020 REQ-2, REQ-8).
+  const locked = Boolean(debt && (debt.settlement || (debt.house_id && !houses.find((house) => house.id === debt.house_id)?.held)));
+  select.disabled = locked;
+  form.elements.category.disabled = locked && Boolean(debt.house_id);
+  $('debt-house-hint').hidden = !locked;
+  applyCategory();
+}
+
+/** The House dropdown shows only for a Mortgage or a Loan (CSD-020 REQ-14). */
+function applyCategory() {
+  const form = $('debt-form');
+  const linkable = form.elements.category.value !== 'Other';
+  $('debt-house-field').hidden = !linkable;
+  if (!linkable) form.elements.house_id.value = '';
+}
+
 function openDebtDialog(debt) {
   editingDebt = debt;
   const form = $('debt-form');
@@ -130,7 +155,9 @@ function openDebtDialog(debt) {
   if (debt) {
     form.elements.name.value = debt.name;
     form.elements.statement_period.value = debt.statement_period;
+    form.elements.category.value = debt.category;
   }
+  fillHouseChoices(debt);
   $('debt-dialog').showModal();
   form.elements.name.focus();
 }
@@ -138,7 +165,12 @@ function openDebtDialog(debt) {
 async function submitDebt(event) {
   event.preventDefault();
   const form = $('debt-form');
-  const input = { name: form.elements.name.value };
+  const category = form.elements.category.value;
+  const input = {
+    name: form.elements.name.value,
+    category,
+    house_id: category === 'Other' ? '' : form.elements.house_id.value,
+  };
   if (!form.elements.statement_period.disabled) {
     input.statement_period = form.elements.statement_period.value;
   }
@@ -286,6 +318,7 @@ export function initDebtsOverview({ onChanged: callback }) {
   $('debt-add').addEventListener('click', () => openDebtDialog(null));
   $('debt-add-first').addEventListener('click', () => openDebtDialog(null));
   $('debt-form').addEventListener('submit', submitDebt);
+  $('debt-form').elements.category.addEventListener('change', applyCategory);
   $('debt-statement-add').addEventListener('click', () => openStatementDialog());
   $('debt-statement-copy').addEventListener('click', copyPrevious);
   $('debt-statement-form').addEventListener('submit', submitStatement);

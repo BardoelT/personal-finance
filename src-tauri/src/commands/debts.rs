@@ -8,8 +8,8 @@ use serde::Serialize;
 use tauri::State;
 
 use super::AppState;
-use crate::domain::debts::{debt_note, parse_period, DebtBalance, DebtInput};
-use crate::domain::houses::linking::{self, DebtsView};
+use crate::domain::debts::{debt_note, parse_period, DebtBalance};
+use crate::domain::houses::linking::{self, DebtFormInput, DebtsView};
 use crate::domain::{
     Debt, DebtId, DebtInsights, DebtStatement, DebtStatementPrefill, DebtYearlyTotal, Debts,
 };
@@ -52,21 +52,26 @@ pub fn list_debts(state: State<'_, AppState>) -> Result<DebtsView, AppError> {
 }
 
 #[tauri::command]
-pub fn create_debt(state: State<'_, AppState>, input: DebtInput) -> Result<Debt, AppError> {
+pub fn create_debt(state: State<'_, AppState>, input: DebtFormInput) -> Result<Debt, AppError> {
     let mut project = state.project()?;
-    Ok(project.debts_mut().create_debt(&input)?)
+    let (houses, debts) = project.houses_and_debts_mut();
+    Ok(linking::create_debt(houses, debts, &input)?)
 }
 
 #[tauri::command]
 pub fn update_debt(
     state: State<'_, AppState>,
     debt_id: String,
-    input: DebtInput,
+    input: DebtFormInput,
 ) -> Result<Debt, AppError> {
     let mut project = state.project()?;
-    Ok(project
-        .debts_mut()
-        .update_debt(DebtId::parse(&debt_id)?, &input)?)
+    let (houses, debts) = project.houses_and_debts_mut();
+    Ok(linking::update_debt(
+        houses,
+        debts,
+        DebtId::parse(&debt_id)?,
+        &input,
+    )?)
 }
 
 #[tauri::command]

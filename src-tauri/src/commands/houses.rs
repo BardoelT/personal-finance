@@ -57,14 +57,14 @@ pub fn list_houses(state: State<'_, AppState>) -> Result<HousesView, AppError> {
 #[tauri::command]
 pub fn list_open_debts(
     state: State<'_, AppState>,
-    debt_ids: Vec<String>,
+    house_id: String,
     sell_date: String,
 ) -> Result<Vec<OpenDebt>, AppError> {
     let today = state.today_date();
     let project = state.project()?;
     Ok(linking::open_debts(
         project.debts(),
-        &debt_ids,
+        HouseId::parse(&house_id)?,
         &sell_date,
         today,
     )?)

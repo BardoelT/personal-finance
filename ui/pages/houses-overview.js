@@ -7,7 +7,6 @@ import { formatAmount, formatDate, currentYear, currentMonth } from '../shared/f
 const $ = (id) => document.getElementById(id);
 
 let houses = [];
-let debts = [];
 let onChanged = async () => {};
 
 /** The first line of a note, with an ellipsis when there is more (CSD-015 REQ-20). */
@@ -127,8 +126,7 @@ function renderValuations(valuations) {
 
 /** Reloads everything from Rust. */
 export async function reloadHousesOverview() {
-  const [overview, debtOverview] = await Promise.all([invoke('list_houses'), invoke('list_debts')]);
-  debts = debtOverview.debts;
+  const overview = await invoke('list_houses');
   renderHouses(overview);
   if (overview.houses.length === 0) return;
   const [totals, valuations] = await Promise.all([invoke('yearly_house_values'), invoke('list_house_valuations')]);
@@ -151,7 +149,6 @@ function openHouseDialog(house) {
   form.reset();
   $('house-error').hidden = true;
   $('house-dialog-title').textContent = house ? 'Edit house' : 'Add house';
-  fillDebtChoices(house);
   // The valuation period is locked once the house has valuations (CSD-015 REQ-5).
   const locked = Boolean(house && house.valuation_count > 0);
   form.elements.valuation_period.disabled = locked;
@@ -167,33 +164,6 @@ function openHouseDialog(house) {
   }
   $('house-dialog').showModal();
   form.elements.name.focus();
-}
-
-/** The debts a house can be linked to: unlinked ones and its own (CSD-020 REQ-13). The links of a sold house are locked. */
-function fillDebtChoices(house) {
-  const choices = debts.filter((debt) => !debt.house_id || (house && debt.house_id === house.id));
-  const locked = Boolean(house && !house.held);
-  $('house-debts').hidden = choices.length === 0;
-  $('house-debt-choices').replaceChildren(
-    ...choices.map((debt) =>
-      h(
-        'label',
-        { class: 'debt-choice' },
-        h('input', {
-          type: 'checkbox',
-          name: 'debt',
-          value: debt.id,
-          ...(house && debt.house_id === house.id ? { checked: true } : {}),
-          ...(locked ? { disabled: true } : {}),
-        }),
-        debt.name,
-      ),
-    ),
-  );
-}
-
-function checkedDebtIds() {
-  return [...$('house-debt-choices').querySelectorAll('input:checked')].map((box) => box.value);
 }
 
 /** Asks Repaid or Cancelled for each open debt; resolves to the choices, or null for Back (CSD-020 REQ-15). */
@@ -263,13 +233,13 @@ async function submitHouse(event) {
   if (!form.elements.valuation_period.disabled) {
     input.valuation_period = form.elements.valuation_period.value;
   }
-  const links = { debt_ids: checkedDebtIds(), settlements: [], confirm_undo: false };
+  const links = { settlements: [], confirm_undo: false };
   try {
     const sellDate = input.sell_date.trim();
     const sold = editingHouse !== null && !editingHouse.held;
     if (sellDate && !sold) {
       // A new sale: linked debts with an open balance need Repaid or Cancelled (CSD-020 REQ-3).
-      const open = await invoke('list_open_debts', { debtIds: links.debt_ids, sellDate });
+      const open = editingHouse ? await invoke('list_open_debts', { houseId: editingHouse.id, sellDate }) : [];
       if (open.length > 0) {
         const choices = await askSettlements(open);
         if (choices === null) return;
