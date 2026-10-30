@@ -1,7 +1,7 @@
 ---
 id: CSD-020
 title: Debt linked to a house
-status: draft
+status: approved
 owner: Thijs Bardoel
 version: 0.6
 last_updated: 30/10/2026
