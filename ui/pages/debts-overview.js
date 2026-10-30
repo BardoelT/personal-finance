@@ -28,6 +28,12 @@ function latestBalance(debt) {
   return h('span', { class: 'account-amount' }, formatAmount(debt.latest_balance), h('small', {}, debt.latest_period));
 }
 
+/** The settlement badge of a settled debt, else Repaid while the latest balance is 0.00 (CSD-011 REQ-26). */
+function debtBadge(debt) {
+  if (debt.settlement) return h('span', { class: 'badge' }, `${debt.settlement.outcome} ${formatAmount(debt.settlement.amount)}`);
+  return debt.repaid ? h('span', { class: 'badge' }, 'Repaid') : '';
+}
+
 function renderDebts(overview) {
   debts = overview.debts;
   const hasDebts = debts.length > 0;
@@ -43,7 +49,7 @@ function renderDebts(overview) {
           'span',
           { class: 'job-meta' },
           `${debt.category} · ${debt.statement_period}${debt.house_name ? ` · ${debt.house_name}` : ''} `,
-          debt.settlement ? h('span', { class: 'badge' }, `${debt.settlement.outcome} ${formatAmount(debt.settlement.amount)}`) : '',
+          debtBadge(debt),
         ),
         latestBalance(debt),
         h(

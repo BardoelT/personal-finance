@@ -16,6 +16,8 @@ pub struct DebtSummary {
     pub statement_count: usize,
     pub latest_period: Option<Period>,
     pub latest_balance: Option<Decimal>,
+    /// Whether the latest statement has the balance 0.00 (CSD-011 REQ-26).
+    pub repaid: bool,
 }
 
 /// The debts with the total of their latest balances (CSD-011 REQ-17). The
@@ -41,6 +43,7 @@ impl Debts {
                     statement_count: self.statement_count(debt.id),
                     latest_period: latest.map(|statement| statement.period),
                     latest_balance: latest.map(|statement| statement.balance.value()),
+                    repaid: latest.is_some_and(|statement| statement.balance.value().is_zero()),
                 }
             })
             .collect();
