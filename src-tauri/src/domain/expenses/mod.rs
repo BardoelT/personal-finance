@@ -32,7 +32,7 @@ use time::Date;
 
 use crate::domain::error::DomainError;
 
-use expense::MAX_NAME_CHARS;
+use crate::domain::series::MAX_NAME_CHARS;
 
 /// All expenses, in the order they were added (CSD-013 section 5).
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]

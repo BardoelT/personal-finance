@@ -31,7 +31,7 @@ use crate::domain::error::DomainError;
 use crate::domain::income::YearMonth;
 use crate::domain::investments::{Note, Period};
 
-use account::{COLOUR_SLOTS, MAX_NAME_CHARS};
+use crate::domain::series::{self, COLOUR_SLOTS, MAX_NAME_CHARS};
 
 /// All bank accounts with their entries. Accounts are kept in the order they
 /// were created (CSD-009 section 5).
@@ -316,29 +316,22 @@ impl BankAccounts {
 
     /// The lowest colour slot used by the fewest accounts (REQ-3).
     fn next_colour_slot(&self) -> u8 {
-        (0..COLOUR_SLOTS)
-            .min_by_key(|slot| {
-                (
-                    self.accounts
-                        .iter()
-                        .filter(|account| account.colour_slot == *slot)
-                        .count(),
-                    *slot,
-                )
-            })
-            .unwrap_or_default()
+        series::next_colour_slot(self.accounts.iter().map(|account| account.colour_slot))
     }
 
     /// Whether another account already has this name, ignoring case (REQ-2).
     fn name_taken(&self, name: &str, except: Option<BankAccountId>) -> bool {
-        let wanted = name.to_lowercase();
-        self.accounts
-            .iter()
-            .any(|account| Some(account.id) != except && account.name.to_lowercase() == wanted)
+        series::name_taken(
+            self.accounts
+                .iter()
+                .map(|account| (account.id, account.name.as_str())),
+            name,
+            except,
+        )
     }
 }
 
 /// Alphabetical order ignoring case, with the id as a stable tie-break.
 fn account_order(account: &BankAccount) -> (String, String) {
-    (account.name.to_lowercase(), account.id.to_string())
+    series::name_order(&account.name, &account.id)
 }

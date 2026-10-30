@@ -33,7 +33,7 @@ use crate::domain::error::DomainError;
 use crate::domain::income::YearMonth;
 use crate::domain::investments::{Note, Period};
 
-use debt::{COLOUR_SLOTS, MAX_NAME_CHARS};
+use crate::domain::series::{self, COLOUR_SLOTS, MAX_NAME_CHARS};
 
 /// All debts with their statements. Debts are kept in the order they were
 /// created (CSD-011 section 5).
@@ -320,29 +320,20 @@ impl Debts {
 
     /// The lowest colour slot used by the fewest debts (REQ-3).
     fn next_colour_slot(&self) -> u8 {
-        (0..COLOUR_SLOTS)
-            .min_by_key(|slot| {
-                (
-                    self.debts
-                        .iter()
-                        .filter(|debt| debt.colour_slot == *slot)
-                        .count(),
-                    *slot,
-                )
-            })
-            .unwrap_or_default()
+        series::next_colour_slot(self.debts.iter().map(|debt| debt.colour_slot))
     }
 
     /// Whether another debt already has this name, ignoring case (REQ-2).
     fn name_taken(&self, name: &str, except: Option<DebtId>) -> bool {
-        let wanted = name.to_lowercase();
-        self.debts
-            .iter()
-            .any(|debt| Some(debt.id) != except && debt.name.to_lowercase() == wanted)
+        series::name_taken(
+            self.debts.iter().map(|debt| (debt.id, debt.name.as_str())),
+            name,
+            except,
+        )
     }
 }
 
 /// Alphabetical order ignoring case, with the id as a stable tie-break.
 fn debt_order(debt: &Debt) -> (String, String) {
-    (debt.name.to_lowercase(), debt.id.to_string())
+    series::name_order(&debt.name, &debt.id)
 }
