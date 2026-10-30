@@ -346,6 +346,7 @@ fn settle_all(
 pub struct LinkedDebt {
     pub debt_id: DebtId,
     pub debt_name: String,
+    pub category: Category,
     pub latest_balance: Option<Decimal>,
     pub settlement: Option<Settlement>,
 }
@@ -396,6 +397,7 @@ pub fn houses_view(houses: &Houses, debts: &Debts) -> HousesView {
                 .map(|row| LinkedDebt {
                     debt_id: row.debt.id,
                     debt_name: row.debt.name.clone(),
+                    category: row.debt.category,
                     latest_balance: row.latest_balance,
                     settlement: row.debt.settlement.clone(),
                 })

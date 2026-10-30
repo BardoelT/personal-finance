@@ -832,6 +832,7 @@ fn test_csd020_ac_13_1_the_houses_view_lists_the_linked_debts() {
     let rows = &view.houses[0].linked_debts;
     assert_eq!(rows.len(), 2);
     assert!(rows.iter().any(|row| row.debt_name == "Example Loan"
+        && row.category == Category::Loan
         && row.latest_balance == Some(dec("0.00"))
         && row.settlement.as_ref().is_some_and(
             |s| s.outcome == Outcome::Cancelled && s.amount.value() == dec("10000.00")

@@ -144,6 +144,22 @@ async function changed() {
 
 let editingHouse = null;
 
+/** The debts linked to the house, read-only: they are linked in the debt form (CSD-020 REQ-13). */
+function fillLinkedDebts(house) {
+  const linked = house ? house.linked_debts : [];
+  $('house-debts').hidden = linked.length === 0;
+  $('house-debt-list').replaceChildren(
+    ...linked.map((debt) =>
+      h(
+        'li',
+        {},
+        h('span', {}, `${debt.debt_name} · ${debt.category} · ${debt.latest_balance === null ? '—' : formatAmount(debt.latest_balance)}`),
+        debt.settlement ? h('span', { class: 'badge' }, `${debt.settlement.outcome} ${formatAmount(debt.settlement.amount)}`) : '',
+      ),
+    ),
+  );
+}
+
 function openHouseDialog(house) {
   editingHouse = house;
   const form = $('house-form');
@@ -163,6 +179,7 @@ function openHouseDialog(house) {
     form.elements.sell_date.value = house.sell_date === null ? '' : formatDate(house.sell_date);
     form.elements.sell_amount.value = house.sell_amount ?? '';
   }
+  fillLinkedDebts(house);
   $('house-dialog').showModal();
   form.elements.name.focus();
 }
