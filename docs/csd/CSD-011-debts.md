@@ -3,7 +3,7 @@ id: CSD-011
 title: Debts
 status: draft
 owner: Thijs Bardoel
-version: 0.5
+version: 0.6
 last_updated: 30/10/2026
 related: [CSD-000, CSD-002, CSD-003, CSD-005, CSD-009, CSD-012, CSD-020]
 ---
@@ -31,7 +31,7 @@ The app tracks wealth, but has no view of what the user owes: a mortgage, a stud
 - NG-4: Netting the debts against bank accounts and investments, and integration with net worth and the dashboard (CSD-004).
 - NG-5: Money owed to the user.
 - NG-6: Data fetched from a lender, and import of statements (CSV, PDF, lender export).
-- NG-7: Archiving a debt. A debt at 0.00 stays a normal row. (Marking it Repaid or Cancelled on the sale of its house is CSD-020.)
+- NG-7: Archiving a debt. A debt at 0.00 stays a normal row, marked Repaid (REQ-26). (Marking it Repaid or Cancelled on the sale of its house is CSD-020.)
 - NG-8: Lender identifiers and other details: an account or contract number, a lender name apart from the name of the debt, a debt type other than the category of CSD-020 (Mortgage, Loan, Other), and a note on the debt itself.
 - NG-9: A currency per debt. All amounts are in the project currency (CSD-003).
 - NG-10: Individual payments, a stored original amount, and negative balances.
@@ -901,6 +901,34 @@ Scenario: No currency in the sections
   And the debt rows, the yearly totals table and the statements table show no currency
 ```
 
+**REQ-26: Repaid mark** *(state-driven)*
+While the latest statement of a debt has the balance 0.00, the app shall mark the debt row of the Debts overview "Repaid", decided in Rust, and for a debt settled on the sale of its house (CSD-020) the badge of its settlement shall be shown instead.
+
+```gherkin
+@AC-26.1
+Scenario: A latest balance of 0.00 is marked Repaid
+  Given a monthly debt "Example Car Loan" with statements 2026-08 (balance 4000.00) and 2026-09 (balance 0.00)
+  When the user opens the Debts overview
+  Then the row of "Example Car Loan" shows the mark "Repaid"
+
+@AC-26.2
+Scenario: A later balance above 0.00 removes the mark
+  Given the same debt
+  When the user adds a statement for 2026-10 with balance 500.00
+  Then the row of "Example Car Loan" shows no mark
+
+@AC-26.3
+Scenario: A debt without statements has no mark
+  Given a monthly debt "Example Card" with no statements
+  Then its row shows no mark
+
+@AC-26.4
+Scenario: A settled debt shows its settlement badge
+  Given "Example Loan" settled as Cancelled on the sale of "Example House" (settled amount 10000.00, latest balance 0.00)
+  When the user opens the Debts overview
+  Then its row shows the badge "Cancelled 10000.00" and not the mark "Repaid"
+```
+
 ### 4.4 Saving, loading and currency
 
 **REQ-23: Debts are part of the project file** *(event-driven)*
@@ -1014,6 +1042,7 @@ Done means fmt, clippy (`-D warnings`) and `cargo test --all-features` pass.
 None.
 
 ## 9. Changelog
+- 0.6 (30/10/2026): A debt whose latest statement is 0.00 is marked Repaid in the Debts overview (new REQ-26; NG-7 reworded). Back to `draft` until re-approved.
 - 0.5 (30/10/2026): NG-8 allows the debt category of CSD-020 (Mortgage, Loan, Other) and the house link set in the debt form. Back to `draft` until re-approved.
 - 0.4 (30/10/2026): A debt may be linked to a house and settled when that house is sold (CSD-020). NG-3 and NG-7 no longer exclude the link and the Repaid/Cancelled marking; NG-8 stays (there is no debt type). Back to `draft` until re-approved (GitHub issue 31).
 - 0.3 (29/10/2026): The position in the left pane is stated in CSD-004 REQ-1 and no longer repeated here (GitHub issue 21).
