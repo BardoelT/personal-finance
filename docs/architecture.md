@@ -26,8 +26,8 @@ Two rules shape everything:
 |---|---|
 | `domain/income/` | Jobs, paychecks, annual statements, yearly totals, dashboard overview, insights |
 | `domain/investments/` | Accounts, statements, net deposits, capital growth, yearly totals, insights |
-| `domain/houses/` | Houses with one purchase and at most one sale, valuations with non-negative values inside the holding window, the change per valuation, colour slots, yearly values with the change (houses held at year end), insights per house. Reuses the investments' `Period` and `Note` |
-| `domain/debts/` | Debts, statements with non-negative balances, the change per statement, colour slots, yearly totals with the amount repaid, insights per debt. Reuses the investments' `Period` and `Note` |
+| `domain/houses/` | Houses with one purchase and at most one sale, valuations with non-negative values inside the holding window, the change per valuation, colour slots, yearly values with the change (houses held at year end), insights per house, and `linking` (debts linked to a house, the Repaid/Cancelled settlement on a sale, undo; it changes houses and debts together or not at all). Reuses the investments' `Period` and `Note` |
+| `domain/debts/` | Debts, statements with non-negative balances, the change per statement, colour slots, yearly totals with the amount repaid, the optional house link and settlement of a debt, insights per debt. Reuses the investments' `Period` and `Note` |
 | `domain/expenses/` | Expenses (dated, with a fixed category and a note), the year and month filter, yearly totals with the largest expense, insights per category. Reuses the investments' `Note` |
 | `domain/bank_accounts/` | Bank accounts, entries with signed balances, colour slots, yearly totals, insights per bank. Reuses the investments' `Period` and `Note` |
 | `domain/net_worth/` | The yearly net worth: combines the yearly closing figures of houses, investments, bank accounts and debts (it keeps no data of its own) |

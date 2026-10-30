@@ -11,7 +11,7 @@ The left pane groups the pages as **Overview**, **Finance**, **Wealth**, **Liabi
 - **Expenses:** dated expenses with a name, amount, category (a fixed list) and a note, with yearly totals and the largest expense of each year. Insights charts the spending per year, stacked by category.
 - **Bank accounts:** any number of accounts, each recorded monthly or yearly as a closing balance (negative when overdrawn) and a note. Yearly totals and the total of the latest balances. Insights charts the balance per bank per year with a closing-balance marker.
 - **Investments:** any number of investment accounts, each recorded monthly or yearly. A statement holds the closing balance, the net deposits (money put in minus money taken out) and a note; the capital growth is derived from them, and the form calculates the balance or the growth from the other. Yearly totals show closing balance, net deposits and capital growth. Insights charts opening balance, net deposits and capital growth with a closing-balance marker and the growth percentage. Individual stocks, prices and trades are not tracked.
-- **Houses:** things you own (a house, a car), each bought once and possibly sold, valued monthly or yearly, with the change since the previous valuation and yearly values. A sold house stops counting from its sale year. Insights charts the value per house per year.
+- **Houses:** the houses you own, each bought once and possibly sold, valued monthly or yearly, with the change since the previous valuation and yearly values. A sold house stops counting from its sale year. Existing debts (a mortgage, a loan) can be linked to a house; when the house is sold, each open debt is marked Repaid or Cancelled and drops to 0.00. A Repaid debt counts in full in the wealth accumulation from cash, the settled amount of a Cancelled one is taken out of that year's repaid amount. Insights charts the value per house per year.
 - **Debts:** what you owe, each recorded monthly or yearly as a remaining balance, with the amount repaid per year. Insights charts the debt per debt per year.
 - **Net worth:** one chart of your overall financial state: a stacked bar per year with houses, investments and cash above the zero line and debts below it, and a marker at the net worth. Every figure is the one the chart of its own area shows.
 - **Ratios:** one table with the years as columns: total income, how much of it became wealth (bank increase, investment net deposits and debt repaid), the growth of the investments and of the total wealth, and the disposable income with its share of the income.
@@ -124,6 +124,7 @@ Behaviour is defined in Capability Specification Documents in [`docs/csd/`](docs
 | [CSD-019](docs/csd/CSD-019-house-purchase-and-sale.md) | House purchase and sale |
 | [CSD-017](docs/csd/CSD-017-net-worth-insights.md) | Net worth insights (the Net worth page) |
 | [CSD-018](docs/csd/CSD-018-ratios.md) | Ratios (the Ratios page) |
+| [CSD-020](docs/csd/CSD-020-debt-linked-to-house.md) | Debt linked to a house |
 
 Only specs with `status: approved` are implemented; check a spec's status before relying on it. Tests reference acceptance criteria in their names, for example `test_csd002_ac_1_1_...`.
 

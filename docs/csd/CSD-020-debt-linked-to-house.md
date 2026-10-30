@@ -52,10 +52,10 @@ sequenceDiagram
     participant CMD as commands/
     participant DOM as domain/
     U->>UI: Edit house: sets sell date and amount, presses Save
-    UI->>CMD: update_house(id, input, debt_ids, settlements=[])
-    CMD->>DOM: validate the house and find linked debts with an open balance
-    DOM-->>CMD: HOUSE_SETTLEMENT_REQUIRED (debts and open balances)
-    CMD-->>UI: error with the open debts
+    UI->>CMD: list_open_debts(debt_ids, sell_date)
+    CMD->>DOM: linked debts with an open balance at the sale
+    DOM-->>CMD: open debts and balances
+    CMD-->>UI: serialised response
     UI->>U: "Settle linked debts": Repaid or Cancelled per debt
     U->>UI: chooses and presses Save sale
     UI->>CMD: update_house(id, input, debt_ids, settlements=[{debt, outcome}])
@@ -419,7 +419,7 @@ erDiagram
 
 The link is stored on the debt (`house_id`) and the settlement on the debt (`settlement`), both optional; the project file keeps `format_version` 1 and a file without them opens with no links. The settlement statement is an ordinary statement of the debt (CSD-011) and counts in its figures.
 
-Commands: `create_house` and `update_house` take, besides the fields of CSD-015 and CSD-019, `debt_ids` (the full selection), `settlements` (a list of `{ debt_id, outcome }`) and `confirm_undo` (boolean). `list_houses()` returns the linked debts of each house with latest balance and settlement, and `list_debts()` returns the house name and settlement of each debt. All validation is in Rust.
+Commands: `create_house` and `update_house` take, besides the fields of CSD-015 and CSD-019, `debt_ids` (the full selection), `settlements` (a list of `{ debt_id, outcome }`) and `confirm_undo` (boolean). `list_open_debts(debt_ids, sell_date)` returns the linked debts with an open balance at a sale, for the prompt of REQ-15, and the commands still validate the choices (REQ-3). `list_houses()` returns the linked debts of each house with latest balance and settlement, and `list_debts()` returns the house name and settlement of each debt. All validation is in Rust.
 
 Error codes (code plus safe message): `HOUSE_DEBT_LINKED_ELSEWHERE`, `HOUSE_LINKS_LOCKED_SOLD`, `HOUSE_SETTLEMENT_REQUIRED` (carries the open debts and their balances), `HOUSE_SETTLEMENT_INVALID`, `HOUSE_SALE_UNDO_UNCONFIRMED`, `HOUSE_SELL_DATE_LOCKED`, `HOUSE_HAS_LINKED_DEBTS`, `DEBT_NOT_FOUND`, `DEBT_STATEMENT_AFTER_SALE`, `DEBT_SETTLED_LOCKED`, `PROJECT_INVALID_FILE`.
 
