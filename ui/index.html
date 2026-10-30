@@ -932,6 +932,22 @@
         </select>
         <span class="field-hint" id="asset-period-hint" hidden>The valuation period cannot change once the asset has valuations.</span>
       </label>
+      <div class="field-row">
+        <label class="field">Purchase date (dd/mm/yyyy)
+          <input type="text" name="purchase_date" inputmode="numeric" placeholder="15/03/2024" maxlength="10" autocomplete="off" required>
+        </label>
+        <label class="field">Purchase amount
+          <input type="text" name="purchase_amount" inputmode="decimal" placeholder="250000.00" autocomplete="off" required>
+        </label>
+      </div>
+      <div class="field-row">
+        <label class="field">Sell date (optional, dd/mm/yyyy)
+          <input type="text" name="sell_date" inputmode="numeric" placeholder="dd/mm/yyyy" maxlength="10" autocomplete="off">
+        </label>
+        <label class="field">Sell amount (optional)
+          <input type="text" name="sell_amount" inputmode="decimal" autocomplete="off">
+        </label>
+      </div>
       <p class="form-error" id="asset-error" role="alert" hidden></p>
       <div class="dialog-actions">
         <button type="button" class="btn" data-cancel>Cancel</button>

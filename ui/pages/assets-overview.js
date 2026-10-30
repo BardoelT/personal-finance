@@ -1,7 +1,8 @@
-// Assets: things the user owns with a monthly or yearly valuation, each a value and a note (CSD-015).
+// Assets: things the user owns with a monthly or yearly valuation, each a value and a note (CSD-015),
+// bought once and possibly sold (CSD-019).
 import { invoke, errorText } from '../shared/ipc.js';
 import { h, iconButton, confirmAction, showToast, showError } from '../shared/dom.js';
-import { formatAmount, currentYear, currentMonth } from '../shared/format.js';
+import { formatAmount, formatDate, currentYear, currentMonth } from '../shared/format.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -26,6 +27,16 @@ function latestValue(asset) {
   return h('span', { class: 'account-amount' }, formatAmount(asset.latest_value), h('small', {}, asset.latest_period));
 }
 
+/** The purchase and the sale of an asset as one line (CSD-019 REQ-9). Display only. */
+function holdingText(asset) {
+  if (asset.purchase_date === null) return `${asset.valuation_period} · Held`;
+  const bought = `Bought ${formatDate(asset.purchase_date)} for ${formatAmount(asset.purchase_amount)}`;
+  const state = asset.held
+    ? 'Held'
+    : `Sold on ${formatDate(asset.sell_date)} for ${formatAmount(asset.sell_amount)}, result ${formatAmount(asset.result)}`;
+  return `${asset.valuation_period} · ${bought} · ${state}`;
+}
+
 function renderAssets(overview) {
   assets = overview.assets;
   const hasAssets = assets.length > 0;
@@ -37,7 +48,7 @@ function renderAssets(overview) {
         'li',
         { class: 'job-row' },
         h('span', { class: 'job-name' }, asset.name),
-        h('span', { class: 'job-meta' }, asset.valuation_period),
+        h('span', { class: 'job-meta' }, holdingText(asset)),
         latestValue(asset),
         h(
           'span',
@@ -125,6 +136,11 @@ function openAssetDialog(asset) {
   if (asset) {
     form.elements.name.value = asset.name;
     form.elements.valuation_period.value = asset.valuation_period;
+    // A legacy asset has no purchase yet, so those fields stay empty (CSD-019 REQ-6).
+    form.elements.purchase_date.value = asset.purchase_date === null ? '' : formatDate(asset.purchase_date);
+    form.elements.purchase_amount.value = asset.purchase_amount ?? '';
+    form.elements.sell_date.value = asset.sell_date === null ? '' : formatDate(asset.sell_date);
+    form.elements.sell_amount.value = asset.sell_amount ?? '';
   }
   $('asset-dialog').showModal();
   form.elements.name.focus();
@@ -133,7 +149,13 @@ function openAssetDialog(asset) {
 async function submitAsset(event) {
   event.preventDefault();
   const form = $('asset-form');
-  const input = { name: form.elements.name.value };
+  const input = {
+    name: form.elements.name.value,
+    purchase_date: form.elements.purchase_date.value,
+    purchase_amount: form.elements.purchase_amount.value,
+    sell_date: form.elements.sell_date.value,
+    sell_amount: form.elements.sell_amount.value,
+  };
   if (!form.elements.valuation_period.disabled) {
     input.valuation_period = form.elements.valuation_period.value;
   }
