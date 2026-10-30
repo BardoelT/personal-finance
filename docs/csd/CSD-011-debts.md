@@ -32,7 +32,7 @@ The app tracks wealth, but has no view of what the user owes: a mortgage, a stud
 - NG-5: Money owed to the user.
 - NG-6: Data fetched from a lender, and import of statements (CSV, PDF, lender export).
 - NG-7: Archiving a debt. A debt at 0.00 stays a normal row, marked Repaid (REQ-26). (Marking it Repaid or Cancelled on the sale of its house is CSD-020.)
-- NG-8: Lender identifiers and other details: an account or contract number, a lender name apart from the name of the debt, a debt type other than the category of CSD-020 (Mortgage, Loan, Other), and a note on the debt itself.
+- NG-8: Lender identifiers and other details: an account or contract number, a lender name apart from the name of the debt, a debt type other than the category of CSD-020 (Mortgage, Loan, Scholarship, Other), and a note on the debt itself.
 - NG-9: A currency per debt. All amounts are in the project currency (CSD-003).
 - NG-10: Individual payments, a stored original amount, and negative balances.
 - NG-11: Aligning the latest balances of different debts to one date, or estimating a balance for a period without a statement.
@@ -1043,7 +1043,7 @@ None.
 
 ## 9. Changelog
 - 0.6 (30/10/2026): A debt whose latest statement is 0.00 is marked Repaid in the Debts overview (new REQ-26; NG-7 reworded). Back to `draft` until re-approved.
-- 0.5 (30/10/2026): NG-8 allows the debt category of CSD-020 (Mortgage, Loan, Other) and the house link set in the debt form. Back to `draft` until re-approved.
+- 0.5 (30/10/2026): NG-8 allows the debt category of CSD-020 (Mortgage, Loan, Scholarship, Other) and the house link set in the debt form. Back to `draft` until re-approved.
 - 0.4 (30/10/2026): A debt may be linked to a house and settled when that house is sold (CSD-020). NG-3 and NG-7 no longer exclude the link and the Repaid/Cancelled marking; NG-8 stays (there is no debt type). Back to `draft` until re-approved (GitHub issue 31).
 - 0.3 (29/10/2026): The position in the left pane is stated in CSD-004 REQ-1 and no longer repeated here (GitHub issue 21).
 - 0.1 (28/10/2026): initial draft, from GitHub issue 15 and the grill-me interview. It follows CSD-009 (debts, colour slot, period lock, statements, changing the period, copy previous, yearly totals, layout), with a balance of 0.00 or more, a change per statement (REQ-25) and an amount repaid in the yearly totals.
