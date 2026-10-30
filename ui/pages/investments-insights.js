@@ -104,7 +104,6 @@ const chart = createYearlyChart({
   ],
 });
 
-export const reloadInvestmentsInsights = chart.reload;
 /** Reloads the chart only while the Insights tab is showing (after a project is opened). */
 export const reloadInvestmentsInsightsIfOpen = chart.reloadIfOpen;
 

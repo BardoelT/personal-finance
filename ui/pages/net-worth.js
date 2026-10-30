@@ -109,7 +109,6 @@ const chart = createYearlyChart({
   labelLines: (row) => [{ text: yearLabel(row), className: 'chart-year' }],
 });
 
-export const reloadNetWorth = chart.reload;
 
 /** Reloads the chart only while the page is showing, so a hidden chart is not drawn at zero width. */
 export const reloadNetWorthIfOpen = async () => {
